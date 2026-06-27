@@ -1,0 +1,15 @@
+{
+  "folders": [
+    {
+      "name": "ktf",
+      "path": "/workspaces/ktf"
+    },
+    {
+      "name": "mopp",
+      "path": "/home/node/mopp"
+    }
+  ],
+  "settings": {
+    "terminal.integrated.cwd": "/workspaces/ktf"
+  }
+}

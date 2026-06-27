@@ -1,0 +1,31 @@
+@import url('https://fonts.googleapis.com/css2?family=Chivo:wght@400;600;700;800&family=Sora:wght@600;700&display=swap');
+
+:root {
+  font-family: Chivo, 'Trebuchet MS', sans-serif;
+  line-height: 1.45;
+  font-weight: 400;
+  color: #102436;
+  background:
+    radial-gradient(circle at 10% 0%, #d9e9f8 0, transparent 35%),
+    radial-gradient(circle at 90% 20%, #fde0c7 0, transparent 35%),
+    #f4f7fb;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+}
+
+h1,
+h2,
+h3 {
+  font-family: Sora, Verdana, sans-serif;
+}

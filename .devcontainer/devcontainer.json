@@ -1,0 +1,21 @@
+{
+  "name": "mopp-devcontainer",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:20",
+  "workspaceFolder": "/workspaces/mopp",
+  "forwardPorts": [4173],
+  "portsAttributes": {
+    "4173": {
+      "label": "MOPP Vite (frontend)",
+      "onAutoForward": "openBrowser",
+      "visibility": "public"
+    }
+  },
+  "postCreateCommand": "npm install",
+  "postStartCommand": "bash /workspaces/mopp/.devcontainer/start-services.sh",
+  "customizations": {
+    "vscode": {
+      "settings": {},
+      "extensions": ["dbaeumer.vscode-eslint", "esbenp.prettier-vscode"]
+    }
+  }
+}

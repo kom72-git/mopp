@@ -114,6 +114,15 @@ function isNoBetPick(pick) {
   return /^\s*n\s*:\s*n\s*$/i.test(String(pick ?? ''))
 }
 
+async function fetchSyncStatus() {
+  const response = await fetch(`/sync-status.json?t=${Date.now()}`, { cache: 'no-store' })
+  if (!response.ok) {
+    throw new Error('Sync status není dostupný')
+  }
+
+  return response.json()
+}
+
 function SplitTip({ value }) {
   const { home, away } = parseTipValue(value)
 
@@ -308,11 +317,16 @@ function App() {
   const [isSyncing, setIsSyncing] = useState(false)
   const isProductionBuild = import.meta.env.PROD
   const canTriggerDeploy = isProductionBuild && Boolean(deployHookUrl)
+  const syncPollTimerRef = useRef(null)
 
   useEffect(() => {
     return () => {
       if (tooltipTimerRef.current) {
         clearTimeout(tooltipTimerRef.current)
+      }
+
+      if (syncPollTimerRef.current) {
+        clearTimeout(syncPollTimerRef.current)
       }
     }
   }, [])
@@ -329,6 +343,30 @@ function App() {
     }, 3200)
   }
 
+  const waitForFreshProductionData = async (previousSignature, attemptsLeft = 18) => {
+    if (attemptsLeft <= 0) {
+      showTooltip('Redeploy běží, ale nové nasazení ještě není online. Obnov stránku za chvíli ručně.')
+      return
+    }
+
+    syncPollTimerRef.current = setTimeout(async () => {
+      try {
+        const status = await fetchSyncStatus()
+        if (status?.signature && status.signature !== previousSignature) {
+          showTooltip('Nový deploy je online. Načítám aktuální data...')
+          setTimeout(() => {
+            window.location.reload()
+          }, 800)
+          return
+        }
+      } catch {
+        // Pokracujeme dal, produkcni deploy muze byt zrovna v prepinani verze.
+      }
+
+      waitForFreshProductionData(previousSignature, attemptsLeft - 1)
+    }, 10000)
+  }
+
   const handleLogoClick = async (event) => {
     if (event.detail < 3 || isSyncing) return
 
@@ -337,12 +375,14 @@ function App() {
 
     try {
       if (canTriggerDeploy) {
+        const currentStatus = await fetchSyncStatus().catch(() => null)
         const hookResponse = await fetch(deployHookUrl, { method: 'POST' })
         if (!hookResponse.ok) {
           throw new Error('Deploy hook selhal')
         }
 
-        showTooltip('Spuštěn redeploy na Vercelu. Build si stáhne nová data z Google tabulky.')
+        showTooltip('Spuštěn redeploy na Vercelu. Čekám na nové nasazení s čerstvými daty...')
+        waitForFreshProductionData(currentStatus?.signature ?? null)
         return
       }
 

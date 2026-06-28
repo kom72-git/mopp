@@ -34,4 +34,5 @@ Preview build pouziva `http://localhost:4174` (`npm run preview`).
 
 - Lokalne: spust `npm run dev:api` a pak trojklik na logo provede `POST /api/sync-sheet`, ktery prepise `src/data/moppData.js`.
 - Vercel: runtime API nestaci, protoze frontend cte data ze statickeho buildu. Trojklik ma na produkci volat Vercel Deploy Hook a novy build si pri `npm run build` sam stahne cerstva data diky `prebuild` skriptu.
+- Build navic generuje `public/sync-status.json`, podle ktereho produkcni web pozna, ze je novy deploy online, a sam se obnovi.
 - Pro Vercel nastav promennou `VITE_VERCEL_DEPLOY_HOOK` na URL deploy hooku. Bez ni se produkcni web neumi bezpecne synchronizovat.

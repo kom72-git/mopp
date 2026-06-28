@@ -1,4 +1,5 @@
 import fs from 'node:fs/promises'
+import { createHash } from 'node:crypto'
 
 const SHEET_ID = '1cdrtECld-UgY8qjcc2UajQwcO3F85u1EgV2EU2sc9Lw'
 const GID = '134828351'
@@ -222,6 +223,7 @@ function buildSyncMessage(diff, nextData, hadPreviousData) {
 
 async function main() {
   const outputFile = 'src/data/moppData.js'
+  const statusFile = 'public/sync-status.json'
   const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID}`
   const response = await fetch(url)
 
@@ -236,15 +238,27 @@ async function main() {
   const message = buildSyncMessage(diff, data, Boolean(previousData))
 
   const output = `export const players = ${JSON.stringify(data.players, null, 2)}\n\nexport const matches = ${JSON.stringify(data.matches, null, 2)}\n`
+  const signature = createHash('sha1').update(output).digest('hex')
+  const status = {
+    updatedAt: new Date().toISOString(),
+    signature,
+    players: data.players.length,
+    matches: data.matches.length,
+    message,
+  }
 
   await fs.mkdir('src/data', { recursive: true })
+  await fs.mkdir('public', { recursive: true })
   await fs.writeFile(outputFile, output, 'utf8')
+  await fs.writeFile(statusFile, `${JSON.stringify(status, null, 2)}\n`, 'utf8')
 
   return {
     ok: true,
     players: data.players.length,
     matches: data.matches.length,
     file: outputFile,
+    statusFile,
+    signature,
     changes: diff,
     message,
   }

@@ -431,9 +431,7 @@ function App() {
 
   const normalizedVisiblePlayerIds = useMemo(() => {
     const ids = scoreboard.map((player) => player.id)
-    const kept = visiblePlayerIds.filter((id) => ids.includes(id))
-    const missing = ids.filter((id) => !kept.includes(id))
-    return [...kept, ...missing]
+    return visiblePlayerIds.filter((id) => ids.includes(id))
   }, [scoreboard, visiblePlayerIds])
 
   const togglePlayerVisibility = (playerId) => {

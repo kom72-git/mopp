@@ -12,27 +12,27 @@ export const players = [
   {
     "id": "p3",
     "name": "Radek",
-    "points": 61
+    "points": 64
   },
   {
     "id": "p4",
     "name": "Roman",
-    "points": 63
+    "points": 66
   },
   {
     "id": "p5",
     "name": "Špáca",
-    "points": 91
+    "points": 94
   },
   {
     "id": "p6",
     "name": "Slanec",
-    "points": 91
+    "points": 94
   },
   {
     "id": "p7",
     "name": "Láďa",
-    "points": 82
+    "points": 85
   },
   {
     "id": "p8",
@@ -42,17 +42,17 @@ export const players = [
   {
     "id": "p9",
     "name": "Jony",
-    "points": 71
+    "points": 74
   },
   {
     "id": "p10",
     "name": "Mirax",
-    "points": 58
+    "points": 61
   },
   {
     "id": "p11",
     "name": "Honza",
-    "points": 78
+    "points": 88
   }
 ]
 
@@ -2373,63 +2373,63 @@ export const matches = [
     "startsAt": "18. (ne) 28.06. 21:00",
     "home": "Jihoafrická republika",
     "away": "Kanada",
-    "score": null,
+    "score": "0:1",
     "bank": 330,
     "tips": [
       {
         "playerId": "p1",
         "pick": "1:0",
-        "points": null
+        "points": 0
       },
       {
         "playerId": "p2",
         "pick": "2:1",
-        "points": null
+        "points": 0
       },
       {
         "playerId": "p3",
         "pick": "1:2",
-        "points": null
+        "points": 3
       },
       {
         "playerId": "p4",
         "pick": "1:2",
-        "points": null
+        "points": 3
       },
       {
         "playerId": "p5",
         "pick": "1:2",
-        "points": null
+        "points": 3
       },
       {
         "playerId": "p6",
         "pick": "1:2",
-        "points": null
+        "points": 3
       },
       {
         "playerId": "p7",
         "pick": "1:3",
-        "points": null
+        "points": 3
       },
       {
         "playerId": "p8",
         "pick": "1:1",
-        "points": null
+        "points": 0
       },
       {
         "playerId": "p9",
         "pick": "1:3",
-        "points": null
+        "points": 3
       },
       {
         "playerId": "p10",
         "pick": "0:2",
-        "points": null
+        "points": 3
       },
       {
         "playerId": "p11",
         "pick": "0:1",
-        "points": null
+        "points": 10
       }
     ]
   },
@@ -2440,7 +2440,7 @@ export const matches = [
     "home": "Brazílie",
     "away": "Japonsko",
     "score": null,
-    "bank": 0,
+    "bank": 110,
     "tips": [
       {
         "playerId": "p1",

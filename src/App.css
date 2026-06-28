@@ -651,11 +651,30 @@
   stroke-linecap: round;
   stroke-linejoin: round;
   opacity: 0.92;
+  transition: opacity 140ms ease, stroke-width 140ms ease;
+}
+
+.rank-line.is-dim {
+  opacity: 0.2;
+}
+
+.rank-line.is-highlight {
+  opacity: 1;
+  stroke-width: 3.2;
 }
 
 .rank-line-end {
   stroke: #fff;
   stroke-width: 1;
+  transition: opacity 140ms ease, r 140ms ease;
+}
+
+.rank-line-end.is-dim {
+  opacity: 0.22;
+}
+
+.rank-line-end.is-highlight {
+  opacity: 1;
 }
 
 .rank-legend {
@@ -687,6 +706,11 @@
 .rank-legend-item.is-muted {
   opacity: 0.45;
   filter: grayscale(0.15);
+}
+
+.rank-legend-item.is-hover {
+  border-color: #8fb7da;
+  background: #e7f2fc;
 }
 
 .rank-legend-dot {

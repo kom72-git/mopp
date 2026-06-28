@@ -291,6 +291,7 @@ function SplitTip({ value }) {
 
 function App() {
   const tooltipTimerRef = useRef(null)
+  const touchLegendHandledRef = useRef(false)
   const [data, setData] = useState({ players: fallbackPlayers, matches: fallbackMatches })
   const [isLiveLoading, setIsLiveLoading] = useState(true)
   const players = data.players
@@ -428,6 +429,7 @@ function App() {
 
   const [selectedRound, setSelectedRound] = useState(currentRound)
   const [visiblePlayerIds, setVisiblePlayerIds] = useState(() => scoreboard.map((player) => player.id))
+  const [hoveredPlayerId, setHoveredPlayerId] = useState('')
 
   const normalizedVisiblePlayerIds = useMemo(() => {
     const ids = scoreboard.map((player) => player.id)
@@ -959,13 +961,19 @@ function App() {
                     </text>
 
                     {visibleSeries.map((player) => {
+                      const hasHover = Boolean(hoveredPlayerId)
+                      const isHovered = hoveredPlayerId === player.id
                       const path = player.ranks
                         .map((rank, index) => `${index === 0 ? 'M' : 'L'} ${indexToX(index)} ${rankToY(rank)}`)
                         .join(' ')
 
                       return (
                         <g key={player.id}>
-                          <path d={path} stroke={player.color} className="rank-line" />
+                          <path
+                            d={path}
+                            stroke={player.color}
+                            className={`rank-line ${hasHover && !isHovered ? 'is-dim' : ''} ${isHovered ? 'is-highlight' : ''}`.trim()}
+                          />
                           {player.ranks.map((rank, index) => (
                             <circle
                               key={`${player.id}-pt-${index}`}
@@ -973,7 +981,7 @@ function App() {
                               cy={rankToY(rank)}
                               r="2.6"
                               fill={player.color}
-                              className="rank-line-end"
+                              className={`rank-line-end ${hasHover && !isHovered ? 'is-dim' : ''} ${isHovered ? 'is-highlight' : ''}`.trim()}
                             />
                           ))}
                         </g>
@@ -988,9 +996,31 @@ function App() {
               {rankTimeline.series.map((player) => (
                 <button
                   type="button"
-                  className={`rank-legend-item ${normalizedVisiblePlayerIds.includes(player.id) ? '' : 'is-muted'}`.trim()}
+                  className={`rank-legend-item ${normalizedVisiblePlayerIds.includes(player.id) ? '' : 'is-muted'} ${hoveredPlayerId === player.id ? 'is-hover' : ''}`.trim()}
                   key={`legend-${player.id}`}
-                  onClick={() => togglePlayerVisibility(player.id)}
+                  onClick={() => {
+                    if (touchLegendHandledRef.current) {
+                      touchLegendHandledRef.current = false
+                      return
+                    }
+                    togglePlayerVisibility(player.id)
+                  }}
+                  onTouchStart={(event) => {
+                    event.preventDefault()
+                    touchLegendHandledRef.current = true
+
+                    if (hoveredPlayerId !== player.id) {
+                      setHoveredPlayerId(player.id)
+                      return
+                    }
+
+                    togglePlayerVisibility(player.id)
+                    setHoveredPlayerId('')
+                  }}
+                  onMouseEnter={() => setHoveredPlayerId(player.id)}
+                  onMouseLeave={() => setHoveredPlayerId('')}
+                  onFocus={() => setHoveredPlayerId(player.id)}
+                  onBlur={() => setHoveredPlayerId('')}
                 >
                   <span className="rank-legend-dot" style={{ backgroundColor: player.color }} />
                   {player.name}

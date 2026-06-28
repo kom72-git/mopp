@@ -1,12 +1,11 @@
-import { fetchSheetData } from '../scripts/sheet-data.mjs'
-
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   if (req.method !== 'GET') {
     res.status(405).json({ ok: false, message: 'Method not allowed' })
     return
   }
 
   try {
+    const { fetchSheetData } = await import('../scripts/sheet-data.mjs')
     const data = await fetchSheetData()
     res.setHeader('Cache-Control', 'no-store, max-age=0')
     res.status(200).json({ ok: true, ...data })

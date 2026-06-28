@@ -2601,7 +2601,7 @@ export const matches = [
       },
       {
         "playerId": "p6",
-        "pick": "3:1",
+        "pick": "-",
         "points": null
       },
       {

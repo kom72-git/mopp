@@ -323,6 +323,7 @@ function App() {
   const [syncMessage, setSyncMessage] = useState('')
   const [showSyncTooltip, setShowSyncTooltip] = useState(false)
   const [isSyncing, setIsSyncing] = useState(false)
+  const [syncMessageDuration, setSyncMessageDuration] = useState(3200)
 
   useEffect(() => {
     let cancelled = false
@@ -357,16 +358,17 @@ function App() {
     }
   }, [])
 
-  const showTooltip = (message) => {
+  const showTooltip = (message, duration = 3200) => {
     if (tooltipTimerRef.current) {
       clearTimeout(tooltipTimerRef.current)
     }
     setSyncMessage(message)
+    setSyncMessageDuration(duration)
     setShowSyncTooltip(true)
     tooltipTimerRef.current = setTimeout(() => {
       setShowSyncTooltip(false)
       tooltipTimerRef.current = null
-    }, 3200)
+    }, duration)
   }
 
   const handleLogoClick = async (event) => {
@@ -408,7 +410,10 @@ function App() {
         showTooltip(payload.message || 'Synchronizace dokončena')
       }
     } catch {
-      showTooltip('API není dostupné. Lokálně spusť: npm run dev:api, na Vercelu zkontroluj funkci /api/data.')
+      showTooltip(
+        'API není dostupné. Lokálně musí běžet backend na portu 4000. Ve workspace už to má startovat samo; když ne, zkus obnovit okno VS Code.',
+        9000,
+      )
     } finally {
       setIsSyncing(false)
     }

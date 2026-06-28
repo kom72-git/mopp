@@ -1,7 +1,7 @@
 {
   "name": "mopp-devcontainer",
   "image": "mcr.microsoft.com/devcontainers/javascript-node:20",
-  "workspaceFolder": "/home/node/mopp",
+  "workspaceFolder": "/home/node/moop",
   "forwardPorts": [4173, 4000],
   "portsAttributes": {
     "4173": {

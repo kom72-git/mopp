@@ -2,9 +2,11 @@
 
 set -u
 
-ROOT_DIR="/workspaces/mopp"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 FRONTEND_LOG="/tmp/mopp-frontend.log"
 FRONTEND_PID="/tmp/mopp-frontend.pid"
+API_LOG="/tmp/mopp-api.log"
+API_PID="/tmp/mopp-api.pid"
 
 start_detached() {
   local log_file="$1"
@@ -38,8 +40,6 @@ stop_conflicting_processes() {
 }
 
 start_frontend() {
-  stop_conflicting_processes
-  
   if is_port_listening 4173; then
     echo "MOPP frontend uz bezi (port 4173)."
     return
@@ -60,6 +60,29 @@ start_frontend() {
   echo "MOPP frontend se nespustil vcas. Viz log: $FRONTEND_LOG"
 }
 
+start_api() {
+  if is_port_listening 4000; then
+    echo "MOPP API uz bezi (port 4000)."
+    return
+  fi
+
+  echo "Spoustim MOPP API..."
+  api_pid=$(start_detached "$API_LOG" npm --prefix "$ROOT_DIR/api" run dev)
+  echo "$api_pid" > "$API_PID"
+
+  for _ in {1..30}; do
+    if is_port_listening 4000; then
+      echo "MOPP API spusteno (port 4000)."
+      return
+    fi
+    sleep 0.5
+  done
+
+  echo "MOPP API se nespustilo vcas. Viz log: $API_LOG"
+}
+
+stop_conflicting_processes
+start_api
 start_frontend
 
-echo "Hotovo. Log: $FRONTEND_LOG | PID: $FRONTEND_PID"
+echo "Hotovo. Frontend log: $FRONTEND_LOG | API log: $API_LOG"

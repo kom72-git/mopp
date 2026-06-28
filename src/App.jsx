@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
-import { matches, players } from './data/moppData'
+import { matches as fallbackMatches, players as fallbackPlayers } from './data/moppData'
 import { getFlagUrl } from './data/countryFlags'
 
 const winningsByPlayerId = {
@@ -114,13 +114,18 @@ function isNoBetPick(pick) {
   return /^\s*n\s*:\s*n\s*$/i.test(String(pick ?? ''))
 }
 
-async function fetchSyncStatus() {
-  const response = await fetch(`/sync-status.json?t=${Date.now()}`, { cache: 'no-store' })
-  if (!response.ok) {
-    throw new Error('Sync status není dostupný')
+async function fetchLiveData() {
+  const response = await fetch(`/api/data?t=${Date.now()}`, { cache: 'no-store' })
+  const payload = await response.json()
+
+  if (!response.ok || !payload?.ok) {
+    throw new Error(payload?.message || 'Live data nejsou dostupna')
   }
 
-  return response.json()
+  return {
+    players: payload.players ?? [],
+    matches: payload.matches ?? [],
+  }
 }
 
 function SplitTip({ value }) {
@@ -135,9 +140,12 @@ function SplitTip({ value }) {
 }
 
 function App() {
-  const deployHookUrl = import.meta.env.VITE_VERCEL_DEPLOY_HOOK
   const tooltipTimerRef = useRef(null)
-  const scoreboard = useMemo(() => [...players].sort((a, b) => b.points - a.points), [])
+  const [data, setData] = useState({ players: fallbackPlayers, matches: fallbackMatches })
+  const [isLiveLoading, setIsLiveLoading] = useState(true)
+  const players = data.players
+  const matches = data.matches
+  const scoreboard = useMemo(() => [...players].sort((a, b) => b.points - a.points), [players])
   const standings = useMemo(
     () =>
       scoreboard.map((player) => {
@@ -164,13 +172,13 @@ function App() {
           stats,
         }
       }),
-    [scoreboard],
+    [matches, scoreboard],
   )
 
   const rounds = useMemo(() => {
     const all = matches.map((match) => extractRound(match)).filter((value) => value !== null)
     return [...new Set(all)].sort((a, b) => a - b)
-  }, [])
+  }, [matches])
 
   const rankTimeline = useMemo(() => {
     if (rounds.length === 0) return { rounds: [], series: [] }
@@ -236,7 +244,7 @@ function App() {
     }))
 
     return { rounds: chartRounds, series }
-  }, [rounds, scoreboard])
+  }, [matches, rounds, scoreboard])
 
   const currentRound = useMemo(() => {
     const inProgress = matches
@@ -246,7 +254,7 @@ function App() {
 
     if (inProgress.length > 0) return Math.min(...inProgress)
     return rounds[rounds.length - 1] ?? 1
-  }, [rounds])
+  }, [matches, rounds])
 
   const [selectedRound, setSelectedRound] = useState(currentRound)
   const [visiblePlayerIds, setVisiblePlayerIds] = useState(() => scoreboard.map((player) => player.id))
@@ -315,18 +323,36 @@ function App() {
   const [syncMessage, setSyncMessage] = useState('')
   const [showSyncTooltip, setShowSyncTooltip] = useState(false)
   const [isSyncing, setIsSyncing] = useState(false)
-  const isProductionBuild = import.meta.env.PROD
-  const canTriggerDeploy = isProductionBuild && Boolean(deployHookUrl)
-  const syncPollTimerRef = useRef(null)
+
+  useEffect(() => {
+    let cancelled = false
+
+    const loadLiveData = async () => {
+      try {
+        const nextData = await fetchLiveData()
+        if (!cancelled) {
+          setData(nextData)
+        }
+      } catch {
+        // Fallback na build data zustane aktivni.
+      } finally {
+        if (!cancelled) {
+          setIsLiveLoading(false)
+        }
+      }
+    }
+
+    loadLiveData()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     return () => {
       if (tooltipTimerRef.current) {
         clearTimeout(tooltipTimerRef.current)
-      }
-
-      if (syncPollTimerRef.current) {
-        clearTimeout(syncPollTimerRef.current)
       }
     }
   }, [])
@@ -343,30 +369,6 @@ function App() {
     }, 3200)
   }
 
-  const waitForFreshProductionData = async (previousSignature, attemptsLeft = 18) => {
-    if (attemptsLeft <= 0) {
-      showTooltip('Redeploy běží, ale nové nasazení ještě není online. Obnov stránku za chvíli ručně.')
-      return
-    }
-
-    syncPollTimerRef.current = setTimeout(async () => {
-      try {
-        const status = await fetchSyncStatus()
-        if (status?.signature && status.signature !== previousSignature) {
-          showTooltip('Nový deploy je online. Načítám aktuální data...')
-          setTimeout(() => {
-            window.location.reload()
-          }, 800)
-          return
-        }
-      } catch {
-        // Pokracujeme dal, produkcni deploy muze byt zrovna v prepinani verze.
-      }
-
-      waitForFreshProductionData(previousSignature, attemptsLeft - 1)
-    }, 10000)
-  }
-
   const handleLogoClick = async (event) => {
     if (event.detail < 3 || isSyncing) return
 
@@ -374,15 +376,10 @@ function App() {
     showTooltip('Synchronizace s Google tabulkou...')
 
     try {
-      if (canTriggerDeploy) {
-        const currentStatus = await fetchSyncStatus().catch(() => null)
-        const hookResponse = await fetch(deployHookUrl, { method: 'POST' })
-        if (!hookResponse.ok) {
-          throw new Error('Deploy hook selhal')
-        }
-
-        showTooltip('Spuštěn redeploy na Vercelu. Čekám na nové nasazení s čerstvými daty...')
-        waitForFreshProductionData(currentStatus?.signature ?? null)
+      if (import.meta.env.PROD) {
+        const nextData = await fetchLiveData()
+        setData(nextData)
+        showTooltip('Načtena aktuální data z Google tabulky.')
         return
       }
 
@@ -404,17 +401,14 @@ function App() {
       if (!response.ok || !payload?.ok) {
         showTooltip(payload?.message || 'Synchronizace selhala')
       } else {
+        const nextData = await fetchLiveData().catch(() => null)
+        if (nextData) {
+          setData(nextData)
+        }
         showTooltip(payload.message || 'Synchronizace dokončena')
-        setTimeout(() => {
-          window.location.reload()
-        }, 700)
       }
     } catch {
-      showTooltip(
-        isProductionBuild
-          ? 'Na Vercelu nastav Deploy Hook. Runtime sync tam data do už hotového buildu nezapíše.'
-          : 'API není dostupné. Lokálně spusť: npm run dev:api.'
-      )
+      showTooltip('API není dostupné. Lokálně spusť: npm run dev:api, na Vercelu zkontroluj funkci /api/data.')
     } finally {
       setIsSyncing(false)
     }
@@ -432,6 +426,7 @@ function App() {
             </span>
             <span>Master of PP</span>
           </p>
+          {isLiveLoading ? <p className="intro">Načítám aktuální data…</p> : null}
         </div>
 
         <figure className="hero-logo-wrap">

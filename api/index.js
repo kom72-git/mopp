@@ -17,6 +17,20 @@ app.get("/api/ping", (req, res) => {
   res.json({ message: "MOPP API bezi", ts: new Date().toISOString() });
 });
 
+app.get("/api/data", async (req, res) => {
+  try {
+    const { fetchSheetData } = await import(path.resolve(__dirname, "../scripts/sheet-data.mjs"));
+    const data = await fetchSheetData();
+    res.set("Cache-Control", "no-store");
+    return res.json({ ok: true, ...data });
+  } catch (error) {
+    return res.status(500).json({
+      ok: false,
+      message: error?.message || "Nepodarilo se nacist data z Google Sheetu",
+    });
+  }
+});
+
 app.post("/api/sync-sheet", (req, res) => {
   const scriptPath = path.resolve(__dirname, "../scripts/sync-sheet.mjs");
   const child = spawn("node", [scriptPath, "--json"], {

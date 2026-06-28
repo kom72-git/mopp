@@ -18,7 +18,28 @@ is_port_listening() {
   lsof -iTCP:"$port" -sTCP:LISTEN -P -n >/dev/null 2>&1
 }
 
+stop_conflicting_processes() {
+  echo "Kontroluji a zastavuji konfliktni procesy..."
+  
+  # Zastavit procesy na portech MOPP
+  pkill -f "vite.*4173" || true
+  pkill -f "node.*4000" || true
+  
+  # Cekat az se porty uvolni
+  for _ in {1..10}; do
+    if ! is_port_listening 4173 && ! is_port_listening 4000; then
+      echo "Porty 4173 a 4000 jsou volne."
+      return
+    fi
+    sleep 0.5
+  done
+  
+  echo "Varovani: Porty 4173 nebo 4000 jsou stale obsazene."
+}
+
 start_frontend() {
+  stop_conflicting_processes
+  
   if is_port_listening 4173; then
     echo "MOPP frontend uz bezi (port 4173)."
     return

@@ -11,10 +11,12 @@
 
 ## Jak spustit
 ```bash
-cd /home/node/mopp
+cd /home/node/moop
 npm run dev
-# Běží na http://localhost:5174/
+# Běží na http://localhost:4173/
 ```
+
+API běží samostatně na `http://localhost:4000/`.
 
 ## Design
 - Mobilní-first (priority)
@@ -45,4 +47,4 @@ npm run dev
 5. **GitHub + Vercel deploy** – jako u známek
 
 ---
-Pokud jsi nový v projektu: přečti si toto, pak se podívej na prototyp na http://localhost:5174/
+Pokud jsi nový v projektu: přečti si toto, pak se podívej na prototyp na http://localhost:4173/

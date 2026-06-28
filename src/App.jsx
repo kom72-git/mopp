@@ -306,6 +306,8 @@ function App() {
   const [syncMessage, setSyncMessage] = useState('')
   const [showSyncTooltip, setShowSyncTooltip] = useState(false)
   const [isSyncing, setIsSyncing] = useState(false)
+  const isProductionBuild = import.meta.env.PROD
+  const canTriggerDeploy = isProductionBuild && Boolean(deployHookUrl)
 
   useEffect(() => {
     return () => {
@@ -334,6 +336,16 @@ function App() {
     showTooltip('Synchronizace s Google tabulkou...')
 
     try {
+      if (canTriggerDeploy) {
+        const hookResponse = await fetch(deployHookUrl, { method: 'POST' })
+        if (!hookResponse.ok) {
+          throw new Error('Deploy hook selhal')
+        }
+
+        showTooltip('Spuštěn redeploy na Vercelu. Build si stáhne nová data z Google tabulky.')
+        return
+      }
+
       let response
       let payload
 
@@ -345,15 +357,6 @@ function App() {
           response = await fetch('http://localhost:4000/api/sync-sheet', { method: 'POST' })
           payload = await response.json()
         } catch {
-          if (deployHookUrl) {
-            const hookResponse = await fetch(deployHookUrl, { method: 'POST' })
-            if (!hookResponse.ok) {
-              throw new Error('Deploy hook selhal')
-            }
-
-            showTooltip('Spuštěn redeploy na Vercelu. Nová data se projeví po dokončení buildu.')
-            return
-          }
           throw new Error('API není dostupné')
         }
       }
@@ -367,7 +370,11 @@ function App() {
         }, 700)
       }
     } catch {
-      showTooltip('API není dostupné. Lokálně spusť: npm run dev:api, na Vercelu nastav Deploy Hook.')
+      showTooltip(
+        isProductionBuild
+          ? 'Na Vercelu nastav Deploy Hook. Runtime sync tam data do už hotového buildu nezapíše.'
+          : 'API není dostupné. Lokálně spusť: npm run dev:api.'
+      )
     } finally {
       setIsSyncing(false)
     }

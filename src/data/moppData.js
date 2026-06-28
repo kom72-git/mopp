@@ -2408,7 +2408,7 @@ export const matches = [
       },
       {
         "playerId": "p7",
-        "pick": "-",
+        "pick": "1:3",
         "points": null
       },
       {
@@ -2423,7 +2423,7 @@ export const matches = [
       },
       {
         "playerId": "p10",
-        "pick": "-",
+        "pick": "0:2",
         "points": null
       },
       {
@@ -2459,7 +2459,7 @@ export const matches = [
       },
       {
         "playerId": "p4",
-        "pick": "-",
+        "pick": "3:1",
         "points": null
       },
       {
@@ -2479,7 +2479,7 @@ export const matches = [
       },
       {
         "playerId": "p8",
-        "pick": "-",
+        "pick": "3:1",
         "points": null
       },
       {
@@ -2489,7 +2489,7 @@ export const matches = [
       },
       {
         "playerId": "p10",
-        "pick": "-",
+        "pick": "3:0",
         "points": null
       },
       {
@@ -2525,7 +2525,7 @@ export const matches = [
       },
       {
         "playerId": "p4",
-        "pick": "-",
+        "pick": "4:0",
         "points": null
       },
       {
@@ -2545,7 +2545,7 @@ export const matches = [
       },
       {
         "playerId": "p8",
-        "pick": "-",
+        "pick": "4:1",
         "points": null
       },
       {
@@ -2555,7 +2555,7 @@ export const matches = [
       },
       {
         "playerId": "p10",
-        "pick": "-",
+        "pick": "4:0",
         "points": null
       },
       {
@@ -2591,7 +2591,7 @@ export const matches = [
       },
       {
         "playerId": "p4",
-        "pick": "-",
+        "pick": "1:1",
         "points": null
       },
       {
@@ -2611,7 +2611,7 @@ export const matches = [
       },
       {
         "playerId": "p8",
-        "pick": "-",
+        "pick": "2:1",
         "points": null
       },
       {
@@ -2621,7 +2621,7 @@ export const matches = [
       },
       {
         "playerId": "p10",
-        "pick": "-",
+        "pick": "3:0",
         "points": null
       },
       {
@@ -2657,7 +2657,7 @@ export const matches = [
       },
       {
         "playerId": "p4",
-        "pick": "-",
+        "pick": "1:2",
         "points": null
       },
       {
@@ -2677,7 +2677,7 @@ export const matches = [
       },
       {
         "playerId": "p8",
-        "pick": "-",
+        "pick": "2:1",
         "points": null
       },
       {
@@ -2687,7 +2687,7 @@ export const matches = [
       },
       {
         "playerId": "p10",
-        "pick": "-",
+        "pick": "0:2",
         "points": null
       },
       {
@@ -2723,7 +2723,7 @@ export const matches = [
       },
       {
         "playerId": "p4",
-        "pick": "-",
+        "pick": "3:0",
         "points": null
       },
       {
@@ -2743,7 +2743,7 @@ export const matches = [
       },
       {
         "playerId": "p8",
-        "pick": "-",
+        "pick": "3:0",
         "points": null
       },
       {
@@ -2753,7 +2753,7 @@ export const matches = [
       },
       {
         "playerId": "p10",
-        "pick": "-",
+        "pick": "4:0",
         "points": null
       },
       {
@@ -2885,7 +2885,7 @@ export const matches = [
       },
       {
         "playerId": "p10",
-        "pick": "-",
+        "pick": "1:2",
         "points": null
       },
       {

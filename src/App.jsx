@@ -124,6 +124,7 @@ function SplitTip({ value }) {
 }
 
 function App() {
+  const deployHookUrl = import.meta.env.VITE_VERCEL_DEPLOY_HOOK
   const tooltipTimerRef = useRef(null)
   const scoreboard = useMemo(() => [...players].sort((a, b) => b.points - a.points), [])
   const standings = useMemo(
@@ -256,8 +257,21 @@ function App() {
         response = await fetch('/api/sync-sheet', { method: 'POST' })
         payload = await response.json()
       } catch {
-        response = await fetch('http://localhost:4000/api/sync-sheet', { method: 'POST' })
-        payload = await response.json()
+        try {
+          response = await fetch('http://localhost:4000/api/sync-sheet', { method: 'POST' })
+          payload = await response.json()
+        } catch {
+          if (deployHookUrl) {
+            const hookResponse = await fetch(deployHookUrl, { method: 'POST' })
+            if (!hookResponse.ok) {
+              throw new Error('Deploy hook selhal')
+            }
+
+            showTooltip('Spuštěn redeploy na Vercelu. Nová data se projeví po dokončení buildu.')
+            return
+          }
+          throw new Error('API není dostupné')
+        }
       }
 
       if (!response.ok || !payload?.ok) {
@@ -269,7 +283,7 @@ function App() {
         }, 700)
       }
     } catch {
-      showTooltip('API není dostupné. Spusť: npm run dev:api')
+      showTooltip('API není dostupné. Lokálně spusť: npm run dev:api, na Vercelu nastav Deploy Hook.')
     } finally {
       setIsSyncing(false)
     }

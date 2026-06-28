@@ -8,6 +8,7 @@
 }
 
 .hero {
+  position: relative;
   background:
     radial-gradient(circle at 82% 20%, rgb(255 255 255 / 16%), transparent 42%),
     linear-gradient(130deg, #12365d, #1f5f95 58%, #2c82c5);
@@ -29,7 +30,7 @@
 }
 
 .hero-logo-wrap {
-  position: relative;
+  position: static;
   margin: 0;
   max-width: 72px;
   justify-self: end;
@@ -51,8 +52,9 @@
 
 .sync-tooltip {
   position: absolute;
-  top: calc(100% + 0.35rem);
-  right: 0;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   z-index: 2;
   min-width: 210px;
   max-width: 300px;
@@ -515,6 +517,94 @@
   text-align: right;
 }
 
+.rank-chart-panel {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.rank-chart-wrap {
+  width: 100%;
+  border: 1px solid #d7e5f2;
+  border-radius: 12px;
+  overflow: auto;
+  background: #f9fcff;
+}
+
+.rank-chart {
+  display: block;
+  width: 100%;
+  min-width: 680px;
+  height: auto;
+}
+
+.rank-grid-line {
+  stroke: #d7e3ef;
+  stroke-width: 1;
+}
+
+.rank-axis-label {
+  font-size: 11px;
+  fill: #5a7288;
+  font-weight: 700;
+}
+
+.rank-axis-title {
+  font-size: 12px;
+  fill: #2e5a7d;
+  font-weight: 700;
+}
+
+.rank-line {
+  fill: none;
+  stroke-width: 2.25;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.92;
+}
+
+.rank-line-end {
+  stroke: #fff;
+  stroke-width: 1;
+}
+
+.rank-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.28rem 0.5rem;
+}
+
+.rank-legend-hint {
+  margin: 0.05rem 0 0;
+  font-size: 0.72rem;
+  color: #5b7288;
+}
+
+.rank-legend-item {
+  border: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  font-size: 0.74rem;
+  color: #284d70;
+  background: #eef5fc;
+  border: 1px solid #d4e4f2;
+  border-radius: 999px;
+  padding: 0.1rem 0.42rem;
+}
+
+.rank-legend-item.is-muted {
+  opacity: 0.45;
+  filter: grayscale(0.15);
+}
+
+.rank-legend-dot {
+  width: 0.52rem;
+  height: 0.52rem;
+  border-radius: 999px;
+  border: 1px solid rgb(0 0 0 / 10%);
+}
+
 @media (min-width: 980px) {
   .workspace {
     grid-template-columns: 330px minmax(0, 1fr);
@@ -564,8 +654,8 @@
   }
 
   .sync-tooltip {
-    right: auto;
-    left: 0;
+    left: 50%;
+    transform: translate(-50%, -50%);
     min-width: 180px;
     max-width: 240px;
   }

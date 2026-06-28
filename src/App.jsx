@@ -17,6 +17,8 @@ const winningsByPlayerId = {
   p11: 366,
 }
 
+const chartColors = ['#2563eb', '#0ea5e9', '#06b6d4', '#14b8a6', '#22c55e', '#84cc16', '#eab308', '#f59e0b', '#f97316', '#a855f7', '#ec4899']
+
 function pointsClass(points) {
   if (points === 10) return 'tip-pill is-exact'
   if (points === 5) return 'tip-pill is-near'
@@ -161,6 +163,72 @@ function App() {
     return [...new Set(all)].sort((a, b) => a - b)
   }, [])
 
+  const rankTimeline = useMemo(() => {
+    if (rounds.length === 0) return { rounds: [], series: [] }
+
+    const inProgress = matches
+      .filter((match) => !match.score || match.tips.some((tip) => tip.points === null))
+      .map((match) => extractRound(match))
+      .filter((value) => value !== null)
+
+    const derivedCurrentRound = inProgress.length > 0 ? Math.min(...inProgress) : rounds[rounds.length - 1] ?? 1
+
+    const playedRounds = matches
+      .filter((match) => match.score && match.score !== '--:--')
+      .map((match) => extractRound(match))
+      .filter((value) => value !== null)
+
+    const lastPlayedRound = playedRounds.length > 0 ? Math.max(...playedRounds) : derivedCurrentRound
+    const chartEndRound = Math.max(derivedCurrentRound, lastPlayedRound)
+    const chartRounds = rounds.filter((round) => round <= chartEndRound)
+    if (chartRounds.length === 0) return { rounds: [], series: [] }
+
+    const playerOrder = scoreboard.map((player) => player.id)
+    const playerMeta = new Map(scoreboard.map((player) => [player.id, player]))
+    const tieBreak = new Map(playerOrder.map((id, index) => [id, index]))
+    const totals = new Map(playerOrder.map((id) => [id, 0]))
+    const matchesByRound = new Map(chartRounds.map((round) => [round, []]))
+
+    for (const match of matches) {
+      const round = extractRound(match)
+      if (!Number.isFinite(round) || !matchesByRound.has(round)) continue
+      matchesByRound.get(round).push(match)
+    }
+
+    const rankByPlayer = new Map(playerOrder.map((id) => [id, []]))
+
+    for (const round of chartRounds) {
+      const roundMatches = matchesByRound.get(round) ?? []
+
+      for (const match of roundMatches) {
+        for (const tip of match.tips ?? []) {
+          if (!totals.has(tip.playerId)) continue
+          const gained = Number.isFinite(tip.points) ? tip.points : 0
+          totals.set(tip.playerId, totals.get(tip.playerId) + gained)
+        }
+      }
+
+      const sorted = [...playerOrder].sort((a, b) => {
+        const diff = (totals.get(b) ?? 0) - (totals.get(a) ?? 0)
+        if (diff !== 0) return diff
+        return (tieBreak.get(a) ?? 0) - (tieBreak.get(b) ?? 0)
+      })
+
+      sorted.forEach((playerId, index) => {
+        rankByPlayer.get(playerId).push(index + 1)
+      })
+    }
+
+    const series = playerOrder.map((playerId, index) => ({
+      id: playerId,
+      name: playerMeta.get(playerId)?.name ?? playerId,
+      color: chartColors[index % chartColors.length],
+      ranks: rankByPlayer.get(playerId) ?? [],
+    }))
+
+    return { rounds: chartRounds, series }
+  }, [rounds, scoreboard])
+
   const currentRound = useMemo(() => {
     const inProgress = matches
       .filter((match) => !match.score || match.tips.some((tip) => tip.points === null))
@@ -172,6 +240,22 @@ function App() {
   }, [rounds])
 
   const [selectedRound, setSelectedRound] = useState(currentRound)
+  const [visiblePlayerIds, setVisiblePlayerIds] = useState(() => scoreboard.map((player) => player.id))
+
+  useEffect(() => {
+    const ids = scoreboard.map((player) => player.id)
+    setVisiblePlayerIds((prev) => {
+      const kept = prev.filter((id) => ids.includes(id))
+      const missing = ids.filter((id) => !kept.includes(id))
+      return [...kept, ...missing]
+    })
+  }, [scoreboard])
+
+  const togglePlayerVisibility = (playerId) => {
+    setVisiblePlayerIds((prev) =>
+      prev.includes(playerId) ? prev.filter((id) => id !== playerId) : [...prev, playerId],
+    )
+  }
 
   const roundMatches = useMemo(
     () => matches.filter((match) => extractRound(match) === selectedRound),
@@ -530,6 +614,110 @@ function App() {
             <p>V tomto kole zatím nejsou zápasy.</p>
           )}
         </section>
+      </section>
+
+      <section className="panel rank-chart-panel">
+        <div className="panel-head">
+          <h2>Vývoj pořadí hráčů</h2>
+          <span className="tag">od 1. dne</span>
+        </div>
+
+        {rankTimeline.rounds.length > 0 ? (
+          <>
+            <div className="rank-chart-wrap" role="img" aria-label="Graf vývoje pořadí hráčů">
+              {(() => {
+                const width = 940
+                const height = 330
+                const margin = { top: 16, right: 18, bottom: 38, left: 40 }
+                const innerWidth = width - margin.left - margin.right
+                const innerHeight = height - margin.top - margin.bottom
+                const maxRank = rankTimeline.series.length
+                const stepX = rankTimeline.rounds.length > 1 ? innerWidth / (rankTimeline.rounds.length - 1) : 0
+                const rankToY = (rank) => margin.top + ((rank - 1) / Math.max(1, maxRank - 1)) * innerHeight
+                const indexToX = (index) => margin.left + index * stepX
+                const visibleSeries = rankTimeline.series.filter((player) => visiblePlayerIds.includes(player.id))
+
+                return (
+                  <svg viewBox={`0 0 ${width} ${height}`} className="rank-chart" preserveAspectRatio="xMidYMid meet">
+                    <rect x="0" y="0" width={width} height={height} fill="#f9fcff" />
+
+                    {Array.from({ length: maxRank }, (_, i) => i + 1).map((rank) => (
+                      <g key={`grid-${rank}`}>
+                        <line
+                          x1={margin.left}
+                          y1={rankToY(rank)}
+                          x2={width - margin.right}
+                          y2={rankToY(rank)}
+                          className="rank-grid-line"
+                        />
+                        {rank <= 5 || rank === maxRank ? (
+                          <text x={8} y={rankToY(rank) + 4} className="rank-axis-label">
+                            {rank}.
+                          </text>
+                        ) : null}
+                      </g>
+                    ))}
+
+                    {rankTimeline.rounds.map((round, index) => (
+                      <text
+                        key={`x-${round}`}
+                        x={indexToX(index)}
+                        y={height - 20}
+                        textAnchor="middle"
+                        className="rank-axis-label"
+                      >
+                        {round}
+                      </text>
+                    ))}
+
+                    <text x={width / 2} y={height - 4} textAnchor="middle" className="rank-axis-title">
+                      Den turnaje
+                    </text>
+
+                    {visibleSeries.map((player) => {
+                      const path = player.ranks
+                        .map((rank, index) => `${index === 0 ? 'M' : 'L'} ${indexToX(index)} ${rankToY(rank)}`)
+                        .join(' ')
+
+                      return (
+                        <g key={player.id}>
+                          <path d={path} stroke={player.color} className="rank-line" />
+                          {player.ranks.map((rank, index) => (
+                            <circle
+                              key={`${player.id}-pt-${index}`}
+                              cx={indexToX(index)}
+                              cy={rankToY(rank)}
+                              r="2.6"
+                              fill={player.color}
+                              className="rank-line-end"
+                            />
+                          ))}
+                        </g>
+                      )
+                    })}
+                  </svg>
+                )
+              })()}
+            </div>
+
+            <div className="rank-legend">
+              {rankTimeline.series.map((player) => (
+                <button
+                  type="button"
+                  className={`rank-legend-item ${visiblePlayerIds.includes(player.id) ? '' : 'is-muted'}`.trim()}
+                  key={`legend-${player.id}`}
+                  onClick={() => togglePlayerVisibility(player.id)}
+                >
+                  <span className="rank-legend-dot" style={{ backgroundColor: player.color }} />
+                  {player.name}
+                </button>
+              ))}
+            </div>
+            <p className="rank-legend-hint">Kliknutím na jméno hráče v legendě čáru skryješ/zobrazíš.</p>
+          </>
+        ) : (
+          <p>Zatím nejsou data pro graf.</p>
+        )}
       </section>
 
     </main>

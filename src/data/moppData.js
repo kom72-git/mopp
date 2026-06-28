@@ -2378,7 +2378,7 @@ export const matches = [
     "tips": [
       {
         "playerId": "p1",
-        "pick": "-",
+        "pick": "1:0",
         "points": null
       },
       {

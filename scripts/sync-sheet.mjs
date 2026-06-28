@@ -38,6 +38,8 @@ function parseCsv(csvText) {
     const row = rows[r] ?? []
 
     const day = (row[1] ?? '').trim()
+    const dayMatch = day.match(/\d+/)
+    const round = dayMatch ? Number(dayMatch[0]) : null
     const date = (row[2] ?? '').trim()
     const time = (row[3] ?? '').trim()
     const home = (row[5] ?? '').trim()
@@ -69,6 +71,7 @@ function parseCsv(csvText) {
 
     matches.push({
       id: `m${matches.length + 1}`,
+      round,
       startsAt,
       home,
       away,
@@ -100,10 +103,31 @@ async function main() {
   await fs.mkdir('src/data', { recursive: true })
   await fs.writeFile('src/data/moppData.js', output, 'utf8')
 
-  console.log(`Synced ${data.players.length} players and ${data.matches.length} matches into src/data/moppData.js`)
+  return {
+    ok: true,
+    players: data.players.length,
+    matches: data.matches.length,
+    file: 'src/data/moppData.js',
+    message: `Synchronizováno: ${data.players.length} hráčů a ${data.matches.length} zápasů.`,
+  }
 }
 
-main().catch((error) => {
-  console.error(error.message)
-  process.exit(1)
-})
+main()
+  .then((result) => {
+    const asJson = process.argv.includes('--json')
+    if (asJson) {
+      console.log(JSON.stringify(result))
+      return
+    }
+    console.log(`${result.message} Zapsáno do ${result.file}`)
+  })
+  .catch((error) => {
+    const asJson = process.argv.includes('--json')
+    if (asJson) {
+      console.log(JSON.stringify({ ok: false, message: error.message }))
+      process.exit(1)
+      return
+    }
+    console.error(error.message)
+    process.exit(1)
+  })

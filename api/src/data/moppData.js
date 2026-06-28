@@ -59,7 +59,6 @@ export const players = [
 export const matches = [
   {
     "id": "m1",
-    "round": 1,
     "startsAt": "1. (čt) 11.06. 21:00",
     "home": "Mexiko",
     "away": "Jihoafrická republika",
@@ -125,7 +124,6 @@ export const matches = [
   },
   {
     "id": "m2",
-    "round": 2,
     "startsAt": "2. (pá) 12.06. 4:00",
     "home": "Jižní Korea",
     "away": "Česko",
@@ -191,7 +189,6 @@ export const matches = [
   },
   {
     "id": "m3",
-    "round": 2,
     "startsAt": "2. (pá) 12.06. 21:00",
     "home": "Kanada",
     "away": "Bosna a Hercegovina",
@@ -257,7 +254,6 @@ export const matches = [
   },
   {
     "id": "m4",
-    "round": 3,
     "startsAt": "3. (so) 13.06. 3:00",
     "home": "USA",
     "away": "Paraguay",
@@ -323,7 +319,6 @@ export const matches = [
   },
   {
     "id": "m5",
-    "round": 3,
     "startsAt": "3. (so) 13.06. 21:00",
     "home": "Katar",
     "away": "Švýcarsko",
@@ -389,7 +384,6 @@ export const matches = [
   },
   {
     "id": "m6",
-    "round": 4,
     "startsAt": "4. (ne) 14.06. 0:00",
     "home": "Brazílie",
     "away": "Maroko",
@@ -455,7 +449,6 @@ export const matches = [
   },
   {
     "id": "m7",
-    "round": 4,
     "startsAt": "4. (ne) 14.06. 22:00",
     "home": "Nizozemsko",
     "away": "Japonsko",
@@ -521,7 +514,6 @@ export const matches = [
   },
   {
     "id": "m8",
-    "round": 5,
     "startsAt": "5. (po) 15.06. 1:00",
     "home": "Pobřeží slonoviny",
     "away": "Ekvádor",
@@ -587,7 +579,6 @@ export const matches = [
   },
   {
     "id": "m9",
-    "round": 5,
     "startsAt": "5. (po) 15.06. 21:00",
     "home": "Belgie",
     "away": "Egypt",
@@ -653,7 +644,6 @@ export const matches = [
   },
   {
     "id": "m10",
-    "round": 6,
     "startsAt": "6. (út) 16.06. 0:00",
     "home": "Saúdská Arábie",
     "away": "Uruguay",
@@ -719,7 +709,6 @@ export const matches = [
   },
   {
     "id": "m11",
-    "round": 6,
     "startsAt": "6. (út) 16.06. 21:00",
     "home": "Francie",
     "away": "Senegal",
@@ -785,7 +774,6 @@ export const matches = [
   },
   {
     "id": "m12",
-    "round": 7,
     "startsAt": "7. (st) 17.06. 6:00",
     "home": "Rakousko",
     "away": "Jordánsko",
@@ -851,7 +839,6 @@ export const matches = [
   },
   {
     "id": "m13",
-    "round": 7,
     "startsAt": "7. (st) 17.06. 22:00",
     "home": "Anglie",
     "away": "Chorvatsko",
@@ -917,7 +904,6 @@ export const matches = [
   },
   {
     "id": "m14",
-    "round": 8,
     "startsAt": "8. (čt) 18.06. 1:00",
     "home": "Ghana",
     "away": "Panama",
@@ -983,7 +969,6 @@ export const matches = [
   },
   {
     "id": "m15",
-    "round": 8,
     "startsAt": "8. (čt) 18.06. 18:00",
     "home": "Česko",
     "away": "Jihoafrická republika",
@@ -1049,7 +1034,6 @@ export const matches = [
   },
   {
     "id": "m16",
-    "round": 9,
     "startsAt": "9. (pá) 19.06. 0:00",
     "home": "Kanada",
     "away": "Katar",
@@ -1115,7 +1099,6 @@ export const matches = [
   },
   {
     "id": "m17",
-    "round": 9,
     "startsAt": "9. (pá) 19.06. 21:00",
     "home": "USA",
     "away": "Austrálie",
@@ -1181,7 +1164,6 @@ export const matches = [
   },
   {
     "id": "m18",
-    "round": 10,
     "startsAt": "10. (so) 20.06. 2:30",
     "home": "Brazílie",
     "away": "Haiti",
@@ -1247,7 +1229,6 @@ export const matches = [
   },
   {
     "id": "m19",
-    "round": 10,
     "startsAt": "10. (so) 20.06. 5:00",
     "home": "Turecko",
     "away": "Paraguay",
@@ -1313,7 +1294,6 @@ export const matches = [
   },
   {
     "id": "m20",
-    "round": 11,
     "startsAt": "11. (ne) 21.06. 6:00",
     "home": "Tunisko",
     "away": "Japonsko",
@@ -1379,7 +1359,6 @@ export const matches = [
   },
   {
     "id": "m21",
-    "round": 11,
     "startsAt": "11. (ne) 21.06. 21:00",
     "home": "Belgie",
     "away": "Írán",
@@ -1445,7 +1424,6 @@ export const matches = [
   },
   {
     "id": "m22",
-    "round": 12,
     "startsAt": "12. (po) 22.06. 3:00",
     "home": "Nový Zéland",
     "away": "Egypt",
@@ -1511,7 +1489,6 @@ export const matches = [
   },
   {
     "id": "m23",
-    "round": 12,
     "startsAt": "12. (po) 22.06. 23:00",
     "home": "Francie",
     "away": "Irák",
@@ -1577,7 +1554,6 @@ export const matches = [
   },
   {
     "id": "m24",
-    "round": 13,
     "startsAt": "13. (út) 23.06. 5:00",
     "home": "Jordánsko",
     "away": "Alžírsko",
@@ -1643,7 +1619,6 @@ export const matches = [
   },
   {
     "id": "m25",
-    "round": 13,
     "startsAt": "13. (út) 23.06. 19:00",
     "home": "Portugalsko",
     "away": "Uzbekistán",
@@ -1709,7 +1684,6 @@ export const matches = [
   },
   {
     "id": "m26",
-    "round": 14,
     "startsAt": "14. (st) 24.06. 4:00",
     "home": "Kolumbie",
     "away": "DR Kongo",
@@ -1775,7 +1749,6 @@ export const matches = [
   },
   {
     "id": "m27",
-    "round": 14,
     "startsAt": "14. (st) 24.06. 21:00",
     "home": "Švýcarsko",
     "away": "Kanada",
@@ -1841,7 +1814,6 @@ export const matches = [
   },
   {
     "id": "m28",
-    "round": 15,
     "startsAt": "15. (čt) 25.06. 0:00",
     "home": "Skotsko",
     "away": "Brazílie",
@@ -1907,7 +1879,6 @@ export const matches = [
   },
   {
     "id": "m29",
-    "round": 15,
     "startsAt": "15. (čt) 25.06. 3:00",
     "home": "Jihoafrická republika",
     "away": "Jižní Korea",
@@ -1973,7 +1944,6 @@ export const matches = [
   },
   {
     "id": "m30",
-    "round": 16,
     "startsAt": "16. (pá) 26.06. 1:00",
     "home": "Japonsko",
     "away": "Švédsko",
@@ -2039,7 +2009,6 @@ export const matches = [
   },
   {
     "id": "m31",
-    "round": 16,
     "startsAt": "16. (pá) 26.06. 21:00",
     "home": "Norsko",
     "away": "Francie",
@@ -2105,7 +2074,6 @@ export const matches = [
   },
   {
     "id": "m32",
-    "round": 17,
     "startsAt": "17. (so) 27.06. 2:00",
     "home": "Uruguay",
     "away": "Španělsko",
@@ -2171,7 +2139,6 @@ export const matches = [
   },
   {
     "id": "m33",
-    "round": 17,
     "startsAt": "17. (so) 27.06. 23:00",
     "home": "Panama",
     "away": "Anglie",
@@ -2237,7 +2204,6 @@ export const matches = [
   },
   {
     "id": "m34",
-    "round": 18,
     "startsAt": "18. (ne) 28.06. 1:30",
     "home": "Kolumbie",
     "away": "Portugalsko",
@@ -2303,7 +2269,6 @@ export const matches = [
   },
   {
     "id": "m35",
-    "round": 18,
     "startsAt": "18. (ne) 28.06. 4:00",
     "home": "Alžírsko",
     "away": "Rakousko",
@@ -2369,8 +2334,7 @@ export const matches = [
   },
   {
     "id": "m36",
-    "round": 18,
-    "startsAt": "18. (ne) 28.06. 21:00",
+    "startsAt": "19. (ne) 28.06. 21:00",
     "home": "Jihoafrická republika",
     "away": "Kanada",
     "score": null,
@@ -2435,7 +2399,6 @@ export const matches = [
   },
   {
     "id": "m37",
-    "round": 19,
     "startsAt": "19. (po) 29.06. 19:00",
     "home": "Brazílie",
     "away": "Japonsko",
@@ -2501,8 +2464,7 @@ export const matches = [
   },
   {
     "id": "m38",
-    "round": 19,
-    "startsAt": "19. (po) 29.06. 22:30",
+    "startsAt": "20. (po) 29.06. 22:30",
     "home": "Německo",
     "away": "Paraguay",
     "score": null,
@@ -2567,7 +2529,6 @@ export const matches = [
   },
   {
     "id": "m39",
-    "round": 20,
     "startsAt": "20. (út) 30.06. 03:00",
     "home": "Nizozemsko",
     "away": "Maroko",
@@ -2633,7 +2594,6 @@ export const matches = [
   },
   {
     "id": "m40",
-    "round": 20,
     "startsAt": "20. (út) 30.06. 19:00",
     "home": "Pobřeží slonoviny",
     "away": "Norsko",
@@ -2699,7 +2659,6 @@ export const matches = [
   },
   {
     "id": "m41",
-    "round": 20,
     "startsAt": "20. (út) 30.06. 23:00",
     "home": "Francie",
     "away": "Švédsko",
@@ -2765,7 +2724,6 @@ export const matches = [
   },
   {
     "id": "m42",
-    "round": 22,
     "startsAt": "22. (čt) 02.07. 02:00",
     "home": "USA",
     "away": "Bosna a Hercegovina",
@@ -2831,8 +2789,7 @@ export const matches = [
   },
   {
     "id": "m43",
-    "round": 23,
-    "startsAt": "23. (pá) 03.07. 20:00",
+    "startsAt": "24. (pá) 03.07. 20:00",
     "home": "Austrálie",
     "away": "Egypt",
     "score": null,
@@ -2897,8 +2854,7 @@ export const matches = [
   },
   {
     "id": "m44",
-    "round": 24,
-    "startsAt": "24. (so) 04.07. 00:00",
+    "startsAt": "25. (so) 04.07. 00:00",
     "home": "Argentina",
     "away": "Kapverdy",
     "score": null,

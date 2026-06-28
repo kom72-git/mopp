@@ -14,6 +14,60 @@
   color: #f7fbff;
   border-radius: 16px;
   padding: 0.95rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.85rem;
+  align-items: start;
+}
+
+.hero-content {
+  min-width: 0;
+  padding-left: 0.3rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.hero-logo-wrap {
+  position: relative;
+  margin: 0;
+  max-width: 72px;
+  justify-self: end;
+}
+
+.hero-logo-button {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.hero-logo {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.sync-tooltip {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  z-index: 2;
+  min-width: 210px;
+  max-width: 300px;
+  padding: 0.36rem 0.5rem;
+  border-radius: 8px;
+  background: #f0f7ff;
+  border: 1px solid #9dc4e6;
+  color: #123a5f;
+  font-size: 0.72rem;
+  line-height: 1.25;
+}
+
+.sync-tooltip.is-info {
+  background: #e8f4ff;
+  border-color: #7db2df;
 }
 
 .badge {
@@ -37,6 +91,12 @@
   margin: 0.48rem 0 0;
   max-width: 62ch;
   color: rgb(233 243 255 / 95%);
+}
+
+.intro-sep {
+  display: inline-block;
+  margin: 0 0.46rem;
+  opacity: 0.92;
 }
 
 .panel {
@@ -155,25 +215,69 @@
 
 .match-item-main {
   margin-top: 0.34rem;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 0.55rem;
-  align-items: center;
+  display: block;
 }
 
 .teams-stack {
+  position: relative;
   display: grid;
   gap: 0.24rem;
+  margin-right: 0.95rem;
+  padding-right: 0.4rem;
+}
+
+.teams-stack::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: #cfd5dd;
 }
 
 .team-inline {
   display: flex;
   align-items: center;
-  gap: 0.3rem;
+  justify-content: space-between;
+  gap: 0.5rem;
   font-weight: 700;
   color: #173b5c;
   min-width: 0;
   word-break: break-word;
+}
+
+.team-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.team-goals {
+  position: relative;
+  min-width: 1.9rem;
+  padding-right: 0.5rem;
+  text-align: right;
+  color: #5a6c7e;
+  font-variant-numeric: tabular-nums;
+}
+
+.team-goals.is-winner {
+  color: #0d2f4f;
+}
+
+.team-goals.is-winner::after {
+  content: '';
+  position: absolute;
+  right: -0.4rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-top: 0.32rem solid transparent;
+  border-bottom: 0.32rem solid transparent;
+  border-right: 0.5rem solid #0d2f4f;
 }
 
 .flag {
@@ -184,16 +288,6 @@
   object-fit: cover;
 }
 
-.score-box {
-  min-width: 66px;
-  text-align: center;
-  font-weight: 800;
-  color: #17466c;
-  background: #e9f3fc;
-  border: 1px solid #c8dff2;
-  border-radius: 10px;
-  padding: 0.34rem 0.45rem;
-}
 
 .match-item-sub {
   margin: 0.34rem 0 0;
@@ -219,29 +313,29 @@
 
 .selected-match-main {
   margin-top: 0.34rem;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 0.55rem;
+  display: block;
 }
 
 .selected-teams-stack {
+  position: relative;
   display: grid;
-  gap: 0.22rem;
+  gap: 0.28rem;
+  margin-right: 0.95rem;
+  padding-right: 0.4rem;
   color: #173a5b;
   font-weight: 700;
 }
 
-.selected-score-box {
-  min-width: 72px;
-  text-align: center;
-  font-weight: 800;
-  color: #17466c;
-  background: #e8f3fd;
-  border: 1px solid #c8dff2;
-  border-radius: 10px;
-  padding: 0.38rem 0.46rem;
+.selected-teams-stack::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: #cfd5dd;
 }
+
 
 .selected-match-bank {
   margin: 0.34rem 0 0;
@@ -258,10 +352,10 @@
 .tips-head,
 .tips-row {
   display: grid;
-  grid-template-columns: 52px minmax(0, 1fr) 72px 66px;
+  grid-template-columns: minmax(0, 1fr) 72px 66px;
   gap: 0.4rem;
   align-items: center;
-  padding: 0.52rem 0.62rem;
+  padding: 0.52rem 0.82rem;
 }
 
 .tips-head {
@@ -278,21 +372,33 @@
   background: #fff;
 }
 
-.rank-cell {
-  color: #3f6588;
-  font-weight: 700;
-}
-
 .name-cell {
   color: #193a58;
   font-weight: 600;
   min-width: 0;
   word-break: break-word;
+  padding-left: 0.1rem;
 }
 
 .tip-value {
   color: #1f3f60;
   font-weight: 800;
+}
+
+.split-tip {
+  display: inline-grid;
+  gap: 0.06rem;
+  line-height: 1;
+}
+
+.split-tip strong {
+  display: block;
+  text-align: left;
+}
+
+.split-tip strong.is-placeholder {
+  color: #5a6c7e;
+  font-weight: 700;
 }
 
 .tip-pill {
@@ -335,15 +441,21 @@
   background: linear-gradient(180deg, #fff, #f7fbff);
   padding: 0.42rem 0.5rem;
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  gap: 0.2rem;
+  box-shadow: 0 3px 12px rgb(11 35 58 / 6%);
+}
+
+.stand-top {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 0.45rem;
 }
 
-.stand-card p {
+.stand-rank {
   margin: 0;
   color: #3f6485;
-  font-weight: 700;
+  font-weight: 800;
   font-size: 0.74rem;
 }
 
@@ -353,21 +465,54 @@
   font-size: 0.88rem;
 }
 
-.stand-card strong {
+.stand-points {
   display: inline-block;
   color: #0d2f4f;
 }
 
-.stand-metrics {
+.stand-bottom {
   display: grid;
-  justify-items: end;
-  gap: 0.08rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.45rem;
 }
 
-.stand-metrics span {
+.stand-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.24rem;
+  min-width: 0;
+}
+
+.stat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.26rem;
+  border-radius: 999px;
+  padding: 0.08rem 0.28rem 0.08rem 0.42rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.stat-label {
+  opacity: 0.9;
+}
+
+.stat-count {
+  min-width: 1.35rem;
+  text-align: center;
+  border-radius: 999px;
+  padding: 0.04rem 0.34rem;
+  background: rgb(255 255 255 / 68%);
+  font-size: 0.68rem;
+}
+
+.stand-winnings {
   font-size: 0.74rem;
   color: #4f6b82;
   font-weight: 700;
+  text-align: right;
 }
 
 @media (min-width: 980px) {
@@ -394,12 +539,8 @@
   .tips-row {
     grid-template-columns: auto minmax(0, 1fr) auto;
     grid-template-areas:
-      'rank name points'
+      'name name points'
       '. pick points';
-  }
-
-  .tips-row .rank-cell {
-    grid-area: rank;
   }
 
   .tips-row .name-cell {
@@ -417,6 +558,18 @@
 }
 
 @media (max-width: 520px) {
+  .hero-logo-wrap {
+    justify-self: end;
+    max-width: 58px;
+  }
+
+  .sync-tooltip {
+    right: auto;
+    left: 0;
+    min-width: 180px;
+    max-width: 240px;
+  }
+
   .round-tabs {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

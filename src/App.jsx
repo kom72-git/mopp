@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 import { matches, players } from './data/moppData'
 import { getFlagUrl } from './data/countryFlags'
@@ -25,31 +25,145 @@ function pointsClass(points) {
   return 'tip-pill is-pending'
 }
 
-function extractRound(startsAt) {
-  const matched = startsAt?.match(/^(\d+)\./)
+function extractRound(match) {
+  if (Number.isFinite(match?.round)) return match.round
+  const matched = match?.startsAt?.match(/^(\d+)\./)
   return matched ? Number(matched[1]) : null
 }
 
 function formatRound(round) {
-  return `Den ${round}`
+  return `${round}. den`
+}
+
+function extractCalendarDate(startsAt) {
+  const matched = startsAt?.match(/^\d+\.\s*\([^)]+\)\s*(\d{1,2}\.\d{1,2}\.)/)
+  if (matched) return matched[1]
+
+  const fallback = startsAt?.match(/(\d{1,2}\.\d{1,2}\.)/g)
+  return fallback?.[fallback.length - 1] ?? null
+}
+
+function parseMatchDate(startsAt) {
+  const matched = startsAt?.match(/(\d{1,2})\.(\d{1,2})\.\s*(\d{1,2}):(\d{2})/)
+  if (!matched) return null
+
+  const day = Number(matched[1])
+  const month = Number(matched[2]) - 1
+  const hour = Number(matched[3])
+  const minute = Number(matched[4])
+  return new Date(2026, month, day, hour, minute)
+}
+
+function getStageLabel(startsAt) {
+  const date = parseMatchDate(startsAt)
+  if (!date) return 'Skupinová fáze'
+
+  const groupEnd = new Date(2026, 5, 28, 4, 0)
+  const round16End = new Date(2026, 6, 4, 3, 30)
+  const round8End = new Date(2026, 6, 7, 22, 0)
+  const quarterEnd = new Date(2026, 6, 12, 3, 0)
+
+  if (date <= groupEnd) return 'Skupinová fáze'
+  if (date <= round16End) return 'Šestnáctifinále'
+  if (date <= round8End) return 'Osmifinále'
+  if (date <= quarterEnd) return 'Čtvrtfinále'
+  if (date.getMonth() === 6 && (date.getDate() === 14 || date.getDate() === 15)) return 'Semifinále'
+  if (date.getMonth() === 6 && date.getDate() === 18) return 'O 3. místo'
+  if (date.getMonth() === 6 && date.getDate() === 19) return 'Finále'
+
+  return 'Skupinová fáze'
+}
+
+function parseScore(score) {
+  if (!score || score === '--:--') return { home: null, away: null, isDraw: false, winner: null }
+
+  const [homeRaw, awayRaw] = String(score).split(':')
+  const home = Number(homeRaw)
+  const away = Number(awayRaw)
+  if (!Number.isFinite(home) || !Number.isFinite(away)) {
+    return { home: null, away: null, isDraw: false, winner: null }
+  }
+
+  const isDraw = home === away
+  const winner = isDraw ? null : home > away ? 'home' : 'away'
+
+  return { home, away, isDraw, winner }
+}
+
+function parseTipValue(value) {
+  if (!value || value === '-') return { home: '-', away: '-' }
+
+  const [homeRaw = '', awayRaw = ''] = String(value).split(':')
+  const normalize = (token) => {
+    const trimmed = token.trim()
+    if (!trimmed) return '-'
+    if (/^n$/i.test(trimmed)) return 'N'
+    if (/^-?\d+$/.test(trimmed)) return trimmed
+    return '-'
+  }
+
+  return {
+    home: normalize(homeRaw),
+    away: normalize(awayRaw),
+  }
+}
+
+function isNoBetPick(pick) {
+  return /^\s*n\s*:\s*n\s*$/i.test(String(pick ?? ''))
+}
+
+function SplitTip({ value }) {
+  const { home, away } = parseTipValue(value)
+
+  return (
+    <span className="split-tip" aria-label={`Tip ${value}`}>
+      <strong className={home === '-' ? 'is-placeholder' : ''}>{home}</strong>
+      <strong className={away === '-' ? 'is-placeholder' : ''}>{away}</strong>
+    </span>
+  )
 }
 
 function App() {
+  const tooltipTimerRef = useRef(null)
   const scoreboard = useMemo(() => [...players].sort((a, b) => b.points - a.points), [])
   const standings = useMemo(
-    () => scoreboard.map((player) => ({ ...player, winnings: winningsByPlayerId[player.id] ?? 0 })),
+    () =>
+      scoreboard.map((player) => {
+        const stats = {
+          exact: 0,
+          near: 0,
+          win: 0,
+          noBet: 0,
+        }
+
+        for (const match of matches) {
+          const tip = match.tips.find((item) => item.playerId === player.id)
+          if (!tip) continue
+
+          if (tip.points === 10) stats.exact += 1
+          if (tip.points === 5) stats.near += 1
+          if (tip.points === 3) stats.win += 1
+          if (isNoBetPick(tip.pick)) stats.noBet += 1
+        }
+
+        return {
+          ...player,
+          winnings: winningsByPlayerId[player.id] ?? 0,
+          stats,
+        }
+      }),
     [scoreboard],
   )
 
   const rounds = useMemo(() => {
-    const all = matches.map((match) => extractRound(match.startsAt)).filter((value) => value !== null)
+    const all = matches.map((match) => extractRound(match)).filter((value) => value !== null)
     return [...new Set(all)].sort((a, b) => a - b)
   }, [])
 
   const currentRound = useMemo(() => {
     const inProgress = matches
       .filter((match) => !match.score || match.tips.some((tip) => tip.points === null))
-      .map((match) => extractRound(match.startsAt))
+      .map((match) => extractRound(match))
       .filter((value) => value !== null)
 
     if (inProgress.length > 0) return Math.min(...inProgress)
@@ -59,37 +173,33 @@ function App() {
   const [selectedRound, setSelectedRound] = useState(currentRound)
 
   const roundMatches = useMemo(
-    () => matches.filter((match) => extractRound(match.startsAt) === selectedRound),
+    () => matches.filter((match) => extractRound(match) === selectedRound),
     [selectedRound],
   )
 
-  const roundTipTotals = useMemo(() => {
-    const submitted = roundMatches.reduce((acc, match) => {
-      const submittedInMatch = match.tips.filter((tip) => tip.pick && tip.pick !== '-').length
-      return acc + submittedInMatch
-    }, 0)
+  const stageLabel = useMemo(() => {
+    const firstMatch = roundMatches[0]
+    return getStageLabel(firstMatch?.startsAt)
+  }, [roundMatches])
 
-    return {
-      submitted,
-      max: roundMatches.length * players.length,
-    }
+  const roundDateLabel = useMemo(() => {
+    const dates = [...new Set(roundMatches.map((match) => extractCalendarDate(match.startsAt)).filter(Boolean))]
+    if (dates.length === 0) return ''
+    if (dates.length === 1) return dates[0]
+    return `${dates[0]}–${dates[dates.length - 1]}`
   }, [roundMatches])
 
   const [selectedMatchId, setSelectedMatchId] = useState(roundMatches[0]?.id ?? '')
 
-  useEffect(() => {
-    if (roundMatches.length === 0) {
-      setSelectedMatchId('')
-      return
-    }
-
+  const effectiveSelectedMatchId = useMemo(() => {
+    if (roundMatches.length === 0) return ''
     const exists = roundMatches.some((match) => match.id === selectedMatchId)
-    if (!exists) setSelectedMatchId(roundMatches[0].id)
+    return exists ? selectedMatchId : roundMatches[0].id
   }, [roundMatches, selectedMatchId])
 
   const selectedMatch = useMemo(
-    () => roundMatches.find((match) => match.id === selectedMatchId) ?? roundMatches[0],
-    [roundMatches, selectedMatchId],
+    () => roundMatches.find((match) => match.id === effectiveSelectedMatchId) ?? roundMatches[0],
+    [roundMatches, effectiveSelectedMatchId],
   )
 
   const selectedMatchTips = useMemo(() => {
@@ -108,24 +218,98 @@ function App() {
       .sort((a, b) => a.rank - b.rank)
   }, [selectedMatch, scoreboard])
 
+  const [syncMessage, setSyncMessage] = useState('')
+  const [showSyncTooltip, setShowSyncTooltip] = useState(false)
+  const [isSyncing, setIsSyncing] = useState(false)
+
+  useEffect(() => {
+    return () => {
+      if (tooltipTimerRef.current) {
+        clearTimeout(tooltipTimerRef.current)
+      }
+    }
+  }, [])
+
+  const showTooltip = (message) => {
+    if (tooltipTimerRef.current) {
+      clearTimeout(tooltipTimerRef.current)
+    }
+    setSyncMessage(message)
+    setShowSyncTooltip(true)
+    tooltipTimerRef.current = setTimeout(() => {
+      setShowSyncTooltip(false)
+      tooltipTimerRef.current = null
+    }, 3200)
+  }
+
+  const handleLogoClick = async (event) => {
+    if (event.detail < 3 || isSyncing) return
+
+    setIsSyncing(true)
+    showTooltip('Synchronizace s Google tabulkou...')
+
+    try {
+      let response
+      let payload
+
+      try {
+        response = await fetch('/api/sync-sheet', { method: 'POST' })
+        payload = await response.json()
+      } catch {
+        response = await fetch('http://localhost:4000/api/sync-sheet', { method: 'POST' })
+        payload = await response.json()
+      }
+
+      if (!response.ok || !payload?.ok) {
+        showTooltip(payload?.message || 'Synchronizace selhala')
+      } else {
+        showTooltip(payload.message || 'Synchronizace dokončena')
+        setTimeout(() => {
+          window.location.reload()
+        }, 700)
+      }
+    } catch {
+      showTooltip('API není dostupné. Spusť: npm run dev:api')
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
   return (
     <main className="layout">
       <header className="hero">
-        <p className="badge">Master of PP • MOPP</p>
-        <h1>Kolo na jeden pohled</h1>
-        <p className="intro">
-          Nejdriv vyberes kolo, pak zapas. Detail je jen jeden, takze orientace je rychla i na
-          mobilu.
-        </p>
+        <div className="hero-content">
+          <h1>MS ve fotbale 2026</h1>
+          <p className="intro">
+            <span>tipovací soutěž</span>
+            <span className="intro-sep" aria-hidden="true">
+              –
+            </span>
+            <span>Master of PP</span>
+          </p>
+        </div>
+
+        <figure className="hero-logo-wrap">
+          <button type="button" className="hero-logo-button" onClick={handleLogoClick}>
+            <img
+              className="hero-logo"
+              src="/fifa-world-cup-2026-logo.svg"
+              alt="Autor: FIFA – Tento soubor byl odvozen z: World-g89b177785 1280.png:Tento soubor byl odvozen z: 2026 FIFA World Cup emblem (without trophy).svg:Tento soubor byl odvozen z: FIFA World Cup 2026 (Wordmark).svg:, Volné dílo, https://commons.wikimedia.org/w/index.php?curid=188361756"
+              loading="lazy"
+            />
+          </button>
+          {showSyncTooltip ? (
+            <span className={`sync-tooltip ${isSyncing ? 'is-info' : ''}`}>{syncMessage}</span>
+          ) : null}
+        </figure>
       </header>
 
       <section className="panel controls-panel">
         <div className="panel-head">
-          <h2>Vyber dne</h2>
-          <span className="tag">{roundMatches.length} zapasu</span>
+          <h2>{stageLabel} · {formatRound(selectedRound)}</h2>
         </div>
 
-        <div className="round-tabs" role="tablist" aria-label="Vyber dne">
+        <div className="round-tabs" role="tablist" aria-label="Výběr dne">
           {rounds.map((round) => {
             const timeClass =
               round < currentRound ? 'is-past' : round > currentRound ? 'is-future' : 'is-current'
@@ -147,10 +331,8 @@ function App() {
 
       <section className="panel day-matches-panel">
         <div className="panel-head">
-          <h2>Zapasy dne</h2>
-          <span className="tag">
-            Tipy {roundTipTotals.submitted}/{roundTipTotals.max}
-          </span>
+          <h2>Zápasy dne</h2>
+          {roundDateLabel ? <span className="tag">{roundDateLabel}</span> : null}
         </div>
 
         <div className="day-matches-row">
@@ -159,6 +341,7 @@ function App() {
             const awayFlag = getFlagUrl(match.away)
             const isActive = match.id === selectedMatch?.id
             const submittedTips = match.tips.filter((tip) => tip.pick && tip.pick !== '-').length
+            const score = parseScore(match.score)
 
             return (
               <button
@@ -172,24 +355,32 @@ function App() {
                 <div className="match-item-main">
                   <div className="teams-stack">
                     <span className="team-inline">
-                      {homeFlag ? (
-                        <img className="flag" src={homeFlag} alt={`Vlajka ${match.home}`} loading="lazy" />
-                      ) : null}
-                      {match.home}
+                      <span className="team-left">
+                        {homeFlag ? (
+                          <img className="flag" src={homeFlag} alt={`Vlajka ${match.home}`} loading="lazy" />
+                        ) : null}
+                        {match.home}
+                      </span>
+                      <strong className={`team-goals ${score.winner === 'home' ? 'is-winner' : ''}`}>
+                        {score.home ?? '-'}
+                      </strong>
                     </span>
                     <span className="team-inline">
-                      {awayFlag ? (
-                        <img className="flag" src={awayFlag} alt={`Vlajka ${match.away}`} loading="lazy" />
-                      ) : null}
-                      {match.away}
+                      <span className="team-left">
+                        {awayFlag ? (
+                          <img className="flag" src={awayFlag} alt={`Vlajka ${match.away}`} loading="lazy" />
+                        ) : null}
+                        {match.away}
+                      </span>
+                      <strong className={`team-goals ${score.winner === 'away' ? 'is-winner' : ''}`}>
+                        {score.away ?? '-'}
+                      </strong>
                     </span>
                   </div>
-
-                  <div className="score-box">{match.score ?? '--:--'}</div>
                 </div>
 
                 <p className="match-item-sub">
-                  Bank {match.bank} Kc • Tipy {submittedTips}/{players.length}
+                  Bank {match.bank} Kč • Tipy {submittedTips}/{players.length}
                 </p>
               </button>
             )
@@ -200,18 +391,38 @@ function App() {
       <section className="workspace">
         <aside className="panel match-list-panel">
           <div className="panel-head">
-            <h2>Poradi hracu</h2>
-            <span className="tag">{standings.length}</span>
+            <h2>Pořadí hráčů</h2>
           </div>
 
           <div className="standings-list">
             {standings.map((player, index) => (
               <article className="stand-card" key={player.id}>
-                <p>#{index + 1}</p>
-                <h3>{player.name}</h3>
-                <div className="stand-metrics">
-                  <strong>{player.points} b</strong>
-                  <span>{player.winnings} Kc</span>
+                <div className="stand-top">
+                  <p className="stand-rank">{index + 1}.</p>
+                  <h3>{player.name}</h3>
+                  <strong className="stand-points">{player.points} b</strong>
+                </div>
+
+                <div className="stand-bottom">
+                  <div className="stand-stats">
+                    <span className="stat-pill is-exact">
+                      <span className="stat-label">10b</span>
+                      <strong className="stat-count">{player.stats.exact}×</strong>
+                    </span>
+                    <span className="stat-pill is-near">
+                      <span className="stat-label">5b</span>
+                      <strong className="stat-count">{player.stats.near}×</strong>
+                    </span>
+                    <span className="stat-pill is-win">
+                      <span className="stat-label">3b</span>
+                      <strong className="stat-count">{player.stats.win}×</strong>
+                    </span>
+                    <span className="stat-pill is-miss">
+                      <span className="stat-label">N</span>
+                      <strong className="stat-count">{player.stats.noBet}×</strong>
+                    </span>
+                  </div>
+                  <span className="stand-winnings">{player.winnings} Kč</span>
                 </div>
               </article>
             ))}
@@ -233,17 +444,56 @@ function App() {
                 <p className="selected-match-time">{selectedMatch.startsAt}</p>
                 <div className="selected-match-main">
                   <div className="selected-teams-stack">
-                    <span>{selectedMatch.home}</span>
-                    <span>{selectedMatch.away}</span>
+                    {(() => {
+                      const homeFlag = getFlagUrl(selectedMatch.home)
+                      const awayFlag = getFlagUrl(selectedMatch.away)
+                      const score = parseScore(selectedMatch.score)
+
+                      return (
+                        <>
+                          <span className="team-inline">
+                            <span className="team-left">
+                              {homeFlag ? (
+                                <img
+                                  className="flag"
+                                  src={homeFlag}
+                                  alt={`Vlajka ${selectedMatch.home}`}
+                                  loading="lazy"
+                                />
+                              ) : null}
+                              {selectedMatch.home}
+                            </span>
+                            <strong className={`team-goals ${score.winner === 'home' ? 'is-winner' : ''}`}>
+                              {score.home ?? '-'}
+                            </strong>
+                          </span>
+
+                          <span className="team-inline">
+                            <span className="team-left">
+                              {awayFlag ? (
+                                <img
+                                  className="flag"
+                                  src={awayFlag}
+                                  alt={`Vlajka ${selectedMatch.away}`}
+                                  loading="lazy"
+                                />
+                              ) : null}
+                              {selectedMatch.away}
+                            </span>
+                            <strong className={`team-goals ${score.winner === 'away' ? 'is-winner' : ''}`}>
+                              {score.away ?? '-'}
+                            </strong>
+                          </span>
+                        </>
+                      )
+                    })()}
                   </div>
-                  <div className="selected-score-box">{selectedMatch.score ?? '--:--'}</div>
                 </div>
                 <p className="selected-match-bank">Bank {selectedMatch.bank} Kč</p>
               </header>
 
               <div className="tips-table" role="table" aria-label="Tipy hráčů">
                 <div className="tips-head" role="row">
-                  <span>#</span>
                   <span>Hráč</span>
                   <span>Tip</span>
                   <span>Body</span>
@@ -251,9 +501,10 @@ function App() {
 
                 {selectedMatchTips.map((tip) => (
                   <div className="tips-row" role="row" key={`${selectedMatch.id}-${tip.playerId}`}>
-                    <span className="rank-cell">#{tip.rank}</span>
                     <span className="name-cell">{tip.playerName}</span>
-                    <strong className="tip-value">{tip.pick}</strong>
+                    <span className="tip-value">
+                      <SplitTip value={tip.pick} />
+                    </span>
                     <span className={pointsClass(tip.points)}>
                       {tip.points === null ? '-' : `${tip.points} b`}
                     </span>

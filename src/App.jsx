@@ -3,18 +3,36 @@ import './App.css'
 import { matches as fallbackMatches, players as fallbackPlayers } from './data/moppData'
 import { getFlagUrl } from './data/countryFlags'
 
-const winningsByPlayerId = {
-  p1: 330,
-  p2: 478,
-  p3: 0,
-  p4: 55,
-  p5: 558,
-  p6: 366,
-  p7: 118,
-  p8: 672,
-  p9: 357,
-  p10: 220,
-  p11: 366,
+// Volitelny rucni bonus navic mimo vyhry ze zapasu.
+// Tady pridej extra castky, ktere chces pricist k automatickemu souctu vyher.
+const bonusWinningsByPlayerId = {
+  p1: 0, // Kom
+  p2: 0, // Kraty
+  p3: 0, // Radek
+  p4: 0, // Roman
+  p5: 0, // Spaca
+  p6: 0, // Slanec
+  p7: 0, // Lada
+  p8: 0, // Prd
+  p9: 0, // Jony
+  p10: 0, // Mirax
+  p11: 0, // Honza
+}
+
+// Volitelne rucni korekce vyplat pro konkretni zapasy.
+// Format: { matchId: { playerId: castka } }
+const manualPayoutOverridesByMatchId = {
+}
+
+// Komu priradit zbytek banku pri nedelitelnosti.
+// Format: { matchId: playerId }
+const remainderRecipientByMatchId = {
+  // Priklad:
+  // m12: 'p3', // u zapasu m12 dostane zbytek hrac p3
+  m1: 'p8', 
+  m2: 'p8',
+  m23: 'p2',
+  m33: 'p8',
 }
 
 const chartColors = ['#2563eb', '#0ea5e9', '#06b6d4', '#14b8a6', '#22c55e', '#84cc16', '#eab308', '#f59e0b', '#f97316', '#a855f7', '#ec4899']
@@ -92,6 +110,70 @@ function parseMatchDate(startsAt) {
   return new Date(2026, month, day, hour, minute)
 }
 
+function parseStartsAtDisplay(startsAt, matchId) {
+  const matched = startsAt?.match(/^(\d+\.)\s*\(([^)]+)\)\s*(.+)$/)
+  if (!matched) {
+    return {
+      roundLabel: startsAt ?? '',
+      matchNo: '',
+      dayName: '',
+      rest: '',
+    }
+  }
+
+  const [, roundLabel, dayRaw, restRaw] = matched
+  const dayToken = dayRaw.trim().toLowerCase()
+  const dayNames = {
+    po: 'pondeli',
+    pondeli: 'pondeli',
+    'pondělí': 'pondeli',
+    ut: 'utery',
+    'út': 'utery',
+    utery: 'utery',
+    'úterý': 'utery',
+    st: 'streda',
+    streda: 'streda',
+    'středa': 'streda',
+    ct: 'ctvrtek',
+    'čt': 'ctvrtek',
+    ctvrtek: 'ctvrtek',
+    'čtvrtek': 'ctvrtek',
+    pa: 'patek',
+    'pá': 'patek',
+    patek: 'patek',
+    'pátek': 'patek',
+    so: 'sobota',
+    sobota: 'sobota',
+    ne: 'nedele',
+    nedele: 'nedele',
+    'neděle': 'nedele',
+  }
+
+  const dayName = dayNames[dayToken] ?? dayRaw
+  const rest = restRaw.trimStart()
+  const matchNo = String(matchId ?? '').replace(/^m/i, '')
+  return {
+    roundLabel,
+    matchNo,
+    dayName,
+    rest,
+  }
+}
+
+function StartsAtLabel({ startsAt, matchId }) {
+  const parts = parseStartsAtDisplay(startsAt, matchId)
+  if (!parts.dayName) return <>{parts.roundLabel}</>
+
+  return (
+    <span className="starts-at-label">
+      <span>{parts.roundLabel}</span>
+      {parts.matchNo ? <span className="starts-at-match-no">({parts.matchNo})</span> : null}
+      <span>{parts.dayName}</span>
+      <span className="starts-at-date">{parts.rest}</span>
+    </span>
+  )
+}
+
 function getStageLabel(startsAt) {
   const date = parseMatchDate(startsAt)
   if (!date) return 'Skupinová fáze'
@@ -150,6 +232,38 @@ function isNoBetPick(pick) {
   return /^\s*n\s*:\s*n\s*$/i.test(String(pick ?? ''))
 }
 
+function calculateMatchPayouts(match, playerOrder, overridesByMatchId, remainderRecipientsByMatchId) {
+  const override = overridesByMatchId?.[match?.id]
+  if (override && typeof override === 'object') {
+    return new Map(Object.entries(override).map(([playerId, value]) => [playerId, Number(value) || 0]))
+  }
+
+  const tips = match?.tips ?? []
+  const bank = Number(match?.bank)
+  if (!Number.isFinite(bank) || bank <= 0) return new Map()
+
+  const winners = tips.filter((tip) => tip.points === 10)
+  if (winners.length === 0) return new Map()
+
+  winners.sort((a, b) => (playerOrder.get(a.playerId) ?? 999) - (playerOrder.get(b.playerId) ?? 999))
+
+  const base = Math.floor(bank / winners.length)
+  const remainder = bank - base * winners.length
+  const payouts = new Map(winners.map((winner) => [winner.playerId, base]))
+
+  if (remainder > 0) {
+    const preferredWinnerId = remainderRecipientsByMatchId?.[match?.id]
+    const fallbackWinnerId = winners[0]?.playerId
+    const recipientId = preferredWinnerId && payouts.has(preferredWinnerId) ? preferredWinnerId : fallbackWinnerId
+
+    if (recipientId) {
+      payouts.set(recipientId, (payouts.get(recipientId) ?? 0) + remainder)
+    }
+  }
+
+  return payouts
+}
+
 async function fetchLiveData() {
   const response = await fetch(`/api/data?t=${Date.now()}`, { cache: 'no-store' })
   const payload = await response.json()
@@ -182,6 +296,26 @@ function App() {
   const players = data.players
   const matches = data.matches
   const scoreboard = useMemo(() => [...players].sort((a, b) => b.points - a.points), [players])
+  const totalPayoutsByPlayer = useMemo(() => {
+    const playerOrder = new Map(players.map((player, index) => [player.id, index]))
+    const totals = new Map(players.map((player) => [player.id, 0]))
+
+    for (const match of matches) {
+      const payouts = calculateMatchPayouts(
+        match,
+        playerOrder,
+        manualPayoutOverridesByMatchId,
+        remainderRecipientByMatchId,
+      )
+
+      for (const [playerId, payout] of payouts.entries()) {
+        totals.set(playerId, (totals.get(playerId) ?? 0) + (Number(payout) || 0))
+      }
+    }
+
+    return totals
+  }, [matches, players])
+
   const standings = useMemo(
     () =>
       scoreboard.map((player) => {
@@ -204,11 +338,11 @@ function App() {
 
         return {
           ...player,
-          winnings: winningsByPlayerId[player.id] ?? 0,
+          winnings: (totalPayoutsByPlayer.get(player.id) ?? 0) + (bonusWinningsByPlayerId[player.id] ?? 0),
           stats,
         }
       }),
-    [matches, scoreboard],
+    [matches, scoreboard, totalPayoutsByPlayer],
   )
 
   const rounds = useMemo(() => {
@@ -295,14 +429,12 @@ function App() {
   const [selectedRound, setSelectedRound] = useState(currentRound)
   const [visiblePlayerIds, setVisiblePlayerIds] = useState(() => scoreboard.map((player) => player.id))
 
-  useEffect(() => {
+  const normalizedVisiblePlayerIds = useMemo(() => {
     const ids = scoreboard.map((player) => player.id)
-    setVisiblePlayerIds((prev) => {
-      const kept = prev.filter((id) => ids.includes(id))
-      const missing = ids.filter((id) => !kept.includes(id))
-      return [...kept, ...missing]
-    })
-  }, [scoreboard])
+    const kept = visiblePlayerIds.filter((id) => ids.includes(id))
+    const missing = ids.filter((id) => !kept.includes(id))
+    return [...kept, ...missing]
+  }, [scoreboard, visiblePlayerIds])
 
   const togglePlayerVisibility = (playerId) => {
     setVisiblePlayerIds((prev) =>
@@ -340,21 +472,67 @@ function App() {
     [roundMatches, effectiveSelectedMatchId],
   )
 
+  const rankByPlayerForSelectedRound = useMemo(() => {
+    const fallback = new Map(scoreboard.map((player, index) => [player.id, index + 1]))
+    const roundIndex = rankTimeline.rounds.indexOf(selectedRound)
+    if (roundIndex < 0) return fallback
+
+    const byRound = new Map()
+    for (const series of rankTimeline.series) {
+      const rank = series.ranks[roundIndex]
+      if (Number.isFinite(rank)) {
+        byRound.set(series.id, rank)
+      }
+    }
+
+    return byRound.size > 0 ? byRound : fallback
+  }, [rankTimeline, scoreboard, selectedRound])
+
+  const rankByPlayerForPreviousRound = useMemo(() => {
+    const roundIndex = rankTimeline.rounds.indexOf(selectedRound)
+    if (roundIndex <= 0) return new Map()
+
+    const byRound = new Map()
+    for (const series of rankTimeline.series) {
+      const rank = series.ranks[roundIndex - 1]
+      if (Number.isFinite(rank)) {
+        byRound.set(series.id, rank)
+      }
+    }
+
+    return byRound
+  }, [rankTimeline, selectedRound])
+
   const selectedMatchTips = useMemo(() => {
     if (!selectedMatch) return []
+
+    const playerOrder = new Map(players.map((player, index) => [player.id, index]))
+    const payoutsByPlayer = calculateMatchPayouts(
+      selectedMatch,
+      playerOrder,
+      manualPayoutOverridesByMatchId,
+      remainderRecipientByMatchId,
+    )
 
     return selectedMatch.tips
       .map((tip) => {
         const player = players.find((item) => item.id === tip.playerId)
-        const rank = scoreboard.findIndex((item) => item.id === tip.playerId) + 1
+        const rank =
+          rankByPlayerForSelectedRound.get(tip.playerId) ??
+          scoreboard.findIndex((item) => item.id === tip.playerId) + 1
+        const previousRank = rankByPlayerForPreviousRound.get(tip.playerId)
+        const rankDelta = Number.isFinite(previousRank) ? previousRank - rank : 0
+        const payout = payoutsByPlayer.get(tip.playerId) ?? 0
         return {
           ...tip,
           playerName: player?.name ?? tip.playerId,
           rank,
+          rankDelta,
+          payout,
         }
       })
       .sort((a, b) => a.rank - b.rank)
-  }, [selectedMatch, scoreboard])
+  }, [players, rankByPlayerForPreviousRound, rankByPlayerForSelectedRound, scoreboard, selectedMatch])
 
   const [syncMessage, setSyncMessage] = useState('')
   const [showSyncTooltip, setShowSyncTooltip] = useState(false)
@@ -530,7 +708,9 @@ function App() {
                 className={`match-item ${isActive ? 'is-active' : ''}`}
                 onClick={() => setSelectedMatchId(match.id)}
               >
-                <p className="match-item-top">{match.startsAt}</p>
+                <p className="match-item-top">
+                  <StartsAtLabel startsAt={match.startsAt} matchId={match.id} />
+                </p>
 
                 <div className="match-item-main">
                   <div className="teams-stack">
@@ -559,9 +739,7 @@ function App() {
                   </div>
                 </div>
 
-                <p className="match-item-sub">
-                  Bank {match.bank} Kč • Tipy {submittedTips}/{players.length}
-                </p>
+                <p className="match-item-sub">Bank {match.bank} Kč • Tipy {submittedTips}/{players.length}</p>
               </button>
             )
           })}
@@ -621,7 +799,9 @@ function App() {
               </div>
 
               <header className="selected-match-head">
-                <p className="selected-match-time">{selectedMatch.startsAt}</p>
+                <p className="selected-match-time">
+                  <StartsAtLabel startsAt={selectedMatch.startsAt} matchId={selectedMatch.id} />
+                </p>
                 <div className="selected-match-main">
                   <div className="selected-teams-stack">
                     {(() => {
@@ -674,14 +854,38 @@ function App() {
 
               <div className="tips-table" role="table" aria-label="Tipy hráčů">
                 <div className="tips-head" role="row">
+                  <span>Poř.</span>
+                  <span className="tips-head-shift" aria-hidden="true" />
                   <span>Hráč</span>
+                  <span>Výhra</span>
                   <span>Tip</span>
                   <span>Body</span>
                 </div>
 
                 {selectedMatchTips.map((tip) => (
                   <div className="tips-row" role="row" key={`${selectedMatch.id}-${tip.playerId}`}>
-                    <span className="name-cell">{tip.playerName}</span>
+                    <span className="rank-cell">{tip.rank}.</span>
+                    <span className="shift-cell">
+                      {tip.rankDelta > 0 ? (
+                        <span className="rank-shift is-up" aria-label={`Posun nahoru o ${tip.rankDelta} míst`} title={`+${tip.rankDelta}`}>
+                          ↑{tip.rankDelta}
+                        </span>
+                      ) : tip.rankDelta < 0 ? (
+                        <span className="rank-shift is-down" aria-label={`Propad o ${Math.abs(tip.rankDelta)} míst`} title={`-${Math.abs(tip.rankDelta)}`}>
+                          ↓{Math.abs(tip.rankDelta)}
+                        </span>
+                      ) : (
+                        <span className="rank-shift is-flat" aria-hidden="true" />
+                      )}
+                    </span>
+                    <span className="name-cell">
+                      <span>{tip.playerName}</span>
+                    </span>
+
+                    <span className="payout-cell">
+                      {tip.payout > 0 ? <span className="payout-badge">+{tip.payout} Kč</span> : null}
+                    </span>
+
                     <span className="tip-value">
                       <SplitTip value={tip.pick} />
                     </span>
@@ -717,7 +921,7 @@ function App() {
                 const stepX = rankTimeline.rounds.length > 1 ? innerWidth / (rankTimeline.rounds.length - 1) : 0
                 const rankToY = (rank) => margin.top + ((rank - 1) / Math.max(1, maxRank - 1)) * innerHeight
                 const indexToX = (index) => margin.left + index * stepX
-                const visibleSeries = rankTimeline.series.filter((player) => visiblePlayerIds.includes(player.id))
+                const visibleSeries = rankTimeline.series.filter((player) => normalizedVisiblePlayerIds.includes(player.id))
 
                 return (
                   <svg viewBox={`0 0 ${width} ${height}`} className="rank-chart" preserveAspectRatio="xMidYMid meet">
@@ -786,7 +990,7 @@ function App() {
               {rankTimeline.series.map((player) => (
                 <button
                   type="button"
-                  className={`rank-legend-item ${visiblePlayerIds.includes(player.id) ? '' : 'is-muted'}`.trim()}
+                  className={`rank-legend-item ${normalizedVisiblePlayerIds.includes(player.id) ? '' : 'is-muted'}`.trim()}
                   key={`legend-${player.id}`}
                   onClick={() => togglePlayerVisibility(player.id)}
                 >

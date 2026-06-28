@@ -212,7 +212,30 @@
   margin: 0;
   font-size: 0.74rem;
   color: #4f6a80;
-  font-weight: 600;
+  font-weight: 400;
+}
+
+.starts-at-label {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 0;
+}
+
+.starts-at-match-no {
+  margin-left: 0.08rem;
+  margin-right: 40px;
+}
+
+.starts-at-date {
+  margin-left: 0.26rem;
+}
+
+.match-id-inline {
+  margin-left: 0.5rem;
+  font-size: 0.68rem;
+  color: #6a7e91;
+  white-space: nowrap;
 }
 
 .match-item-main {
@@ -310,7 +333,7 @@
   margin: 0;
   color: #4d687f;
   font-size: 0.78rem;
-  font-weight: 600;
+  font-weight: 400;
 }
 
 .selected-match-main {
@@ -354,10 +377,57 @@
 .tips-head,
 .tips-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 72px 66px;
+  grid-template-columns: 44px 34px minmax(0, 1fr) 86px 72px 66px;
   gap: 0.4rem;
   align-items: center;
   padding: 0.52rem 0.82rem;
+}
+
+.tips-head-shift {
+  text-align: center;
+  font-weight: 800;
+}
+
+.rank-cell {
+  text-align: center;
+  color: #44617d;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.shift-cell {
+  text-align: center;
+}
+
+.rank-shift {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.7rem;
+  height: 1.2rem;
+  padding: 0 0.28rem;
+  border-radius: 999px;
+  font-size: 0.69rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.rank-shift.is-up {
+  background: #e5f6e8;
+  color: #136038;
+}
+
+.rank-shift.is-down {
+  background: #fde9e9;
+  color: #a42828;
+}
+
+.rank-shift.is-flat {
+  background: transparent;
+  min-width: 0;
+  width: 0;
+  height: 0;
+  padding: 0;
 }
 
 .tips-head {
@@ -380,6 +450,24 @@
   min-width: 0;
   word-break: break-word;
   padding-left: 0.1rem;
+}
+
+.payout-cell {
+  min-height: 1.2rem;
+  display: inline-flex;
+  align-items: center;
+}
+
+.payout-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.08rem 0.34rem;
+  background: #e7f5ea;
+  color: #126036;
+  font-size: 0.67rem;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 .tip-value {
@@ -451,7 +539,7 @@
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.35rem;
 }
 
 .stand-rank {
@@ -470,6 +558,7 @@
 .stand-points {
   display: inline-block;
   color: #0d2f4f;
+  white-space: nowrap;
 }
 
 .stand-bottom {
@@ -511,10 +600,12 @@
 }
 
 .stand-winnings {
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   color: #4f6b82;
   font-weight: 700;
   text-align: right;
+  white-space: nowrap;
+  margin-left: auto;
 }
 
 .rank-chart-panel {
@@ -607,7 +698,7 @@
 
 @media (min-width: 980px) {
   .workspace {
-    grid-template-columns: 330px minmax(0, 1fr);
+    grid-template-columns: 370px minmax(0, 1fr);
     align-items: start;
   }
 
@@ -627,14 +718,27 @@
   }
 
   .tips-row {
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: auto auto minmax(0, 1fr) auto;
     grid-template-areas:
-      'name name points'
-      '. pick points';
+      'rank shift name points'
+      '. . payout points'
+      '. . pick points';
+  }
+
+  .tips-row .rank-cell {
+    grid-area: rank;
+  }
+
+  .tips-row .shift-cell {
+    grid-area: shift;
   }
 
   .tips-row .name-cell {
     grid-area: name;
+  }
+
+  .tips-row .payout-cell {
+    grid-area: payout;
   }
 
   .tips-row .tip-value {

@@ -19,6 +19,42 @@ const winningsByPlayerId = {
 
 const chartColors = ['#2563eb', '#0ea5e9', '#06b6d4', '#14b8a6', '#22c55e', '#84cc16', '#eab308', '#f59e0b', '#f97316', '#a855f7', '#ec4899']
 
+function formatCount(count, one, few, many) {
+  if (count === 1) return `${count} ${one}`
+  if (count >= 2 && count <= 4) return `${count} ${few}`
+  return `${count} ${many}`
+}
+
+function buildLiveSyncMessage(previousData, nextData) {
+  const prevMatches = previousData?.matches ?? []
+  const nextMatches = nextData?.matches ?? []
+  const prevMatchesById = new Map(prevMatches.map((match) => [match.id, match]))
+
+  let tipsChanged = 0
+
+  for (const match of nextMatches) {
+    const prevMatch = prevMatchesById.get(match.id)
+    if (!prevMatch) {
+      tipsChanged += (match.tips ?? []).length
+      continue
+    }
+
+    const prevTipsByPlayer = new Map((prevMatch.tips ?? []).map((tip) => [tip.playerId, tip]))
+    for (const tip of match.tips ?? []) {
+      const prevTip = prevTipsByPlayer.get(tip.playerId)
+      if (!prevTip || prevTip.pick !== tip.pick || prevTip.points !== tip.points) {
+        tipsChanged += 1
+      }
+    }
+  }
+
+  if (tipsChanged === 0) {
+    return 'Žádné tipy k synchronizaci. Data jsou aktuální.'
+  }
+
+  return `Synchronizace dokončena: upraveno ${formatCount(tipsChanged, 'tip', 'tipy', 'tipů')}.`
+}
+
 function pointsClass(points) {
   if (points === 10) return 'tip-pill is-exact'
   if (points === 5) return 'tip-pill is-near'
@@ -276,7 +312,7 @@ function App() {
 
   const roundMatches = useMemo(
     () => matches.filter((match) => extractRound(match) === selectedRound),
-    [selectedRound],
+    [matches, selectedRound],
   )
 
   const stageLabel = useMemo(() => {
@@ -323,7 +359,6 @@ function App() {
   const [syncMessage, setSyncMessage] = useState('')
   const [showSyncTooltip, setShowSyncTooltip] = useState(false)
   const [isSyncing, setIsSyncing] = useState(false)
-  const [syncMessageDuration, setSyncMessageDuration] = useState(3200)
 
   useEffect(() => {
     let cancelled = false
@@ -363,7 +398,6 @@ function App() {
       clearTimeout(tooltipTimerRef.current)
     }
     setSyncMessage(message)
-    setSyncMessageDuration(duration)
     setShowSyncTooltip(true)
     tooltipTimerRef.current = setTimeout(() => {
       setShowSyncTooltip(false)
@@ -379,9 +413,10 @@ function App() {
 
     try {
       if (import.meta.env.PROD) {
+        const previousData = data
         const nextData = await fetchLiveData()
         setData(nextData)
-        showTooltip('Načtena aktuální data z Google tabulky.')
+        showTooltip(buildLiveSyncMessage(previousData, nextData))
         return
       }
 

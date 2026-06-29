@@ -33,6 +33,7 @@ const remainderRecipientByMatchId = {
   m2: 'p8',
   m23: 'p2',
   m33: 'p8',
+  m37: 'p3',
 }
 
 const chartColors = ['#2563eb', '#0ea5e9', '#06b6d4', '#14b8a6', '#22c55e', '#84cc16', '#eab308', '#f59e0b', '#f97316', '#a855f7', '#ec4899']

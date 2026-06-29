@@ -8,6 +8,21 @@ function formatCount(count, one, few, many) {
   return `${count} ${many}`
 }
 
+function formatPragueTimestamp(date) {
+  const formatter = new Intl.DateTimeFormat('cs-CZ', {
+    timeZone: 'Europe/Prague',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  })
+
+  return `${formatter.format(date)} (Europe/Prague)`
+}
+
 async function readExistingData(filePath) {
   try {
     const text = await fs.readFile(filePath, 'utf8')
@@ -145,8 +160,10 @@ async function main() {
 
   const output = `export const players = ${JSON.stringify(data.players, null, 2)}\n\nexport const matches = ${JSON.stringify(data.matches, null, 2)}\n`
   const signature = createHash('sha1').update(output).digest('hex')
+  const now = new Date()
   const status = {
-    updatedAt: new Date().toISOString(),
+    updatedAt: formatPragueTimestamp(now),
+    updatedAtUtc: now.toISOString(),
     signature,
     players: data.players.length,
     matches: data.matches.length,

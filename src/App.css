@@ -742,11 +742,13 @@
   }
 
   .tips-row {
-    grid-template-columns: auto auto minmax(0, 1fr) auto;
+    grid-template-columns: 42px 42px minmax(0, 1fr) 62px;
+    column-gap: 0.34rem;
+    row-gap: 0.22rem;
     grid-template-areas:
       'rank shift name points'
-      '. . payout points'
-      '. . pick points';
+      '. . pick points'
+      '. . payout points';
   }
 
   .tips-row .rank-cell {
@@ -763,15 +765,18 @@
 
   .tips-row .payout-cell {
     grid-area: payout;
+    min-height: 1.05rem;
   }
 
   .tips-row .tip-value {
     grid-area: pick;
+    min-height: 1.8rem;
   }
 
   .tips-row .tip-pill {
     grid-area: points;
-    align-self: center;
+    align-self: start;
+    justify-self: end;
   }
 }
 

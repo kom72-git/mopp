@@ -3,6 +3,9 @@
   "image": "mcr.microsoft.com/devcontainers/javascript-node:20",
   "workspaceFolder": "/home/node/moop",
   "forwardPorts": [4173, 4000],
+  "otherPortsAttributes": {
+    "onAutoForward": "ignore"
+  },
   "portsAttributes": {
     "4173": {
       "label": "MOPP Vite (frontend)",
@@ -20,7 +23,10 @@
   "postAttachCommand": "bash ${containerWorkspaceFolder}/.devcontainer/start-services.sh",
   "customizations": {
     "vscode": {
-      "settings": {},
+      "settings": {
+        "task.allowAutomaticTasks": "on",
+        "remote.restoreForwardedPorts": false
+      },
       "extensions": ["dbaeumer.vscode-eslint", "esbenp.prettier-vscode"]
     }
   }

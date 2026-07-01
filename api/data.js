@@ -12,7 +12,7 @@ module.exports = async function handler(req, res) {
   } catch (error) {
     res.status(500).json({
       ok: false,
-      message: error?.message || 'Nepodarilo se nacist data z Google Sheetu',
+      message: error?.message || 'Nepodařilo se načíst data z Google Sheetu',
     })
   }
 }

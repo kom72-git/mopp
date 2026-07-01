@@ -14,7 +14,7 @@ app.get("/health", (req, res) => {
 });
 
 app.get("/api/ping", (req, res) => {
-  res.json({ message: "MOPP API bezi", ts: new Date().toISOString() });
+  res.json({ message: "MOPP API běží", ts: new Date().toISOString() });
 });
 
 app.get("/api/data", async (req, res) => {
@@ -26,7 +26,7 @@ app.get("/api/data", async (req, res) => {
   } catch (error) {
     return res.status(500).json({
       ok: false,
-      message: error?.message || "Nepodarilo se nacist data z Google Sheetu",
+      message: error?.message || "Nepodařilo se načíst data z Google Sheetu",
     });
   }
 });

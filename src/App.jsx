@@ -38,6 +38,19 @@ const remainderRecipientByMatchId = {
 
 const chartColors = ['#2563eb', '#0ea5e9', '#06b6d4', '#14b8a6', '#22c55e', '#84cc16', '#eab308', '#f59e0b', '#f97316', '#a855f7', '#ec4899']
 
+const longTermBankPayouts = [
+  { place: 1, amount: 900 },
+  { place: 2, amount: 500 },
+  { place: 3, amount: 250 },
+]
+
+const tieBreakRules = [
+  'Počet uhodnutých přesných výsledků za 10b.',
+  'V případě rovnosti uhodnutých výsledků, rozhoduje celkový počet bodovaných tipů.',
+  'Pokud je i zde rovnost, rozhoduje menší počet netipovaných výsledků.',
+  'V případě i této rovnosti následuje los :-)',
+]
+
 function formatCount(count, one, few, many) {
   if (count === 1) return `${count} ${one}`
   if (count >= 2 && count <= 4) return `${count} ${few}`
@@ -125,29 +138,29 @@ function parseStartsAtDisplay(startsAt, matchId) {
   const [, roundLabel, dayRaw, restRaw] = matched
   const dayToken = dayRaw.trim().toLowerCase()
   const dayNames = {
-    po: 'pondeli',
-    pondeli: 'pondeli',
-    'pondělí': 'pondeli',
-    ut: 'utery',
-    'út': 'utery',
-    utery: 'utery',
-    'úterý': 'utery',
-    st: 'streda',
-    streda: 'streda',
-    'středa': 'streda',
-    ct: 'ctvrtek',
-    'čt': 'ctvrtek',
-    ctvrtek: 'ctvrtek',
-    'čtvrtek': 'ctvrtek',
-    pa: 'patek',
-    'pá': 'patek',
-    patek: 'patek',
-    'pátek': 'patek',
+    po: 'pondělí',
+    pondeli: 'pondělí',
+    'pondělí': 'pondělí',
+    ut: 'úterý',
+    'út': 'úterý',
+    utery: 'úterý',
+    'úterý': 'úterý',
+    st: 'středa',
+    streda: 'středa',
+    'středa': 'středa',
+    ct: 'čtvrtek',
+    'čt': 'čtvrtek',
+    ctvrtek: 'čtvrtek',
+    'čtvrtek': 'čtvrtek',
+    pa: 'pátek',
+    'pá': 'pátek',
+    patek: 'pátek',
+    'pátek': 'pátek',
     so: 'sobota',
     sobota: 'sobota',
-    ne: 'nedele',
-    nedele: 'nedele',
-    'neděle': 'nedele',
+    ne: 'neděle',
+    nedele: 'neděle',
+    'neděle': 'neděle',
   }
 
   const dayName = dayNames[dayToken] ?? dayRaw
@@ -270,7 +283,7 @@ async function fetchLiveData() {
   const payload = await response.json()
 
   if (!response.ok || !payload?.ok) {
-    throw new Error(payload?.message || 'Live data nejsou dostupna')
+    throw new Error(payload?.message || 'Živá data nejsou dostupná')
   }
 
   return {
@@ -295,6 +308,7 @@ function App() {
   const touchLegendHandledRef = useRef(false)
   const [data, setData] = useState({ players: fallbackPlayers, matches: fallbackMatches })
   const [isLiveLoading, setIsLiveLoading] = useState(true)
+  const [showLongTermBankInfo, setShowLongTermBankInfo] = useState(false)
   const players = data.players
   const matches = data.matches
   const scoreboard = useMemo(() => [...players].sort((a, b) => b.points - a.points), [players])
@@ -673,15 +687,17 @@ function App() {
             const timeClass =
               round < currentRound ? 'is-past' : round > currentRound ? 'is-future' : 'is-current'
             const activeClass = round === selectedRound ? 'is-active' : ''
+            const isCurrentRound = round === currentRound
 
             return (
               <button
                 key={round}
                 type="button"
                 className={`round-tab ${timeClass} ${activeClass}`.trim()}
+                aria-current={isCurrentRound ? 'date' : undefined}
                 onClick={() => setSelectedRound(round)}
               >
-                {formatRound(round)}
+                <span className="round-tab-label">{formatRound(round)}</span>
               </button>
             )
           })}
@@ -751,7 +767,46 @@ function App() {
         <aside className="panel match-list-panel">
           <div className="panel-head">
             <h2>Pořadí hráčů</h2>
+            <button
+              type="button"
+              className="info-toggle"
+              aria-expanded={showLongTermBankInfo}
+              onClick={() => setShowLongTermBankInfo((prev) => !prev)}
+            >
+              Dlouhodobý bank
+            </button>
           </div>
+
+          {showLongTermBankInfo ? (
+            <div className="long-term-bank-info">
+              <p className="long-term-bank-summary">
+                Dlouhodobý bank <strong>1650 Kč</strong> se rozdělí:
+              </p>
+
+              <ol className="long-term-bank-payouts">
+                {longTermBankPayouts.map((item) => (
+                  <li
+                    key={item.place}
+                    className={`long-term-bank-place ${
+                      item.place === 1 ? 'is-exact' : item.place === 2 ? 'is-near' : 'is-win'
+                    }`}
+                  >
+                    <strong>{item.place}.</strong>
+                    <span className="long-term-bank-amount">{item.amount} Kč</span>
+                  </li>
+                ))}
+              </ol>
+
+              <div className="long-term-bank-rules">
+                <h3>V případě shodného počtu bodů rozhoduje:</h3>
+                <ol>
+                  {tieBreakRules.map((rule) => (
+                    <li key={rule}>{rule}</li>
+                  ))}
+                </ol>
+              </div>
+            </div>
+          ) : null}
 
           <div className="standings-list">
             {standings.map((player, index) => (

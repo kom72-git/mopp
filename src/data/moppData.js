@@ -2,57 +2,57 @@ export const players = [
   {
     "id": "p1",
     "name": "Kom",
-    "points": 68
+    "points": 84
   },
   {
     "id": "p2",
     "name": "Kraty",
-    "points": 77
+    "points": 90
   },
   {
     "id": "p3",
     "name": "Radek",
-    "points": 64
+    "points": 94
   },
   {
     "id": "p4",
     "name": "Roman",
-    "points": 66
+    "points": 104
   },
   {
     "id": "p5",
     "name": "Špáca",
-    "points": 94
+    "points": 124
   },
   {
     "id": "p6",
     "name": "Slanec",
-    "points": 94
+    "points": 119
   },
   {
     "id": "p7",
     "name": "Láďa",
-    "points": 85
+    "points": 94
   },
   {
     "id": "p8",
     "name": "Prd",
-    "points": 109
+    "points": 127
   },
   {
     "id": "p9",
     "name": "Jony",
-    "points": 74
+    "points": 92
   },
   {
     "id": "p10",
     "name": "Mirax",
-    "points": 61
+    "points": 75
   },
   {
     "id": "p11",
     "name": "Honza",
-    "points": 88
+    "points": 104
   }
 ]
 
@@ -2439,63 +2439,63 @@ export const matches = [
     "startsAt": "19. (po) 29.06. 19:00",
     "home": "Brazílie",
     "away": "Japonsko",
-    "score": null,
+    "score": "2:1",
     "bank": 110,
     "tips": [
       {
         "playerId": "p1",
-        "pick": "-",
-        "points": null
+        "pick": "2:1",
+        "points": 10
       },
       {
         "playerId": "p2",
         "pick": "3:0",
-        "points": null
+        "points": 3
       },
       {
         "playerId": "p3",
         "pick": "2:1",
-        "points": null
+        "points": 10
       },
       {
         "playerId": "p4",
         "pick": "3:1",
-        "points": null
+        "points": 3
       },
       {
         "playerId": "p5",
-        "pick": "-",
-        "points": null
+        "pick": "2:1",
+        "points": 10
       },
       {
         "playerId": "p6",
         "pick": "2:0",
-        "points": null
+        "points": 5
       },
       {
         "playerId": "p7",
-        "pick": "-",
-        "points": null
+        "pick": "4:1",
+        "points": 3
       },
       {
         "playerId": "p8",
         "pick": "3:1",
-        "points": null
+        "points": 3
       },
       {
         "playerId": "p9",
-        "pick": "-",
-        "points": null
+        "pick": "3:1",
+        "points": 3
       },
       {
         "playerId": "p10",
         "pick": "3:0",
-        "points": null
+        "points": 3
       },
       {
         "playerId": "p11",
         "pick": "3:2",
-        "points": null
+        "points": 3
       }
     ]
   },
@@ -2505,63 +2505,63 @@ export const matches = [
     "startsAt": "19. (po) 29.06. 22:30",
     "home": "Německo",
     "away": "Paraguay",
-    "score": null,
-    "bank": 0,
+    "score": "1:1",
+    "bank": 110,
     "tips": [
       {
         "playerId": "p1",
-        "pick": "-",
-        "points": null
+        "pick": "4:1",
+        "points": 0
       },
       {
         "playerId": "p2",
         "pick": "3:0",
-        "points": null
+        "points": 0
       },
       {
         "playerId": "p3",
         "pick": "3:1",
-        "points": null
+        "points": 0
       },
       {
         "playerId": "p4",
         "pick": "4:0",
-        "points": null
+        "points": 0
       },
       {
         "playerId": "p5",
-        "pick": "-",
-        "points": null
+        "pick": "3:1",
+        "points": 0
       },
       {
         "playerId": "p6",
         "pick": "2:0",
-        "points": null
+        "points": 0
       },
       {
         "playerId": "p7",
-        "pick": "-",
-        "points": null
+        "pick": "2:0",
+        "points": 0
       },
       {
         "playerId": "p8",
         "pick": "4:1",
-        "points": null
+        "points": 0
       },
       {
         "playerId": "p9",
-        "pick": "-",
-        "points": null
+        "pick": "2:0",
+        "points": 0
       },
       {
         "playerId": "p10",
         "pick": "4:0",
-        "points": null
+        "points": 0
       },
       {
         "playerId": "p11",
         "pick": "2:0",
-        "points": null
+        "points": 0
       }
     ]
   },
@@ -2571,63 +2571,63 @@ export const matches = [
     "startsAt": "20. (út) 30.06. 03:00",
     "home": "Nizozemsko",
     "away": "Maroko",
-    "score": null,
-    "bank": 0,
+    "score": "1:1",
+    "bank": 220,
     "tips": [
       {
         "playerId": "p1",
-        "pick": "-",
-        "points": null
+        "pick": "1:2",
+        "points": 0
       },
       {
         "playerId": "p2",
         "pick": "2:1",
-        "points": null
+        "points": 0
       },
       {
         "playerId": "p3",
         "pick": "2:0",
-        "points": null
+        "points": 0
       },
       {
         "playerId": "p4",
         "pick": "1:1",
-        "points": null
+        "points": 10
       },
       {
         "playerId": "p5",
-        "pick": "-",
-        "points": null
+        "pick": "1:1",
+        "points": 10
       },
       {
         "playerId": "p6",
         "pick": "3:1",
-        "points": null
+        "points": 0
       },
       {
         "playerId": "p7",
-        "pick": "-",
-        "points": null
+        "pick": "2:1",
+        "points": 0
       },
       {
         "playerId": "p8",
         "pick": "2:1",
-        "points": null
+        "points": 0
       },
       {
         "playerId": "p9",
-        "pick": "-",
-        "points": null
+        "pick": "2:1",
+        "points": 0
       },
       {
         "playerId": "p10",
         "pick": "3:0",
-        "points": null
+        "points": 0
       },
       {
         "playerId": "p11",
         "pick": "2:1",
-        "points": null
+        "points": 0
       }
     ]
   },
@@ -2637,63 +2637,63 @@ export const matches = [
     "startsAt": "20. (út) 30.06. 19:00",
     "home": "Pobřeží slonoviny",
     "away": "Norsko",
-    "score": null,
-    "bank": 0,
+    "score": "1:2",
+    "bank": 110,
     "tips": [
       {
         "playerId": "p1",
-        "pick": "-",
-        "points": null
+        "pick": "2:1",
+        "points": 0
       },
       {
         "playerId": "p2",
         "pick": "0:2",
-        "points": null
+        "points": 5
       },
       {
         "playerId": "p3",
         "pick": "1:2",
-        "points": null
+        "points": 10
       },
       {
         "playerId": "p4",
         "pick": "1:2",
-        "points": null
+        "points": 10
       },
       {
         "playerId": "p5",
-        "pick": "-",
-        "points": null
+        "pick": "1:1",
+        "points": 0
       },
       {
         "playerId": "p6",
-        "pick": "-",
-        "points": null
+        "pick": "0:2",
+        "points": 5
       },
       {
         "playerId": "p7",
-        "pick": "-",
-        "points": null
+        "pick": "1:3",
+        "points": 3
       },
       {
         "playerId": "p8",
         "pick": "2:1",
-        "points": null
+        "points": 0
       },
       {
         "playerId": "p9",
-        "pick": "-",
-        "points": null
+        "pick": "1:1",
+        "points": 0
       },
       {
         "playerId": "p10",
         "pick": "0:2",
-        "points": null
+        "points": 5
       },
       {
         "playerId": "p11",
         "pick": "2:2",
-        "points": null
+        "points": 0
       }
     ]
   },
@@ -2703,63 +2703,63 @@ export const matches = [
     "startsAt": "20. (út) 30.06. 23:00",
     "home": "Francie",
     "away": "Švédsko",
-    "score": null,
-    "bank": 0,
+    "score": "3:0",
+    "bank": 110,
     "tips": [
       {
         "playerId": "p1",
-        "pick": "-",
-        "points": null
+        "pick": "2:1",
+        "points": 3
       },
       {
         "playerId": "p2",
         "pick": "3:1",
-        "points": null
+        "points": 5
       },
       {
         "playerId": "p3",
         "pick": "3:0",
-        "points": null
+        "points": 10
       },
       {
         "playerId": "p4",
         "pick": "3:0",
-        "points": null
+        "points": 10
       },
       {
         "playerId": "p5",
-        "pick": "-",
-        "points": null
+        "pick": "3:0",
+        "points": 10
       },
       {
         "playerId": "p6",
-        "pick": "-",
-        "points": null
+        "pick": "3:1",
+        "points": 5
       },
       {
         "playerId": "p7",
-        "pick": "-",
-        "points": null
+        "pick": "4:1",
+        "points": 3
       },
       {
         "playerId": "p8",
         "pick": "3:0",
-        "points": null
+        "points": 10
       },
       {
         "playerId": "p9",
-        "pick": "-",
-        "points": null
+        "pick": "3:0",
+        "points": 10
       },
       {
         "playerId": "p10",
         "pick": "4:0",
-        "points": null
+        "points": 3
       },
       {
         "playerId": "p11",
         "pick": "3:0",
-        "points": null
+        "points": 10
       }
     ]
   },
@@ -2769,63 +2769,63 @@ export const matches = [
     "startsAt": "21. (st) 01.07. 03:00",
     "home": "Mexiko",
     "away": "Ekvádor",
-    "score": null,
-    "bank": 0,
+    "score": "2:0",
+    "bank": 110,
     "tips": [
       {
         "playerId": "p1",
-        "pick": "-",
-        "points": null
+        "pick": "3:0",
+        "points": 3
       },
       {
         "playerId": "p2",
-        "pick": "-",
-        "points": null
+        "pick": "N:N",
+        "points": 0
       },
       {
         "playerId": "p3",
-        "pick": "-",
-        "points": null
+        "pick": "1:1",
+        "points": 0
       },
       {
         "playerId": "p4",
-        "pick": "-",
-        "points": null
+        "pick": "2:1",
+        "points": 5
       },
       {
         "playerId": "p5",
-        "pick": "-",
-        "points": null
+        "pick": "0:0",
+        "points": 0
       },
       {
         "playerId": "p6",
-        "pick": "-",
-        "points": null
+        "pick": "2:0",
+        "points": 10
       },
       {
         "playerId": "p7",
-        "pick": "-",
-        "points": null
+        "pick": "1:2",
+        "points": 0
       },
       {
         "playerId": "p8",
-        "pick": "-",
-        "points": null
+        "pick": "2:1",
+        "points": 5
       },
       {
         "playerId": "p9",
-        "pick": "-",
-        "points": null
+        "pick": "2:1",
+        "points": 5
       },
       {
         "playerId": "p10",
-        "pick": "-",
-        "points": null
+        "pick": "3:1",
+        "points": 3
       },
       {
         "playerId": "p11",
-        "pick": "-",
-        "points": null
+        "pick": "1:0",
+        "points": 3
       }
     ]
   },
@@ -2836,11 +2836,11 @@ export const matches = [
     "home": "Anglie",
     "away": "DR Kongo",
     "score": null,
-    "bank": 0,
+    "bank": 110,
     "tips": [
       {
         "playerId": "p1",
-        "pick": "-",
+        "pick": "3:1",
         "points": null
       },
       {
@@ -2855,7 +2855,7 @@ export const matches = [
       },
       {
         "playerId": "p4",
-        "pick": "-",
+        "pick": "2:0",
         "points": null
       },
       {
@@ -2865,7 +2865,7 @@ export const matches = [
       },
       {
         "playerId": "p6",
-        "pick": "-",
+        "pick": "2:0",
         "points": null
       },
       {
@@ -2875,7 +2875,7 @@ export const matches = [
       },
       {
         "playerId": "p8",
-        "pick": "-",
+        "pick": "2:0",
         "points": null
       },
       {
@@ -2885,12 +2885,12 @@ export const matches = [
       },
       {
         "playerId": "p10",
-        "pick": "-",
+        "pick": "3:0",
         "points": null
       },
       {
         "playerId": "p11",
-        "pick": "-",
+        "pick": "4:0",
         "points": null
       }
     ]
@@ -2906,7 +2906,7 @@ export const matches = [
     "tips": [
       {
         "playerId": "p1",
-        "pick": "-",
+        "pick": "1:2",
         "points": null
       },
       {
@@ -2921,7 +2921,7 @@ export const matches = [
       },
       {
         "playerId": "p4",
-        "pick": "-",
+        "pick": "1:2",
         "points": null
       },
       {
@@ -2931,7 +2931,7 @@ export const matches = [
       },
       {
         "playerId": "p6",
-        "pick": "-",
+        "pick": "1:1",
         "points": null
       },
       {
@@ -2941,7 +2941,7 @@ export const matches = [
       },
       {
         "playerId": "p8",
-        "pick": "-",
+        "pick": "0:1",
         "points": null
       },
       {
@@ -2951,12 +2951,12 @@ export const matches = [
       },
       {
         "playerId": "p10",
-        "pick": "3:1",
+        "pick": "2:1",
         "points": null
       },
       {
         "playerId": "p11",
-        "pick": "-",
+        "pick": "1:1",
         "points": null
       }
     ]
@@ -2972,7 +2972,7 @@ export const matches = [
     "tips": [
       {
         "playerId": "p1",
-        "pick": "-",
+        "pick": "1:0",
         "points": null
       },
       {
@@ -2987,7 +2987,7 @@ export const matches = [
       },
       {
         "playerId": "p4",
-        "pick": "-",
+        "pick": "2:0",
         "points": null
       },
       {
@@ -2997,7 +2997,7 @@ export const matches = [
       },
       {
         "playerId": "p6",
-        "pick": "-",
+        "pick": "2:0",
         "points": null
       },
       {
@@ -3007,7 +3007,7 @@ export const matches = [
       },
       {
         "playerId": "p8",
-        "pick": "-",
+        "pick": "3:1",
         "points": null
       },
       {
@@ -3017,12 +3017,12 @@ export const matches = [
       },
       {
         "playerId": "p10",
-        "pick": "-",
+        "pick": "3:1",
         "points": null
       },
       {
         "playerId": "p11",
-        "pick": "-",
+        "pick": "1:1",
         "points": null
       }
     ]
@@ -3053,7 +3053,7 @@ export const matches = [
       },
       {
         "playerId": "p4",
-        "pick": "-",
+        "pick": "3:1",
         "points": null
       },
       {
@@ -3063,7 +3063,7 @@ export const matches = [
       },
       {
         "playerId": "p6",
-        "pick": "-",
+        "pick": "4:1",
         "points": null
       },
       {
@@ -3073,7 +3073,7 @@ export const matches = [
       },
       {
         "playerId": "p8",
-        "pick": "-",
+        "pick": "2:0",
         "points": null
       },
       {
@@ -3083,12 +3083,12 @@ export const matches = [
       },
       {
         "playerId": "p10",
-        "pick": "-",
+        "pick": "2:0",
         "points": null
       },
       {
         "playerId": "p11",
-        "pick": "-",
+        "pick": "3:0",
         "points": null
       }
     ]
@@ -3119,7 +3119,7 @@ export const matches = [
       },
       {
         "playerId": "p4",
-        "pick": "-",
+        "pick": "2:1",
         "points": null
       },
       {
@@ -3139,7 +3139,7 @@ export const matches = [
       },
       {
         "playerId": "p8",
-        "pick": "-",
+        "pick": "3:1",
         "points": null
       },
       {
@@ -3149,12 +3149,12 @@ export const matches = [
       },
       {
         "playerId": "p10",
-        "pick": "-",
+        "pick": "3:2",
         "points": null
       },
       {
         "playerId": "p11",
-        "pick": "-",
+        "pick": "2:2",
         "points": null
       }
     ]
@@ -3185,7 +3185,7 @@ export const matches = [
       },
       {
         "playerId": "p4",
-        "pick": "-",
+        "pick": "1:1",
         "points": null
       },
       {
@@ -3205,7 +3205,7 @@ export const matches = [
       },
       {
         "playerId": "p8",
-        "pick": "-",
+        "pick": "2:2",
         "points": null
       },
       {
@@ -3215,12 +3215,12 @@ export const matches = [
       },
       {
         "playerId": "p10",
-        "pick": "-",
+        "pick": "3:0",
         "points": null
       },
       {
         "playerId": "p11",
-        "pick": "-",
+        "pick": "0:0",
         "points": null
       }
     ]
@@ -3251,7 +3251,7 @@ export const matches = [
       },
       {
         "playerId": "p4",
-        "pick": "-",
+        "pick": "1:2",
         "points": null
       },
       {
@@ -3271,7 +3271,7 @@ export const matches = [
       },
       {
         "playerId": "p8",
-        "pick": "-",
+        "pick": "1:2",
         "points": null
       },
       {
@@ -3286,7 +3286,7 @@ export const matches = [
       },
       {
         "playerId": "p11",
-        "pick": "-",
+        "pick": "1:3",
         "points": null
       }
     ]
@@ -3297,6 +3297,138 @@ export const matches = [
     "startsAt": "24. (so) 04.07. 00:00",
     "home": "Argentina",
     "away": "Kapverdy",
+    "score": null,
+    "bank": 0,
+    "tips": [
+      {
+        "playerId": "p1",
+        "pick": "-",
+        "points": null
+      },
+      {
+        "playerId": "p2",
+        "pick": "-",
+        "points": null
+      },
+      {
+        "playerId": "p3",
+        "pick": "-",
+        "points": null
+      },
+      {
+        "playerId": "p4",
+        "pick": "6:0",
+        "points": null
+      },
+      {
+        "playerId": "p5",
+        "pick": "-",
+        "points": null
+      },
+      {
+        "playerId": "p6",
+        "pick": "-",
+        "points": null
+      },
+      {
+        "playerId": "p7",
+        "pick": "-",
+        "points": null
+      },
+      {
+        "playerId": "p8",
+        "pick": "4:0",
+        "points": null
+      },
+      {
+        "playerId": "p9",
+        "pick": "-",
+        "points": null
+      },
+      {
+        "playerId": "p10",
+        "pick": "5:0",
+        "points": null
+      },
+      {
+        "playerId": "p11",
+        "pick": "3:0",
+        "points": null
+      }
+    ]
+  },
+  {
+    "id": "m51",
+    "round": 24,
+    "startsAt": "24. (so) 04.07. 03:30",
+    "home": "Kolumbie",
+    "away": "Ghana",
+    "score": null,
+    "bank": 0,
+    "tips": [
+      {
+        "playerId": "p1",
+        "pick": "-",
+        "points": null
+      },
+      {
+        "playerId": "p2",
+        "pick": "-",
+        "points": null
+      },
+      {
+        "playerId": "p3",
+        "pick": "-",
+        "points": null
+      },
+      {
+        "playerId": "p4",
+        "pick": "2:1",
+        "points": null
+      },
+      {
+        "playerId": "p5",
+        "pick": "-",
+        "points": null
+      },
+      {
+        "playerId": "p6",
+        "pick": "-",
+        "points": null
+      },
+      {
+        "playerId": "p7",
+        "pick": "-",
+        "points": null
+      },
+      {
+        "playerId": "p8",
+        "pick": "2:1",
+        "points": null
+      },
+      {
+        "playerId": "p9",
+        "pick": "-",
+        "points": null
+      },
+      {
+        "playerId": "p10",
+        "pick": "1:2",
+        "points": null
+      },
+      {
+        "playerId": "p11",
+        "pick": "1:1",
+        "points": null
+      }
+    ]
+  },
+  {
+    "id": "m52",
+    "round": 24,
+    "startsAt": "24. (so) 04.07. 19:00",
+    "home": "Kanada",
+    "away": "Maroko",
     "score": null,
     "bank": 0,
     "tips": [
@@ -3358,11 +3490,77 @@ export const matches = [
     ]
   },
   {
-    "id": "m51",
+    "id": "m53",
     "round": 24,
-    "startsAt": "24. (so) 04.07. 03:30",
-    "home": "Kolumbie",
-    "away": "Ghana",
+    "startsAt": "24. (so) 04.07. 23:00",
+    "home": "Paraguay",
+    "away": "Francie",
+    "score": null,
+    "bank": 0,
+    "tips": [
+      {
+        "playerId": "p1",
+        "pick": "-",
+        "points": null
+      },
+      {
+        "playerId": "p2",
+        "pick": "-",
+        "points": null
+      },
+      {
+        "playerId": "p3",
+        "pick": "-",
+        "points": null
+      },
+      {
+        "playerId": "p4",
+        "pick": "-",
+        "points": null
+      },
+      {
+        "playerId": "p5",
+        "pick": "-",
+        "points": null
+      },
+      {
+        "playerId": "p6",
+        "pick": "-",
+        "points": null
+      },
+      {
+        "playerId": "p7",
+        "pick": "-",
+        "points": null
+      },
+      {
+        "playerId": "p8",
+        "pick": "-",
+        "points": null
+      },
+      {
+        "playerId": "p9",
+        "pick": "-",
+        "points": null
+      },
+      {
+        "playerId": "p10",
+        "pick": "-",
+        "points": null
+      },
+      {
+        "playerId": "p11",
+        "pick": "-",
+        "points": null
+      }
+    ]
+  },
+  {
+    "id": "m54",
+    "round": 25,
+    "startsAt": "25. (ne) 05.07. 22:00",
+    "home": "Brazílie",
+    "away": "Norsko",
     "score": null,
     "bank": 0,
     "tips": [

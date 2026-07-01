@@ -146,6 +146,11 @@
   cursor: pointer;
   white-space: normal;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.12rem;
+  line-height: 1.05;
 }
 
 .round-tab.is-past {
@@ -156,8 +161,10 @@
 
 .round-tab.is-current {
   background: #e6f4ff;
-  border-color: #9cc7ea;
+  border-color: #5f95c5;
   color: #144b76;
+  box-shadow: inset 0 0 0 1px rgb(20 75 118 / 10%);
+  border-style: dashed;
 }
 
 .round-tab.is-future {
@@ -170,6 +177,17 @@
   background: #1f4f79;
   color: #f3f8ff;
   border-color: #1f4f79;
+}
+
+.round-tab.is-active.is-current {
+  background: linear-gradient(180deg, #21608d, #1a4b73);
+  border-color: #1a4b73;
+  color: #f7fbff;
+  box-shadow: 0 0 0 1px rgb(26 75 115 / 18%);
+}
+
+.round-tab-label {
+  display: block;
 }
 
 .day-matches-panel {
@@ -191,6 +209,103 @@
 .standings-list {
   display: grid;
   gap: 0.35rem;
+}
+
+.info-toggle {
+  border: 1px solid #cedfed;
+  background: #f4f7fb;
+  color: #33506a;
+  border-radius: 999px;
+  padding: 0.24rem 0.6rem;
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.info-toggle[aria-expanded='true'] {
+  background: #e6f4ff;
+  border-color: #8fb7d8;
+  color: #144b76;
+}
+
+.long-term-bank-info {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.62rem 0;
+}
+
+.long-term-bank-summary {
+  margin: 0;
+  font-size: 0.84rem;
+  color: #49647a;
+}
+
+.long-term-bank-payouts {
+  display: grid;
+  gap: 0.32rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.long-term-bank-payouts li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.34rem 0.48rem;
+  border-radius: 10px;
+  background: rgb(255 255 255 / 76%);
+  color: #173b5c;
+  font-size: 0.82rem;
+}
+
+.long-term-bank-place strong {
+  font-weight: 700;
+}
+
+.long-term-bank-amount {
+  font-weight: 400;
+}
+
+.long-term-bank-place.is-exact {
+  background: #dff5dc;
+  color: #12562c;
+}
+
+.long-term-bank-place.is-near {
+  background: #ffe7cf;
+  color: #8f470f;
+}
+
+.long-term-bank-place.is-win {
+  background: #fff8ba;
+  color: #5f5614;
+}
+
+.long-term-bank-rules {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.long-term-bank-rules h3 {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #173b5c;
+}
+
+.long-term-bank-rules ol {
+  margin: 0;
+  padding-left: 1.15rem;
+  display: grid;
+  gap: 0.25rem;
+  color: #49647a;
+  font-size: 0.82rem;
+}
+
+.long-term-bank-rules li {
+  padding-left: 0.15rem;
 }
 
 .match-item {

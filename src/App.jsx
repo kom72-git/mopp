@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 import { matches as fallbackMatches, players as fallbackPlayers } from './data/moppData'
+import { defaultTournamentId, getTournamentById, tournaments } from './data/tournaments'
 import { getFlagUrl } from './data/countryFlags'
+import { getTeamLogoUrl } from './data/teamLogos'
 
 // Volitelny rucni bonus navic mimo vyhry ze zapasu.
 // Tady pridej extra castky, ktere chces pricist k automatickemu souctu vyher.
@@ -24,32 +26,20 @@ const bonusWinningsByPlayerId = {
 const manualPayoutOverridesByMatchId = {
 }
 
-// Komu priradit zbytek banku pri nedelitelnosti.
-// Format: { matchId: playerId }
-const remainderRecipientByMatchId = {
-  // Priklad:
-  // m12: 'p3', // u zapasu m12 dostane zbytek hrac p3
-  m1: 'p8', 
-  m2: 'p8',
-  m23: 'p2',
-  m33: 'p8',
-  m37: 'p3',
-}
-
 const chartColors = ['#2563eb', '#0ea5e9', '#06b6d4', '#14b8a6', '#22c55e', '#84cc16', '#eab308', '#f59e0b', '#f97316', '#a855f7', '#ec4899']
 
-const longTermBankPayouts = [
-  { place: 1, amount: 900 },
-  { place: 2, amount: 500 },
-  { place: 3, amount: 250 },
-]
+const emptyData = { players: [], matches: [] }
 
-const tieBreakRules = [
-  'Počet uhodnutých přesných výsledků za 10b.',
-  'V případě rovnosti uhodnutých výsledků, rozhoduje celkový počet bodovaných tipů.',
-  'Pokud je i zde rovnost, rozhoduje menší počet netipovaných výsledků.',
-  'V případě i této rovnosti následuje los :-)',
-]
+function getStoredTournamentId() {
+  if (typeof window === 'undefined') return defaultTournamentId
+
+  try {
+    const storedTournamentId = window.localStorage.getItem('mopp-selected-tournament')
+    return getTournamentById(storedTournamentId)?.id ?? defaultTournamentId
+  } catch {
+    return defaultTournamentId
+  }
+}
 
 function formatCount(count, one, few, many) {
   if (count === 1) return `${count} ${one}`
@@ -101,8 +91,18 @@ function extractRound(match) {
   return matched ? Number(matched[1]) : null
 }
 
-function formatRound(round) {
-  return `${round}. den`
+function formatRound(round, roundLabel = 'den') {
+  return `${round}. ${roundLabel}`
+}
+
+function isTournamentActiveByDate(tournament) {
+  const startDate = tournament?.startDate
+  if (!startDate) return false
+
+  const now = new Date()
+  const start = new Date(`${startDate}T00:00:00`)
+  if (Number.isNaN(start.getTime())) return false
+  return now >= start
 }
 
 function extractCalendarDate(startsAt) {
@@ -246,6 +246,49 @@ function isNoBetPick(pick) {
   return /^\s*n\s*:\s*n\s*$/i.test(String(pick ?? ''))
 }
 
+function formatTipUpdatedAt(updatedAt) {
+  if (!updatedAt) return ''
+
+  const shortMatch = String(updatedAt).trim().match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}:\d{2})$/)
+  if (shortMatch) {
+    const [, , month, day, time] = shortMatch
+    return `${day}. ${month}. ${time}`
+  }
+
+  const date = new Date(updatedAt)
+  if (Number.isNaN(date.getTime())) {
+    return String(updatedAt).trim()
+  }
+
+  return new Intl.DateTimeFormat('cs-CZ', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date)
+}
+
+function toTipTimestampMs(value) {
+  const text = String(value ?? '').trim()
+  if (!text) return Number.NaN
+
+  const shortMatch = text.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2})$/)
+  if (shortMatch) {
+    const [, year, month, day, hour, minute] = shortMatch
+    const parsed = new Date(
+      Number(year),
+      Number(month) - 1,
+      Number(day),
+      Number(hour),
+      Number(minute),
+    ).getTime()
+    return Number.isFinite(parsed) ? parsed : Number.NaN
+  }
+
+  const parsed = Number(new Date(text))
+  return Number.isFinite(parsed) ? parsed : Number.NaN
+}
+
 function calculateMatchPayouts(match, playerOrder, overridesByMatchId, remainderRecipientsByMatchId) {
   const override = overridesByMatchId?.[match?.id]
   if (override && typeof override === 'object') {
@@ -267,8 +310,22 @@ function calculateMatchPayouts(match, playerOrder, overridesByMatchId, remainder
 
   if (remainder > 0) {
     const preferredWinnerId = remainderRecipientsByMatchId?.[match?.id]
+    const manualRecipientId = preferredWinnerId && payouts.has(preferredWinnerId) ? preferredWinnerId : ''
+
+    const winnersWithTimestamp = winners
+      .map((winner) => ({
+        playerId: winner.playerId,
+        timestampMs: toTipTimestampMs(winner.updatedAt),
+      }))
+      .filter((item) => Number.isFinite(item.timestampMs))
+      .sort((a, b) => {
+        if (a.timestampMs !== b.timestampMs) return a.timestampMs - b.timestampMs
+        return (playerOrder.get(a.playerId) ?? 999) - (playerOrder.get(b.playerId) ?? 999)
+      })
+
+    const autoRecipientId = winnersWithTimestamp[0]?.playerId ?? ''
     const fallbackWinnerId = winners[0]?.playerId
-    const recipientId = preferredWinnerId && payouts.has(preferredWinnerId) ? preferredWinnerId : fallbackWinnerId
+    const recipientId = autoRecipientId || manualRecipientId || fallbackWinnerId
 
     if (recipientId) {
       payouts.set(recipientId, (payouts.get(recipientId) ?? 0) + remainder)
@@ -278,8 +335,9 @@ function calculateMatchPayouts(match, playerOrder, overridesByMatchId, remainder
   return payouts
 }
 
-async function fetchLiveData() {
-  const response = await fetch(`/api/data?t=${Date.now()}`, { cache: 'no-store' })
+async function fetchLiveData(tournamentId) {
+  const query = tournamentId ? `?tournament=${encodeURIComponent(tournamentId)}&` : '?'
+  const response = await fetch(`/api/data${query}t=${Date.now()}`, { cache: 'no-store' })
   const payload = await response.json()
 
   if (!response.ok || !payload?.ok) {
@@ -303,14 +361,79 @@ function SplitTip({ value }) {
   )
 }
 
+function getMatchTeamLogoUrl(tournamentId, teamName) {
+  return getTeamLogoUrl(tournamentId, teamName) ?? getFlagUrl(teamName)
+}
+
+function getTeamLogoClassName(tournamentId) {
+  return tournamentId === 'PO-2025' ? 'is-round-logo' : 'is-rect-logo'
+}
+
 function App() {
   const tooltipTimerRef = useRef(null)
   const touchLegendHandledRef = useRef(false)
-  const [data, setData] = useState({ players: fallbackPlayers, matches: fallbackMatches })
+  const initialTournamentId = getStoredTournamentId()
+  const [selectedTournamentId, setSelectedTournamentId] = useState(initialTournamentId)
+  const [data, setData] = useState(
+    initialTournamentId === defaultTournamentId
+      ? { players: fallbackPlayers, matches: fallbackMatches }
+      : emptyData,
+  )
   const [isLiveLoading, setIsLiveLoading] = useState(true)
-  const [showLongTermBankInfo, setShowLongTermBankInfo] = useState(false)
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('mopp-selected-tournament', selectedTournamentId)
+    } catch {
+      // localStorage muze byt blokovane.
+    }
+  }, [selectedTournamentId])
+  const selectedTournament = useMemo(
+    () => getTournamentById(selectedTournamentId) ?? tournaments[0] ?? null,
+    [selectedTournamentId],
+  )
+  const roundLabel = selectedTournament?.roundLabel ?? 'den'
+  const longTermBank = selectedTournament?.longTermBank ?? null
+  const remainderRecipientByMatchId = useMemo(
+    () => selectedTournament?.remainderRecipientByMatchId ?? {},
+    [selectedTournament],
+  )
+
+  useEffect(() => {
+    const faviconHref = selectedTournament?.favicon
+    if (!faviconHref || typeof document === 'undefined') return
+
+    const cacheBustedHref = `${faviconHref}?t=${encodeURIComponent(selectedTournament?.id ?? '')}`
+    const rels = ['icon', 'shortcut icon']
+
+    for (const rel of rels) {
+      const link = document.querySelector(`link[rel='${rel}']`) || document.createElement('link')
+      link.setAttribute('rel', rel)
+      link.setAttribute('href', cacheBustedHref)
+      if (!link.parentNode) {
+        document.head.appendChild(link)
+      }
+    }
+  }, [selectedTournament?.favicon, selectedTournament?.id])
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    const suffix = selectedTournament?.tabTitle ?? selectedTournament?.title ?? selectedTournament?.label ?? 'MOPP'
+    document.title = `Master of PP | ${suffix}`
+  }, [selectedTournament])
+
   const players = data.players
   const matches = data.matches
+  const hasUnfinishedMatches = useMemo(
+    () =>
+      matches.some(
+        (match) =>
+          !match.score ||
+          match.score === '--:--' ||
+          (match.tips ?? []).some((tip) => tip.points === null),
+      ),
+    [matches],
+  )
+  const highlightCurrentRound = isTournamentActiveByDate(selectedTournament) && hasUnfinishedMatches
   const scoreboard = useMemo(() => [...players].sort((a, b) => b.points - a.points), [players])
   const totalPayoutsByPlayer = useMemo(() => {
     const playerOrder = new Map(players.map((player, index) => [player.id, index]))
@@ -330,7 +453,7 @@ function App() {
     }
 
     return totals
-  }, [matches, players])
+  }, [matches, players, remainderRecipientByMatchId])
 
   const standings = useMemo(
     () =>
@@ -442,9 +565,62 @@ function App() {
     return rounds[rounds.length - 1] ?? 1
   }, [matches, rounds])
 
-  const [selectedRound, setSelectedRound] = useState(currentRound)
-  const [visiblePlayerIds, setVisiblePlayerIds] = useState(() => scoreboard.map((player) => player.id))
-  const [hoveredPlayerId, setHoveredPlayerId] = useState('')
+  const [viewStateByTournament, setViewStateByTournament] = useState({})
+  const currentViewState = viewStateByTournament[selectedTournamentId] ?? {}
+  const selectedRound = currentViewState.selectedRound ?? currentRound
+  const visiblePlayerIds = currentViewState.visiblePlayerIds ?? scoreboard.map((player) => player.id)
+  const hoveredPlayerId = currentViewState.hoveredPlayerId ?? ''
+  const selectedMatchId = currentViewState.selectedMatchId ?? ''
+  const showLongTermBankInfo = currentViewState.showLongTermBankInfo ?? false
+
+  const updateCurrentTournamentState = (patch) => {
+    setViewStateByTournament((prev) => {
+      const existing = prev[selectedTournamentId] ?? {}
+      const nextPatch = typeof patch === 'function' ? patch(existing) : patch
+      return {
+        ...prev,
+        [selectedTournamentId]: {
+          ...existing,
+          ...nextPatch,
+        },
+      }
+    })
+  }
+
+  const setSelectedRound = (value) => {
+    updateCurrentTournamentState((current) => ({
+      selectedRound: typeof value === 'function' ? value(current.selectedRound ?? currentRound) : value,
+    }))
+  }
+
+  const setVisiblePlayerIds = (value) => {
+    updateCurrentTournamentState((current) => ({
+      visiblePlayerIds:
+        typeof value === 'function'
+          ? value(current.visiblePlayerIds ?? scoreboard.map((player) => player.id))
+          : value,
+    }))
+  }
+
+  const setHoveredPlayerId = (value) => {
+    updateCurrentTournamentState((current) => ({
+      hoveredPlayerId: typeof value === 'function' ? value(current.hoveredPlayerId ?? '') : value,
+    }))
+  }
+
+  const setSelectedMatchId = (value) => {
+    updateCurrentTournamentState((current) => ({
+      selectedMatchId:
+        typeof value === 'function' ? value(current.selectedMatchId ?? '') : value,
+    }))
+  }
+
+  const setShowLongTermBankInfo = (value) => {
+    updateCurrentTournamentState((current) => ({
+      showLongTermBankInfo:
+        typeof value === 'function' ? value(current.showLongTermBankInfo ?? false) : value,
+    }))
+  }
 
   const normalizedVisiblePlayerIds = useMemo(() => {
     const ids = scoreboard.map((player) => player.id)
@@ -473,8 +649,6 @@ function App() {
     if (dates.length === 1) return dates[0]
     return `${dates[0]}–${dates[dates.length - 1]}`
   }, [roundMatches])
-
-  const [selectedMatchId, setSelectedMatchId] = useState(roundMatches[0]?.id ?? '')
 
   const effectiveSelectedMatchId = useMemo(() => {
     if (roundMatches.length === 0) return ''
@@ -541,13 +715,14 @@ function App() {
         return {
           ...tip,
           playerName: player?.name ?? tip.playerId,
+          tipNote: tip.updatedAt ? `vloženo ${formatTipUpdatedAt(tip.updatedAt)}` : '',
           rank,
           rankDelta,
           payout,
         }
       })
       .sort((a, b) => a.rank - b.rank)
-  }, [players, rankByPlayerForPreviousRound, rankByPlayerForSelectedRound, scoreboard, selectedMatch])
+  }, [players, rankByPlayerForPreviousRound, rankByPlayerForSelectedRound, scoreboard, selectedMatch, remainderRecipientByMatchId])
 
   const [syncMessage, setSyncMessage] = useState('')
   const [showSyncTooltip, setShowSyncTooltip] = useState(false)
@@ -558,12 +733,14 @@ function App() {
 
     const loadLiveData = async () => {
       try {
-        const nextData = await fetchLiveData()
+        const nextData = await fetchLiveData(selectedTournamentId)
         if (!cancelled) {
           setData(nextData)
         }
       } catch {
-        // Fallback na build data zustane aktivni.
+        if (!cancelled) {
+          setData(selectedTournamentId === defaultTournamentId ? { players: fallbackPlayers, matches: fallbackMatches } : emptyData)
+        }
       } finally {
         if (!cancelled) {
           setIsLiveLoading(false)
@@ -576,7 +753,7 @@ function App() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [selectedTournamentId])
 
   useEffect(() => {
     return () => {
@@ -607,8 +784,10 @@ function App() {
     try {
       if (import.meta.env.PROD) {
         const previousData = data
-        const nextData = await fetchLiveData()
-        setData(nextData)
+        const nextData = await fetchLiveData(defaultTournamentId)
+        if (selectedTournamentId === defaultTournamentId) {
+          setData(nextData)
+        }
         showTooltip(buildLiveSyncMessage(previousData, nextData))
         return
       }
@@ -631,8 +810,8 @@ function App() {
       if (!response.ok || !payload?.ok) {
         showTooltip(payload?.message || 'Synchronizace selhala')
       } else {
-        const nextData = await fetchLiveData().catch(() => null)
-        if (nextData) {
+        const nextData = await fetchLiveData(defaultTournamentId).catch(() => null)
+        if (nextData && selectedTournamentId === defaultTournamentId) {
           setData(nextData)
         }
         showTooltip(payload.message || 'Synchronizace dokončena')
@@ -651,7 +830,7 @@ function App() {
     <main className="layout">
       <header className="hero">
         <div className="hero-content">
-          <h1>MS ve fotbale 2026</h1>
+          <h1>{selectedTournament?.title ?? selectedTournament?.label ?? 'MOPP turnaj'}</h1>
           <p className="intro">
             <span>tipovací soutěž</span>
             <span className="intro-sep" aria-hidden="true">
@@ -659,15 +838,39 @@ function App() {
             </span>
             <span>Master of PP</span>
           </p>
-          {isLiveLoading ? <p className="intro">Načítám aktuální data…</p> : null}
+          <div className="hero-controls">
+            <select
+              className="tournament-select"
+              aria-label="Výběr turnaje"
+              title={selectedTournament?.title ?? selectedTournament?.label ?? 'Turnaj'}
+              value={selectedTournamentId}
+              onChange={(event) => {
+                const nextTournamentId = event.target.value
+                setIsLiveLoading(true)
+                setData(
+                  nextTournamentId === defaultTournamentId
+                    ? { players: fallbackPlayers, matches: fallbackMatches }
+                    : emptyData,
+                )
+                setSelectedTournamentId(nextTournamentId)
+              }}
+            >
+              {tournaments.map((tournament) => (
+                <option key={tournament.id} value={tournament.id}>
+                  {tournament.tabTitle ?? tournament.label}
+                </option>
+              ))}
+            </select>
+            {isLiveLoading ? <span className="tournament-loading">Načítám data…</span> : null}
+          </div>
         </div>
 
         <figure className="hero-logo-wrap">
           <button type="button" className="hero-logo-button" onClick={handleLogoClick}>
             <img
               className="hero-logo"
-              src="/fifa-world-cup-2026-logo.svg"
-              alt="Autor: FIFA – Tento soubor byl odvozen z: World-g89b177785 1280.png:Tento soubor byl odvozen z: 2026 FIFA World Cup emblem (without trophy).svg:Tento soubor byl odvozen z: FIFA World Cup 2026 (Wordmark).svg:, Volné dílo, https://commons.wikimedia.org/w/index.php?curid=188361756"
+              src={selectedTournament?.heroLogo ?? '/tournaments/2026-logo.svg'}
+              alt={`Logo turnaje ${selectedTournament?.title ?? selectedTournament?.label ?? ''}`}
               loading="lazy"
             />
           </button>
@@ -679,15 +882,21 @@ function App() {
 
       <section className="panel controls-panel">
         <div className="panel-head">
-          <h2>{stageLabel} · {formatRound(selectedRound)}</h2>
+          <h2>{stageLabel} · {formatRound(selectedRound, roundLabel)}</h2>
         </div>
 
-        <div className="round-tabs" role="tablist" aria-label="Výběr dne">
+        <div className="round-tabs" role="tablist" aria-label={`Výběr ${roundLabel}`}>
           {rounds.map((round) => {
             const timeClass =
-              round < currentRound ? 'is-past' : round > currentRound ? 'is-future' : 'is-current'
+              highlightCurrentRound
+                ? round < currentRound
+                  ? 'is-past'
+                  : round > currentRound
+                    ? 'is-future'
+                    : 'is-current'
+                : ''
             const activeClass = round === selectedRound ? 'is-active' : ''
-            const isCurrentRound = round === currentRound
+            const isCurrentRound = highlightCurrentRound && round === currentRound
 
             return (
               <button
@@ -697,7 +906,7 @@ function App() {
                 aria-current={isCurrentRound ? 'date' : undefined}
                 onClick={() => setSelectedRound(round)}
               >
-                <span className="round-tab-label">{formatRound(round)}</span>
+                <span className="round-tab-label">{formatRound(round, roundLabel)}</span>
               </button>
             )
           })}
@@ -712,8 +921,9 @@ function App() {
 
         <div className="day-matches-row">
           {roundMatches.map((match) => {
-            const homeFlag = getFlagUrl(match.home)
-            const awayFlag = getFlagUrl(match.away)
+            const homeFlag = getMatchTeamLogoUrl(selectedTournamentId, match.home)
+            const awayFlag = getMatchTeamLogoUrl(selectedTournamentId, match.away)
+            const teamLogoClassName = getTeamLogoClassName(selectedTournamentId)
             const isActive = match.id === selectedMatch?.id
             const submittedTips = match.tips.filter((tip) => tip.pick && tip.pick !== '-').length
             const score = parseScore(match.score)
@@ -734,7 +944,7 @@ function App() {
                     <span className="team-inline">
                       <span className="team-left">
                         {homeFlag ? (
-                          <img className="flag" src={homeFlag} alt={`Vlajka ${match.home}`} loading="lazy" />
+                          <img className={`flag ${teamLogoClassName}`} src={homeFlag} alt={`Logo ${match.home}`} loading="lazy" />
                         ) : null}
                         {match.home}
                       </span>
@@ -745,7 +955,7 @@ function App() {
                     <span className="team-inline">
                       <span className="team-left">
                         {awayFlag ? (
-                          <img className="flag" src={awayFlag} alt={`Vlajka ${match.away}`} loading="lazy" />
+                          <img className={`flag ${teamLogoClassName}`} src={awayFlag} alt={`Logo ${match.away}`} loading="lazy" />
                         ) : null}
                         {match.away}
                       </span>
@@ -780,11 +990,13 @@ function App() {
           {showLongTermBankInfo ? (
             <div className="long-term-bank-info">
               <p className="long-term-bank-summary">
-                Dlouhodobý bank <strong>1650 Kč</strong> se rozdělí:
+                {longTermBank?.introLabel ?? 'Dlouhodobý bank'}{' '}
+                <strong>{longTermBank?.totalAmount ?? 0} Kč</strong>{' '}
+                {longTermBank?.introSuffix ?? 'se rozdělí:'}
               </p>
 
               <ol className="long-term-bank-payouts">
-                {longTermBankPayouts.map((item) => (
+                {(longTermBank?.payouts ?? []).map((item) => (
                   <li
                     key={item.place}
                     className={`long-term-bank-place ${
@@ -798,9 +1010,9 @@ function App() {
               </ol>
 
               <div className="long-term-bank-rules">
-                <h3>V případě shodného počtu bodů rozhoduje:</h3>
+                <h3>{longTermBank?.tieBreakHeading ?? 'V případě shodného počtu bodů rozhoduje:'}</h3>
                 <ol>
-                  {tieBreakRules.map((rule) => (
+                  {(longTermBank?.tieBreakRules ?? []).map((rule) => (
                     <li key={rule}>{rule}</li>
                   ))}
                 </ol>
@@ -861,8 +1073,9 @@ function App() {
                 <div className="selected-match-main">
                   <div className="selected-teams-stack">
                     {(() => {
-                      const homeFlag = getFlagUrl(selectedMatch.home)
-                      const awayFlag = getFlagUrl(selectedMatch.away)
+                      const homeFlag = getMatchTeamLogoUrl(selectedTournamentId, selectedMatch.home)
+                      const awayFlag = getMatchTeamLogoUrl(selectedTournamentId, selectedMatch.away)
+                      const teamLogoClassName = getTeamLogoClassName(selectedTournamentId)
                       const score = parseScore(selectedMatch.score)
 
                       return (
@@ -871,9 +1084,9 @@ function App() {
                             <span className="team-left">
                               {homeFlag ? (
                                 <img
-                                  className="flag"
+                                  className={`flag ${teamLogoClassName}`}
                                   src={homeFlag}
-                                  alt={`Vlajka ${selectedMatch.home}`}
+                                  alt={`Logo ${selectedMatch.home}`}
                                   loading="lazy"
                                 />
                               ) : null}
@@ -888,9 +1101,9 @@ function App() {
                             <span className="team-left">
                               {awayFlag ? (
                                 <img
-                                  className="flag"
+                                  className={`flag ${teamLogoClassName}`}
                                   src={awayFlag}
-                                  alt={`Vlajka ${selectedMatch.away}`}
+                                  alt={`Logo ${selectedMatch.away}`}
                                   loading="lazy"
                                 />
                               ) : null}
@@ -935,7 +1148,8 @@ function App() {
                       )}
                     </span>
                     <span className="name-cell">
-                      <span>{tip.playerName}</span>
+                      <span className="player-name">{tip.playerName}</span>
+                      {tip.tipNote ? <span className="tip-note">{tip.tipNote}</span> : null}
                     </span>
 
                     <span className="payout-cell">

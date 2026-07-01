@@ -85,3 +85,14 @@ Poznamka:
 - Web ted pri nacteni i trojkliku umi sahnout na `/api/data`, ktere vraci cerstva data primo z Google Sheetu. Kvuli zmene tipu uz tedy neni potreba delat commit.
 - Lokalne trojklik porad prepise `src/data/moppData.js`, aby zustal aktualni fallback pro build a lokalni vyvoj.
 - Na Vercelu musi byt dostupna serverless funkce `/api/data`, ktera cte Google Sheet za behu.
+
+### Historie uprav tipu (updatedAt pod jmenem)
+
+- Samotny Google Sheet CSV neobsahuje cas posledni upravy bunky.
+- Zakladni rezim je navazany na existujici synchronizaci (trojklik na logo): pri sync se porovnaji tipy a zmenenym tipum se prida cas synchronizace.
+- Audit se uklada do `public/tip-audit.json` a API `/api/data` ho automaticky primicha do vysledku jako `updatedAt`.
+- Pri prvnim zapnuti se casy zpetne nedoplni hromadne: `updatedAt` se nastavi az pri skutecne zmene tipu zachycene synchronizaci.
+- Pro starsi zapasy muzes casy doplnit rucne v [src/data/tournaments.js](src/data/tournaments.js) pres `manualTipUpdatedAtByMatchId`.
+- Jednodussi varianta je `manualTipTimestampEntries` s radky typu `m1, p8, 2026-06-29 17:30`.
+- Format: `{ m12: { p1: '2026-06-12T09:15:00+02:00', p4: '2026-06-12T09:20:00+02:00' } }`.
+- Rucni hodnoty maji prednost pred automatickym casem ze synchronizace, aby se neprepisovaly.

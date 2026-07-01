@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
+const fs = require("fs/promises");
 const { spawn } = require("child_process");
 
 const app = express();
@@ -20,9 +21,24 @@ app.get("/api/ping", (req, res) => {
 app.get("/api/data", async (req, res) => {
   try {
     const { fetchSheetData } = await import(path.resolve(__dirname, "../scripts/sheet-data.mjs"));
-    const data = await fetchSheetData();
+    const tournamentId = typeof req.query?.tournament === "string" ? req.query.tournament : undefined;
+    const tipAuditFile = path.resolve(__dirname, "../public/tip-audit.json");
+
+    let tipAuditByKey = {};
+    try {
+      const auditText = await fs.readFile(tipAuditFile, "utf8");
+      const auditPayload = JSON.parse(auditText);
+      const tips = auditPayload?.byTournament?.[tournamentId]?.tips;
+      if (tips && typeof tips === "object") {
+        tipAuditByKey = tips;
+      }
+    } catch {
+      tipAuditByKey = {};
+    }
+
+    const data = await fetchSheetData({ tournamentId, tipAuditByKey });
     res.set("Cache-Control", "no-store");
-    return res.json({ ok: true, ...data });
+    return res.json({ ok: true, tournamentId: tournamentId ?? null, ...data });
   } catch (error) {
     return res.status(500).json({
       ok: false,

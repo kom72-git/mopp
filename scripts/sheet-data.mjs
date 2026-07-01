@@ -1,10 +1,70 @@
-const SHEET_ID = '1cdrtECld-UgY8qjcc2UajQwcO3F85u1EgV2EU2sc9Lw'
-const GID = '134828351'
+import { defaultTournamentId, getTournamentById } from '../src/data/tournaments.js'
 
 function toInt(value) {
   const clean = String(value ?? '').replace(/[^0-9-]/g, '')
   const parsed = Number.parseInt(clean, 10)
   return Number.isNaN(parsed) ? 0 : parsed
+}
+
+function isValidTimestamp(value) {
+  const text = String(value ?? '').trim()
+  if (!text) return false
+  if (/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}$/.test(text)) return true
+  const time = Number(new Date(text))
+  return Number.isFinite(time)
+}
+
+function parseManualTipTimestampEntry(entry) {
+  const text = String(entry ?? '').trim()
+  if (!text) return null
+
+  const matched = text.match(/^\s*(m\d+)\s*[,;|]\s*(p\d+)\s*[,;|]\s*(.+?)\s*$/i)
+  if (!matched) return null
+
+  const [, matchIdRaw, playerIdRaw, timestampRaw] = matched
+  const matchId = matchIdRaw.toLowerCase()
+  const playerId = playerIdRaw.toLowerCase()
+  const timestamp = timestampRaw.trim()
+
+  if (!isValidTimestamp(timestamp)) return null
+
+  return {
+    key: `${matchId}:${playerId}`,
+    timestamp,
+  }
+}
+
+function toManualTipAuditByKey(manualByMatchId) {
+  const manualByKey = new Map()
+  const manualMatchIds = new Set()
+  const source = manualByMatchId && typeof manualByMatchId === 'object' ? manualByMatchId : {}
+
+  for (const [matchId, byPlayer] of Object.entries(source)) {
+    if (!byPlayer || typeof byPlayer !== 'object') continue
+    manualMatchIds.add(String(matchId).toLowerCase())
+
+    for (const [playerId, timestamp] of Object.entries(byPlayer)) {
+      if (!isValidTimestamp(timestamp)) continue
+      manualByKey.set(`${matchId}:${playerId}`, String(timestamp))
+    }
+  }
+
+  return { manualByKey, manualMatchIds }
+}
+
+function toManualTipAuditByKeyFromEntries(entries) {
+  const manualByKey = new Map()
+  const manualMatchIds = new Set()
+  const rows = Array.isArray(entries) ? entries : []
+
+  for (const row of rows) {
+    const parsed = parseManualTipTimestampEntry(row)
+    if (!parsed) continue
+    manualByKey.set(parsed.key, parsed.timestamp)
+    manualMatchIds.add(parsed.key.split(':')[0])
+  }
+
+  return { manualByKey, manualMatchIds }
 }
 
 function parseCsv(csvText) {
@@ -51,6 +111,7 @@ function parseCsv(csvText) {
     const bank = toInt(row[12] ?? '')
 
     const startsAt = [day, date, time].filter(Boolean).join(' ')
+    const matchId = `m${matches.length + 1}`
 
     const tips = players.map((player) => {
       const c = player.baseCol
@@ -68,7 +129,7 @@ function parseCsv(csvText) {
     })
 
     matches.push({
-      id: `m${matches.length + 1}`,
+      id: matchId,
       round,
       startsAt,
       home,
@@ -85,8 +146,15 @@ function parseCsv(csvText) {
   }
 }
 
-export async function fetchSheetData() {
-  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID}`
+export async function fetchSheetData(options = {}) {
+  const tournamentId = options.tournamentId ?? defaultTournamentId
+  const tournament = getTournamentById(tournamentId)
+
+  if (!tournament) {
+    throw new Error(`Unknown tournament: ${tournamentId}`)
+  }
+
+  const url = `https://docs.google.com/spreadsheets/d/${tournament.sheetId}/export?format=csv&gid=${tournament.gid}`
   const response = await fetch(url)
 
   if (!response.ok) {
@@ -94,5 +162,37 @@ export async function fetchSheetData() {
   }
 
   const csv = await response.text()
-  return parseCsv(csv)
+  const parsed = parseCsv(csv)
+
+  const localAuditByKey = options.tipAuditByKey && typeof options.tipAuditByKey === 'object'
+    ? new Map(Object.entries(options.tipAuditByKey))
+    : new Map()
+  const manualObjectAudit = toManualTipAuditByKey(tournament.manualTipUpdatedAtByMatchId)
+  const manualEntryAudit = toManualTipAuditByKeyFromEntries(tournament.manualTipTimestampEntries)
+  const manualMatchIds = new Set([...manualObjectAudit.manualMatchIds, ...manualEntryAudit.manualMatchIds])
+
+  const auditByTipKey = new Map()
+  for (const [key, value] of localAuditByKey.entries()) {
+    const matchId = String(key).split(':')[0]?.toLowerCase() ?? ''
+    if (manualMatchIds.has(matchId)) continue
+    auditByTipKey.set(key, value)
+  }
+
+  for (const [key, timestamp] of manualObjectAudit.manualByKey.entries()) {
+    auditByTipKey.set(key, timestamp)
+  }
+  for (const [key, timestamp] of manualEntryAudit.manualByKey.entries()) {
+    auditByTipKey.set(key, timestamp)
+  }
+
+  return {
+    players: parsed.players,
+    matches: parsed.matches.map((match) => ({
+      ...match,
+      tips: (match.tips ?? []).map((tip) => ({
+        ...tip,
+        updatedAt: auditByTipKey.get(`${match.id}:${tip.playerId}`) ?? null,
+      })),
+    })),
+  }
 }

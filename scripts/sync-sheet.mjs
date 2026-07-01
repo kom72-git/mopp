@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises'
 import { createHash } from 'node:crypto'
 import { fetchSheetData } from './sheet-data.mjs'
+import { defaultTournamentId } from '../src/data/tournaments.js'
 
 function formatCount(count, one, few, many) {
   if (count === 1) return `${count} ${one}`
@@ -35,6 +36,69 @@ async function readExistingData(filePath) {
     }
   } catch {
     return null
+  }
+}
+
+async function readExistingTipAudit(filePath) {
+  try {
+    const text = await fs.readFile(filePath, 'utf8')
+    const payload = JSON.parse(text)
+    return payload && typeof payload === 'object' ? payload : {}
+  } catch {
+    return {}
+  }
+}
+
+function isTipChanged(previousTip, nextTip) {
+  if (!previousTip) return String(nextTip?.pick ?? '').trim() !== '-'
+  return previousTip.pick !== nextTip.pick || previousTip.points !== nextTip.points
+}
+
+function buildTipAuditByKey(previousData, nextData, previousAuditByKey, nowIso) {
+  const nextKeys = new Set()
+  const merged = new Map()
+
+  for (const [key, value] of Object.entries(previousAuditByKey ?? {})) {
+    if (value) merged.set(key, value)
+  }
+
+  const prevMatchesById = new Map((previousData?.matches ?? []).map((match) => [match.id, match]))
+  let updatedCount = 0
+
+  for (const nextMatch of nextData.matches ?? []) {
+    const prevMatch = prevMatchesById.get(nextMatch.id)
+    const prevTipsByPlayer = new Map((prevMatch?.tips ?? []).map((tip) => [tip.playerId, tip]))
+
+    for (const nextTip of nextMatch.tips ?? []) {
+      const key = `${nextMatch.id}:${nextTip.playerId}`
+      nextKeys.add(key)
+
+      const prevTip = prevTipsByPlayer.get(nextTip.playerId)
+      if (isTipChanged(prevTip, nextTip)) {
+        merged.set(key, nowIso)
+        updatedCount += 1
+      }
+    }
+  }
+
+  const filtered = {}
+  for (const [key, value] of merged.entries()) {
+    if (nextKeys.has(key)) filtered[key] = value
+  }
+
+  return { tipAuditByKey: filtered, updatedCount }
+}
+
+function injectTipAudit(nextData, tipAuditByKey) {
+  return {
+    players: nextData.players,
+    matches: (nextData.matches ?? []).map((match) => ({
+      ...match,
+      tips: (match.tips ?? []).map((tip) => ({
+        ...tip,
+        updatedAt: tipAuditByKey?.[`${match.id}:${tip.playerId}`] ?? null,
+      })),
+    })),
   }
 }
 
@@ -153,34 +217,60 @@ function buildSyncMessage(diff, nextData, hadPreviousData) {
 async function main() {
   const outputFile = 'src/data/moppData.js'
   const statusFile = 'public/sync-status.json'
-  const data = await fetchSheetData()
+  const tipAuditFile = 'public/tip-audit.json'
+  const tournamentId = defaultTournamentId
+  const data = await fetchSheetData({ tournamentId })
   const previousData = await readExistingData(outputFile)
+  const previousTipAudit = await readExistingTipAudit(tipAuditFile)
+  const previousTipAuditByKey = previousTipAudit?.byTournament?.[tournamentId]?.tips ?? {}
+  const now = new Date()
+  const nowIso = now.toISOString()
+  const { tipAuditByKey, updatedCount } = buildTipAuditByKey(
+    previousData,
+    data,
+    previousTipAuditByKey,
+    nowIso,
+  )
+  const dataWithAudit = injectTipAudit(data, tipAuditByKey)
   const diff = calculateDiff(previousData, data)
   const message = buildSyncMessage(diff, data, Boolean(previousData))
 
-  const output = `export const players = ${JSON.stringify(data.players, null, 2)}\n\nexport const matches = ${JSON.stringify(data.matches, null, 2)}\n`
+  const output = `export const players = ${JSON.stringify(dataWithAudit.players, null, 2)}\n\nexport const matches = ${JSON.stringify(dataWithAudit.matches, null, 2)}\n`
   const signature = createHash('sha1').update(output).digest('hex')
-  const now = new Date()
   const status = {
     updatedAt: formatPragueTimestamp(now),
-    updatedAtUtc: now.toISOString(),
+    updatedAtUtc: nowIso,
     signature,
-    players: data.players.length,
-    matches: data.matches.length,
+    players: dataWithAudit.players.length,
+    matches: dataWithAudit.matches.length,
     message,
+  }
+
+  const tipAuditPayload = {
+    updatedAtUtc: nowIso,
+    byTournament: {
+      ...(previousTipAudit?.byTournament ?? {}),
+      [tournamentId]: {
+        tips: tipAuditByKey,
+      },
+    },
   }
 
   await fs.mkdir('src/data', { recursive: true })
   await fs.mkdir('public', { recursive: true })
   await fs.writeFile(outputFile, output, 'utf8')
   await fs.writeFile(statusFile, `${JSON.stringify(status, null, 2)}\n`, 'utf8')
+  await fs.writeFile(tipAuditFile, `${JSON.stringify(tipAuditPayload, null, 2)}\n`, 'utf8')
 
   return {
     ok: true,
-    players: data.players.length,
-    matches: data.matches.length,
+    tournamentId,
+    players: dataWithAudit.players.length,
+    matches: dataWithAudit.matches.length,
     file: outputFile,
     statusFile,
+    tipAuditFile,
+    tipAuditUpdated: updatedCount,
     signature,
     changes: diff,
     message,

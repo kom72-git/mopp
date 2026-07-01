@@ -29,6 +29,38 @@
   align-items: flex-start;
 }
 
+.hero-controls {
+  margin-top: 0.62rem;
+  width: 100%;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.tournament-select {
+  appearance: none;
+  border: 1px solid rgb(255 255 255 / 24%);
+  background: rgb(255 255 255 / 14%);
+  color: #f7fbff;
+  border-radius: 999px;
+  padding: 0.3rem 0.66rem;
+  font: inherit;
+  font-size: 0.78rem;
+  min-width: 11.5rem;
+  max-width: 15.5rem;
+}
+
+.tournament-select option {
+  color: #102436;
+}
+
+.tournament-loading {
+  color: rgb(233 243 255 / 90%);
+  font-size: 0.76rem;
+  white-space: nowrap;
+}
+
 .hero-logo-wrap {
   position: static;
   margin: 0;
@@ -421,11 +453,22 @@
 }
 
 .flag {
+  display: inline-block;
+  object-fit: cover;
+}
+
+.flag.is-rect-logo {
   width: 20px;
   height: 14px;
   border-radius: 2px;
   border: 1px solid #cedcea;
-  object-fit: cover;
+}
+
+.flag.is-round-logo {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  object-fit: contain;
 }
 
 
@@ -560,11 +603,25 @@
 }
 
 .name-cell {
+  display: grid;
+  gap: 0.06rem;
   color: #193a58;
   font-weight: 600;
   min-width: 0;
   word-break: break-word;
   padding-left: 0.1rem;
+}
+
+.player-name {
+  min-width: 0;
+}
+
+.tip-note {
+  font-size: 0.67rem;
+  line-height: 1.2;
+  color: #607a91;
+  font-weight: 500;
+  overflow-wrap: anywhere;
 }
 
 .payout-cell {
@@ -882,6 +939,7 @@
 
   .tips-row .name-cell {
     grid-area: name;
+    align-self: start;
   }
 
   .tips-row .payout-cell {
@@ -905,6 +963,16 @@
 }
 
 @media (max-width: 520px) {
+  .hero-controls {
+    flex-wrap: wrap;
+    gap: 0.28rem;
+  }
+
+  .tournament-select {
+    min-width: 0;
+    max-width: 100%;
+  }
+
   .hero-logo-wrap {
     justify-self: end;
     max-width: 58px;

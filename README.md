@@ -9,6 +9,12 @@ Samostatny projekt mimo KTF.
 
 ## Spusteni
 
+Kazdy projekt otevirej samostatne v vlastnim okne VS Code.
+Pokud je projekt pripraveny na devcontainer, otevri ho v devcontaineru a nech mu spustit jeho vlastni porty.
+
+V MOPP devcontaineru se po pripojeni automaticky spousti frontend i API.
+Rucni prikazy nize ber jako fallback, kdyz je potrebujes spustit sam.
+
 1. API
 
 ```bash
@@ -33,7 +39,7 @@ Pri beznem vyvoji (`npm run dev`) tenhle port bezne nebezi.
 
 ## Porty MOPP (rychly tahak)
 
-- MOPP slozka: /home/node/moop
+- MOPP slozka: /workspaces/mopp
 - KTF slozka: /workspaces/ktf
 
 I kdyz ve VS Code nekdy uvidis i dalsi porty (typicky 3001 a 5173 z jineho projektu),
@@ -76,8 +82,6 @@ Poznamka:
 - `api/index.js` - API bezi na `4000`
 - `.devcontainer/devcontainer.json` - forward porty pro MOPP
 - `.devcontainer/start-services.sh` - auto start + cisteni cizich procesu
-- `.vscode/tasks.json` - task `MOPP: Start Services` pri otevreni slozky
-- `.vscode/settings.json` - povoleni auto tasku + vypnuta obnova starych forwardu
 
 ## Synchronizace Google Sheet
 

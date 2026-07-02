@@ -188,8 +188,38 @@ function StartsAtLabel({ startsAt, matchId }) {
   )
 }
 
-function getStageLabel(startsAt) {
+function getStageLabel(match, stageRules = [], stageTransitions = []) {
+  const round = extractRound(match)
+  const startsAt = match?.startsAt
   const date = parseMatchDate(startsAt)
+
+  if (date && Array.isArray(stageTransitions) && stageTransitions.length > 0) {
+    const transitions = stageTransitions
+      .map((item) => ({
+        label: item?.label,
+        fromDate: item?.from ? new Date(item.from) : null,
+      }))
+      .filter((item) => item.label && item.fromDate && !Number.isNaN(item.fromDate.getTime()))
+      .sort((a, b) => a.fromDate.getTime() - b.fromDate.getTime())
+
+    if (transitions.length > 0) {
+      let activeLabel = transitions[0].label
+      for (const transition of transitions) {
+        if (date >= transition.fromDate) {
+          activeLabel = transition.label
+        } else {
+          break
+        }
+      }
+      return activeLabel
+    }
+  }
+
+  if (Number.isFinite(round) && Array.isArray(stageRules) && stageRules.length > 0) {
+    const matchedRule = stageRules.find((rule) => Number.isFinite(rule?.maxRound) && round <= rule.maxRound)
+    if (matchedRule?.label) return matchedRule.label
+  }
+
   if (!date) return 'Skupinová fáze'
 
   const groupEnd = new Date(2026, 5, 28, 4, 0)
@@ -638,11 +668,6 @@ function App() {
     [matches, selectedRound],
   )
 
-  const stageLabel = useMemo(() => {
-    const firstMatch = roundMatches[0]
-    return getStageLabel(firstMatch?.startsAt)
-  }, [roundMatches])
-
   const roundDateLabel = useMemo(() => {
     const dates = [...new Set(roundMatches.map((match) => extractCalendarDate(match.startsAt)).filter(Boolean))]
     if (dates.length === 0) return ''
@@ -659,6 +684,16 @@ function App() {
   const selectedMatch = useMemo(
     () => roundMatches.find((match) => match.id === effectiveSelectedMatchId) ?? roundMatches[0],
     [roundMatches, effectiveSelectedMatchId],
+  )
+
+  const selectedMatchStageLabel = useMemo(
+    () =>
+      getStageLabel(
+        selectedMatch,
+        selectedTournament?.stageRules ?? [],
+        selectedTournament?.stageTransitions ?? [],
+      ),
+    [selectedMatch, selectedTournament],
   )
 
   const rankByPlayerForSelectedRound = useMemo(() => {
@@ -882,7 +917,7 @@ function App() {
 
       <section className="panel controls-panel">
         <div className="panel-head">
-          <h2>{stageLabel} · {formatRound(selectedRound, roundLabel)}</h2>
+          <h2>{formatRound(selectedRound, roundLabel)}</h2>
         </div>
 
         <div className="round-tabs" role="tablist" aria-label={`Výběr ${roundLabel}`}>
@@ -915,7 +950,7 @@ function App() {
 
       <section className="panel day-matches-panel">
         <div className="panel-head">
-          <h2>Zápasy dne</h2>
+          <h2>Zápasy dne · {selectedMatchStageLabel}</h2>
           {roundDateLabel ? <span className="tag">{roundDateLabel}</span> : null}
         </div>
 

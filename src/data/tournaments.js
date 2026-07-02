@@ -10,6 +10,22 @@ export const tournaments = [
     favicon: '/icons/ball.svg',
     roundLabel: 'den',
     startDate: '2026-06-11',
+    stageRules: [
+      { maxRound: 20, label: 'Skupinová fáze' },
+      { maxRound: 24, label: 'Šestnáctifinále' },
+      { maxRound: 28, label: 'Osmifinále' },
+      { maxRound: 30, label: 'Čtvrtfinále' },
+      { maxRound: 31, label: 'Semifinále' },
+      { maxRound: 32, label: 'O 3. místo' },
+      { maxRound: 33, label: 'Finále' },
+    ],
+    // Presne prechody fazi podle casu zapasu.
+    // Pouzivaji se prednostne pred round pravidly, pokud je startsAt validni.
+    stageTransitions: [
+      { from: '2026-06-11T00:00:00', label: 'Skupinová fáze' },
+      { from: '2026-07-01T03:00:00', label: 'Šestnáctifinále' },
+      { from: '2026-07-04T19:00:00', label: 'Osmifinále' },
+    ],
     longTermBank: {
       introLabel: 'Dlouhodobý bank',
       totalAmount: 1650,

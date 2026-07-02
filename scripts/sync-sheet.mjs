@@ -51,7 +51,8 @@ async function readExistingTipAudit(filePath) {
 
 function isTipChanged(previousTip, nextTip) {
   if (!previousTip) return String(nextTip?.pick ?? '').trim() !== '-'
-  return previousTip.pick !== nextTip.pick || previousTip.points !== nextTip.points
+  // updatedAt je cas zmeny zadaneho tipu, ne cas vyhodnoceni bodu po zapase.
+  return previousTip.pick !== nextTip.pick
 }
 
 function buildTipAuditByKey(previousData, nextData, previousAuditByKey, nowIso) {

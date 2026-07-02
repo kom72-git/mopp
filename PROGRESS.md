@@ -2,7 +2,6 @@
 **Status:** Statický prototyp hotový a běží
 
 ## Co je hotovo
-- ✅ Nový projekt v `/home/node/mopp` (oddělený od KTF)
 - ✅ React + Vite frontend (stejný stack jako u známek)
 - ✅ Statický prototyp s:
   1. **Zápasy** – mobilní karty se jménem zápasu, časem, výsledkem, bankem
@@ -11,7 +10,6 @@
 
 ## Jak spustit
 ```bash
-cd /home/node/moop
 npm run dev
 # Běží na http://localhost:4173/
 ```

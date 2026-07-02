@@ -46,7 +46,9 @@ export const tournaments = [
     // Editace času tipů pro jednotlivé zápasy (u starých tipů)
     // příklad: 'm1, p8, 2026-06-29 17:30'
     manualTipTimestampEntries: [
-      'm41, p11, 2026-06-28 12:14', 
+      'm41, p11, 2026-06-28 12:14',
+      'm45, p4, 2026-06-30 6:53', 
+
     ],
   },
   {

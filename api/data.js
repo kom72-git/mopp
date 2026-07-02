@@ -1,5 +1,18 @@
 const fs = require('fs/promises')
 const path = require('path')
+const { pathToFileURL } = require('url')
+
+async function loadSheetDataModule() {
+  const modulePath = path.resolve(process.cwd(), 'scripts/sheet-data.mjs')
+  const tournamentsPath = path.resolve(process.cwd(), 'src/data/tournaments.js')
+  const [moduleStats, tournamentsStats] = await Promise.all([
+    fs.stat(modulePath),
+    fs.stat(tournamentsPath),
+  ])
+  const version = `${moduleStats.mtimeMs}-${tournamentsStats.mtimeMs}`
+  const moduleUrl = `${pathToFileURL(modulePath).href}?v=${version}`
+  return import(moduleUrl)
+}
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -8,7 +21,7 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const { fetchSheetData } = await import('../scripts/sheet-data.mjs')
+    const { fetchSheetData } = await loadSheetDataModule()
     const tournamentId = typeof req.query.tournament === 'string' ? req.query.tournament : undefined
     const tipAuditFile = path.resolve(process.cwd(), 'public/tip-audit.json')
 

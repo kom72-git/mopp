@@ -3,6 +3,7 @@ const cors = require("cors");
 const path = require("path");
 const fs = require("fs/promises");
 const { spawn } = require("child_process");
+const { pathToFileURL } = require("url");
 
 const app = express();
 const port = process.env.PORT || 4000;
@@ -18,9 +19,21 @@ app.get("/api/ping", (req, res) => {
   res.json({ message: "MOPP API běží", ts: new Date().toISOString() });
 });
 
+async function loadSheetDataModule() {
+  const modulePath = path.resolve(__dirname, "../scripts/sheet-data.mjs");
+  const tournamentsPath = path.resolve(__dirname, "../src/data/tournaments.js");
+  const [moduleStats, tournamentsStats] = await Promise.all([
+    fs.stat(modulePath),
+    fs.stat(tournamentsPath),
+  ]);
+  const version = `${moduleStats.mtimeMs}-${tournamentsStats.mtimeMs}`;
+  const moduleUrl = `${pathToFileURL(modulePath).href}?v=${version}`;
+  return import(moduleUrl);
+}
+
 app.get("/api/data", async (req, res) => {
   try {
-    const { fetchSheetData } = await import(path.resolve(__dirname, "../scripts/sheet-data.mjs"));
+    const { fetchSheetData } = await loadSheetDataModule();
     const tournamentId = typeof req.query?.tournament === "string" ? req.query.tournament : undefined;
     const tipAuditFile = path.resolve(__dirname, "../public/tip-audit.json");
 

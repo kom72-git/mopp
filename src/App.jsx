@@ -874,28 +874,31 @@ function App() {
             <span>Master of PP</span>
           </p>
           <div className="hero-controls">
-            <select
-              className="tournament-select"
-              aria-label="Výběr turnaje"
-              title={selectedTournament?.title ?? selectedTournament?.label ?? 'Turnaj'}
-              value={selectedTournamentId}
-              onChange={(event) => {
-                const nextTournamentId = event.target.value
-                setIsLiveLoading(true)
-                setData(
-                  nextTournamentId === defaultTournamentId
-                    ? { players: fallbackPlayers, matches: fallbackMatches }
-                    : emptyData,
-                )
-                setSelectedTournamentId(nextTournamentId)
-              }}
-            >
-              {tournaments.map((tournament) => (
-                <option key={tournament.id} value={tournament.id}>
-                  {tournament.tabTitle ?? tournament.label}
-                </option>
-              ))}
-            </select>
+            <span className="tournament-picker-label">Archiv</span>
+            <span className="tournament-select-shell">
+              <select
+                className="tournament-select"
+                aria-label="Výběr turnaje"
+                title={selectedTournament?.title ?? selectedTournament?.label ?? 'Turnaj'}
+                value={selectedTournamentId}
+                onChange={(event) => {
+                  const nextTournamentId = event.target.value
+                  setIsLiveLoading(true)
+                  setData(
+                    nextTournamentId === defaultTournamentId
+                      ? { players: fallbackPlayers, matches: fallbackMatches }
+                      : emptyData,
+                  )
+                  setSelectedTournamentId(nextTournamentId)
+                }}
+              >
+                {tournaments.map((tournament) => (
+                  <option key={tournament.id} value={tournament.id}>
+                    {tournament.tabTitle ?? tournament.label}
+                  </option>
+                ))}
+              </select>
+            </span>
             {isLiveLoading ? <span className="tournament-loading">Načítám data…</span> : null}
           </div>
         </div>

@@ -2,22 +2,22 @@ export const players = [
   {
     "id": "p1",
     "name": "Kom",
-    "points": 93
+    "points": 103
   },
   {
     "id": "p2",
     "name": "Kraty",
-    "points": 103
+    "points": 118
   },
   {
     "id": "p3",
     "name": "Radek",
-    "points": 110
+    "points": 115
   },
   {
     "id": "p4",
     "name": "Roman",
-    "points": 124
+    "points": 134
   },
   {
     "id": "p5",
@@ -27,17 +27,17 @@ export const players = [
   {
     "id": "p6",
     "name": "Slanec",
-    "points": 140
+    "points": 150
   },
   {
     "id": "p7",
     "name": "Láďa",
-    "points": 97
+    "points": 103
   },
   {
     "id": "p8",
     "name": "Prd",
-    "points": 138
+    "points": 141
   },
   {
     "id": "p9",
@@ -47,7 +47,7 @@ export const players = [
   {
     "id": "p10",
     "name": "Mirax",
-    "points": 84
+    "points": 90
   },
   {
     "id": "p11",
@@ -4111,83 +4111,83 @@ export const matches = [
     "startsAt": "23. (pá) 03.07. 01:00",
     "home": "Portugalsko",
     "away": "Chorvatsko",
-    "score": null,
+    "score": "2:1",
     "bank": 110,
     "tips": [
       {
         "playerId": "p1",
         "pick": "2:1",
-        "points": null,
+        "points": 10,
         "updatedAt": "2026-07-02 10:10",
         "updatedState": "inserted"
       },
       {
         "playerId": "p2",
         "pick": "2:0",
-        "points": null,
+        "points": 5,
         "updatedAt": "2026-07-02 5:12",
         "updatedState": "inserted"
       },
       {
         "playerId": "p3",
         "pick": "1:1",
-        "points": null,
+        "points": 0,
         "updatedAt": "2026-07-02 5:11",
         "updatedState": "inserted"
       },
       {
         "playerId": "p4",
         "pick": "2:1",
-        "points": null,
+        "points": 10,
         "updatedAt": "2026-06-30 12:48",
         "updatedState": "inserted"
       },
       {
         "playerId": "p5",
         "pick": "0:0",
-        "points": null,
+        "points": 0,
         "updatedAt": "2026-07-02 19:06",
         "updatedState": "inserted"
       },
       {
         "playerId": "p6",
         "pick": "2:1",
-        "points": null,
+        "points": 10,
         "updatedAt": "2026-07-02 21:33",
         "updatedState": "inserted"
       },
       {
         "playerId": "p7",
         "pick": "3:1",
-        "points": null,
+        "points": 3,
         "updatedAt": "2026-07-02 12:32",
         "updatedState": "inserted"
       },
       {
         "playerId": "p8",
         "pick": "3:1",
-        "points": null,
+        "points": 3,
         "updatedAt": "2026-06-29 21:21",
         "updatedState": "inserted"
       },
       {
         "playerId": "p9",
         "pick": "2:2",
-        "points": null,
+        "points": 0,
         "updatedAt": "2026-07-01 13:26",
         "updatedState": "inserted"
       },
       {
         "playerId": "p10",
         "pick": "3:2",
-        "points": null,
+        "points": 3,
         "updatedAt": "2026-06-29 19:28",
         "updatedState": "inserted"
       },
       {
         "playerId": "p11",
         "pick": "2:2",
-        "points": null,
+        "points": 0,
         "updatedAt": "2026-06-30 12:50",
         "updatedState": "inserted"
       }
@@ -4199,83 +4199,83 @@ export const matches = [
     "startsAt": "23. (pá) 03.07. 05:00",
     "home": "Švýcarsko",
     "away": "Alžírsko",
-    "score": null,
-    "bank": 0,
+    "score": "2:0",
+    "bank": 110,
     "tips": [
       {
         "playerId": "p1",
         "pick": "1:1",
-        "points": null,
+        "points": 0,
         "updatedAt": "2026-07-02 10:10",
         "updatedState": "inserted"
       },
       {
         "playerId": "p2",
         "pick": "2:0",
-        "points": null,
+        "points": 10,
         "updatedAt": "2026-07-02 5:12",
         "updatedState": "inserted"
       },
       {
         "playerId": "p3",
         "pick": "2:1",
-        "points": null,
+        "points": 5,
         "updatedAt": "2026-07-02 5:12",
         "updatedState": "inserted"
       },
       {
         "playerId": "p4",
         "pick": "1:1",
-        "points": null,
+        "points": 0,
         "updatedAt": "2026-06-30 12:48",
         "updatedState": "inserted"
       },
       {
         "playerId": "p5",
         "pick": "1:1",
-        "points": null,
+        "points": 0,
         "updatedAt": "2026-07-02 19:06",
         "updatedState": "inserted"
       },
       {
         "playerId": "p6",
         "pick": "1:1",
-        "points": null,
+        "points": 0,
         "updatedAt": "2026-07-02 21:33",
         "updatedState": "inserted"
       },
       {
         "playerId": "p7",
         "pick": "3:0",
-        "points": null,
+        "points": 3,
         "updatedAt": "2026-07-02 12:32",
         "updatedState": "inserted"
       },
       {
         "playerId": "p8",
         "pick": "2:2",
-        "points": null,
+        "points": 0,
         "updatedAt": "2026-06-29 21:21",
         "updatedState": "inserted"
       },
       {
         "playerId": "p9",
         "pick": "1:2",
-        "points": null,
+        "points": 0,
         "updatedAt": "2026-07-01 13:27",
         "updatedState": "inserted"
       },
       {
         "playerId": "p10",
         "pick": "3:0",
-        "points": null,
+        "points": 3,
         "updatedAt": "2026-06-29 19:28",
         "updatedState": "inserted"
       },
       {
         "playerId": "p11",
         "pick": "0:0",
-        "points": null,
+        "points": 0,
         "updatedAt": "2026-06-30 12:50",
         "updatedState": "inserted"
       }
@@ -4288,14 +4288,14 @@ export const matches = [
     "home": "Austrálie",
     "away": "Egypt",
     "score": null,
-    "bank": 0,
+    "bank": 110,
     "tips": [
       {
         "playerId": "p1",
         "pick": "-",
         "points": null,
-        "updatedAt": null,
-        "updatedState": null
+        "updatedAt": "2026-07-03 2:53",
+        "updatedState": "updated"
       },
       {
         "playerId": "p2",
@@ -4727,6 +4727,182 @@ export const matches = [
     "startsAt": "25. (ne) 05.07. 22:00",
     "home": "Brazílie",
     "away": "Norsko",
+    "score": null,
+    "bank": 0,
+    "tips": [
+      {
+        "playerId": "p1",
+        "pick": "-",
+        "points": null,
+        "updatedAt": null,
+        "updatedState": null
+      },
+      {
+        "playerId": "p2",
+        "pick": "-",
+        "points": null,
+        "updatedAt": null,
+        "updatedState": null
+      },
+      {
+        "playerId": "p3",
+        "pick": "-",
+        "points": null,
+        "updatedAt": null,
+        "updatedState": null
+      },
+      {
+        "playerId": "p4",
+        "pick": "-",
+        "points": null,
+        "updatedAt": null,
+        "updatedState": null
+      },
+      {
+        "playerId": "p5",
+        "pick": "-",
+        "points": null,
+        "updatedAt": null,
+        "updatedState": null
+      },
+      {
+        "playerId": "p6",
+        "pick": "-",
+        "points": null,
+        "updatedAt": null,
+        "updatedState": null
+      },
+      {
+        "playerId": "p7",
+        "pick": "-",
+        "points": null,
+        "updatedAt": null,
+        "updatedState": null
+      },
+      {
+        "playerId": "p8",
+        "pick": "-",
+        "points": null,
+        "updatedAt": null,
+        "updatedState": null
+      },
+      {
+        "playerId": "p9",
+        "pick": "-",
+        "points": null,
+        "updatedAt": null,
+        "updatedState": null
+      },
+      {
+        "playerId": "p10",
+        "pick": "-",
+        "points": null,
+        "updatedAt": null,
+        "updatedState": null
+      },
+      {
+        "playerId": "p11",
+        "pick": "-",
+        "points": null,
+        "updatedAt": null,
+        "updatedState": null
+      }
+    ]
+  },
+  {
+    "id": "m55",
+    "round": 26,
+    "startsAt": "26. (po) 06.07. 02:00",
+    "home": "Mexiko",
+    "away": "Anglie",
+    "score": null,
+    "bank": 0,
+    "tips": [
+      {
+        "playerId": "p1",
+        "pick": "-",
+        "points": null,
+        "updatedAt": null,
+        "updatedState": null
+      },
+      {
+        "playerId": "p2",
+        "pick": "-",
+        "points": null,
+        "updatedAt": null,
+        "updatedState": null
+      },
+      {
+        "playerId": "p3",
+        "pick": "-",
+        "points": null,
+        "updatedAt": null,
+        "updatedState": null
+      },
+      {
+        "playerId": "p4",
+        "pick": "-",
+        "points": null,
+        "updatedAt": null,
+        "updatedState": null
+      },
+      {
+        "playerId": "p5",
+        "pick": "-",
+        "points": null,
+        "updatedAt": null,
+        "updatedState": null
+      },
+      {
+        "playerId": "p6",
+        "pick": "-",
+        "points": null,
+        "updatedAt": null,
+        "updatedState": null
+      },
+      {
+        "playerId": "p7",
+        "pick": "-",
+        "points": null,
+        "updatedAt": null,
+        "updatedState": null
+      },
+      {
+        "playerId": "p8",
+        "pick": "-",
+        "points": null,
+        "updatedAt": null,
+        "updatedState": null
+      },
+      {
+        "playerId": "p9",
+        "pick": "-",
+        "points": null,
+        "updatedAt": null,
+        "updatedState": null
+      },
+      {
+        "playerId": "p10",
+        "pick": "-",
+        "points": null,
+        "updatedAt": null,
+        "updatedState": null
+      },
+      {
+        "playerId": "p11",
+        "pick": "-",
+        "points": null,
+        "updatedAt": null,
+        "updatedState": null
+      }
+    ]
+  },
+  {
+    "id": "m56",
+    "round": 27,
+    "startsAt": "27. (út) 07.07. 02:00",
+    "home": "USA",
+    "away": "Belgie",
     "score": null,
     "bank": 0,
     "tips": [

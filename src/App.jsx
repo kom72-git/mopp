@@ -445,9 +445,17 @@ function buildSparkline(points, width = 120, height = 42, padding = 4) {
   return { path, dots }
 }
 
+function formatMoneyWithSign(value) {
+  const amount = Number(value) || 0
+  const sign = amount > 0 ? '+' : amount < 0 ? '-' : ''
+  const absolute = Math.abs(amount)
+  return `${sign}${new Intl.NumberFormat('cs-CZ').format(absolute)} Kč`
+}
+
 function App() {
   const tooltipTimerRef = useRef(null)
   const touchLegendHandledRef = useRef(false)
+  const playerDetailHeadingRef = useRef(null)
   const initialTournamentId = getStoredTournamentId()
   const [selectedTournamentId, setSelectedTournamentId] = useState(initialTournamentId)
   const [data, setData] = useState(
@@ -793,6 +801,7 @@ function App() {
         if (!tip || !Number.isFinite(tip.points)) return null
         return {
           matchId: match.id,
+          round: extractRound(match),
           points: tip.points,
           isNoBet: isNoBetPick(tip.pick),
         }
@@ -802,8 +811,12 @@ function App() {
     const evaluatedCount = timeline.length
     const requestedWindow = playerFormWindow === 'all' ? evaluatedCount : Number(playerFormWindow)
     const recentWindowSize = Math.max(1, Math.min(evaluatedCount || 1, Number.isFinite(requestedWindow) ? requestedWindow : 10))
+    const requestedFormWindow = playerFormWindow === 'all'
+      ? 'all'
+      : (Number.isFinite(requestedWindow) ? requestedWindow : 10)
     const recent = timeline.slice(-recentWindowSize)
     const previous = timeline.slice(-recentWindowSize * 2, -recentWindowSize)
+    const recentRounds = [...new Set(recent.map((item) => item.round).filter((round) => Number.isFinite(round)))]
 
     const recentPoints = recent.reduce((sum, item) => sum + item.points, 0)
     const recentAverage = recent.length > 0 ? recentPoints / recent.length : 0
@@ -812,11 +825,22 @@ function App() {
       : null
 
     let trendLabel = 'bez srovnání'
+    let trendDirection = 'neutral'
+    let trendDeltaText = ''
     if (previousAverage !== null) {
       const diff = recentAverage - previousAverage
-      if (diff > 0.2) trendLabel = `roste (+${diff.toFixed(2)} b/z)`
-      else if (diff < -0.2) trendLabel = `klesá (${diff.toFixed(2)} b/z)`
-      else trendLabel = 'stabilní'
+      if (diff > 0.2) {
+        trendLabel = 'roste'
+        trendDirection = 'up'
+        trendDeltaText = `+${diff.toFixed(2)} b/z`
+      } else if (diff < -0.2) {
+        trendLabel = 'klesá'
+        trendDirection = 'down'
+        trendDeltaText = `${diff.toFixed(2)} b/z`
+      } else {
+        trendLabel = 'stabilní'
+        trendDirection = 'flat'
+      }
     }
 
     const currentPositiveStreak = (() => {
@@ -836,24 +860,144 @@ function App() {
     const totalMatchesCount = playedMatches.length
     const playerTipCoverage = totalMatchesCount > 0 ? Math.round((tippedMatchesCount / totalMatchesCount) * 100) : 0
 
+    const recentExactCount = recent.filter((item) => item.points === 10).length
+    const recentNearCount = recent.filter((item) => item.points === 5).length
+    const recentWinCount = recent.filter((item) => item.points === 3).length
+    const recentNoBetCount = recent.filter((item) => item.isNoBet).length
+    const recentMissCount = Math.max(0, recent.length - recentExactCount - recentNearCount - recentWinCount - recentNoBetCount)
+    const recentScoredCount = recentExactCount + recentNearCount + recentWinCount
+    const toPercent = (value, total) => (total > 0 ? Math.round((value / total) * 100) : 0)
+
+    const selectedRank = standings.findIndex((item) => item.id === selectedStanding.id) + 1
+    const entryFeePerMatch = Number(selectedTournament?.entryFeePerMatch ?? 10)
+    const seasonMatchesCount = Number(selectedTournament?.seasonMatchesCount ?? 67)
+    const longTermContribution = Number(selectedTournament?.longTermBankContribution ?? 150)
+    const payoutByPlace = new Map(
+      (selectedTournament?.longTermBank?.payouts ?? [])
+        .filter((item) => Number.isFinite(item?.place))
+        .map((item) => [item.place, Number(item.amount) || 0]),
+    )
+    const projectedLongTermPayout = Number(
+      (selectedTournament?.longTermBank?.payouts ?? []).find((item) => item.place === selectedRank)?.amount ?? 0,
+    )
+    const realizedWinnings = Number(selectedStanding.winnings ?? 0)
+    const matchStakeTotal = Math.max(0, entryFeePerMatch * Math.max(0, seasonMatchesCount))
+    const totalInserted = matchStakeTotal + longTermContribution
+    const currentBalance = realizedWinnings - totalInserted
+    const place1Payout = payoutByPlace.get(1) ?? 0
+    const place2Payout = payoutByPlace.get(2) ?? 0
+    const place3Payout = payoutByPlace.get(3) ?? 0
+    const place1Balance = currentBalance + place1Payout
+    const place2Balance = currentBalance + place2Payout
+    const place3Balance = currentBalance + place3Payout
+
+    const recentRoundsSet = new Set(recentRounds)
+    const matchesInRecentRounds = recentRoundsSet.size > 0
+      ? matches.filter((match) => recentRoundsSet.has(extractRound(match)))
+      : []
+
+    const averageRates = (() => {
+      if (matchesInRecentRounds.length === 0 || players.length === 0) {
+        return { scored: 0, exact: 0, near: 0, win: 0 }
+      }
+
+      const perPlayerRates = players
+        .map((player) => {
+          let total = 0
+          let exact = 0
+          let near = 0
+          let win = 0
+
+          for (const match of matchesInRecentRounds) {
+            const tip = (match.tips ?? []).find((item) => item.playerId === player.id)
+            if (!tip || !Number.isFinite(tip.points)) continue
+            total += 1
+            if (tip.points === 10) exact += 1
+            if (tip.points === 5) near += 1
+            if (tip.points === 3) win += 1
+          }
+
+          if (total === 0) return null
+          return {
+            scored: toPercent(exact + near + win, total),
+            exact: toPercent(exact, total),
+            near: toPercent(near, total),
+            win: toPercent(win, total),
+          }
+        })
+        .filter(Boolean)
+
+      if (perPlayerRates.length === 0) {
+        return { scored: 0, exact: 0, near: 0, win: 0 }
+      }
+
+      const sum = perPlayerRates.reduce(
+        (acc, item) => ({
+          scored: acc.scored + item.scored,
+          exact: acc.exact + item.exact,
+          near: acc.near + item.near,
+          win: acc.win + item.win,
+        }),
+        { scored: 0, exact: 0, near: 0, win: 0 },
+      )
+
+      return {
+        scored: Math.round(sum.scored / perPlayerRates.length),
+        exact: Math.round(sum.exact / perPlayerRates.length),
+        near: Math.round(sum.near / perPlayerRates.length),
+        win: Math.round(sum.win / perPlayerRates.length),
+      }
+    })()
+
     return {
       id: selectedStanding.id,
       name: selectedStanding.name,
       evaluatedCount,
-      formWindow: playerFormWindow === 'all' ? 'all' : recentWindowSize,
+      formWindow: requestedFormWindow,
       recentCount: recent.length,
       recentPoints,
       recentAverage: recentAverage.toFixed(2),
       recentFormIndex: Math.round((recentAverage / 10) * 100),
       trendLabel,
+      trendDirection,
+      trendDeltaText,
       currentPositiveStreak,
       recentSequence: recent.map((item) => (item.isNoBet ? 'N' : item.points)).join(', '),
       recentSeries: recent.map((item) => ({ points: item.points, isNoBet: item.isNoBet })),
+      recentRounds,
+      successRates: {
+        scored: toPercent(recentScoredCount, recent.length),
+        exact: toPercent(recentExactCount, recent.length),
+        near: toPercent(recentNearCount, recent.length),
+        win: toPercent(recentWinCount, recent.length),
+        miss: toPercent(recentMissCount, recent.length),
+        noBet: toPercent(recentNoBetCount, recent.length),
+      },
+      successCounts: {
+        exact: recentExactCount,
+        near: recentNearCount,
+        win: recentWinCount,
+      },
+      successRatesDelta: {
+        scored: toPercent(recentScoredCount, recent.length) - averageRates.scored,
+      },
+      moneySummary: {
+        realizedWinnings,
+        matchStakeTotal,
+        longTermContribution,
+        totalInserted,
+        currentBalance,
+        place1Balance,
+        place2Balance,
+        place3Balance,
+        projectedLongTermPayout,
+        selectedRank,
+      },
       tippedMatchesCount,
       totalMatchesCount,
       playerTipCoverage,
     }
-  }, [effectiveSelectedPlayerId, standings, playedMatches, playerFormWindow])
+  }, [effectiveSelectedPlayerId, standings, playedMatches, playerFormWindow, matches, players, selectedTournament])
 
   const selectedPlayerRankSeries = useMemo(() => {
     if (!effectiveSelectedPlayerId) return null
@@ -862,12 +1006,52 @@ function App() {
     const series = rankTimeline.series.find((player) => player.id === effectiveSelectedPlayerId)
     if (!series || series.ranks.length === 0) return null
 
+    const preferredRounds = selectedPlayerProfile?.recentRounds ?? []
+    const windowRounds = preferredRounds.length > 0
+      ? rankTimeline.rounds.filter((round) => preferredRounds.includes(round))
+      : rankTimeline.rounds
+    const roundIndexByValue = new Map(rankTimeline.rounds.map((round, index) => [round, index]))
+    const ranks = windowRounds
+      .map((round) => series.ranks[roundIndexByValue.get(round)])
+      .filter((rank) => Number.isFinite(rank))
+
+    if (windowRounds.length === 0 || ranks.length === 0) {
+      return {
+        ...series,
+        rounds: rankTimeline.rounds,
+        ranks: series.ranks,
+        maxRank: rankTimeline.series.length,
+      }
+    }
+
     return {
       ...series,
-      rounds: rankTimeline.rounds,
+      rounds: windowRounds,
+      ranks,
       maxRank: rankTimeline.series.length,
     }
-  }, [effectiveSelectedPlayerId, rankTimeline])
+  }, [effectiveSelectedPlayerId, rankTimeline, selectedPlayerProfile])
+
+  useEffect(() => {
+    if (!selectedPlayerProfile || typeof window === 'undefined') return
+
+    const isMobile = window.matchMedia('(max-width: 760px)').matches
+    if (!isMobile) return
+
+    const target = playerDetailHeadingRef.current
+    if (!target) return
+
+    const topOffset = 12
+    const rafId = window.requestAnimationFrame(() => {
+      const targetTop = target.getBoundingClientRect().top + window.scrollY - topOffset
+      window.scrollTo({
+        top: Math.max(0, targetTop),
+        behavior: 'smooth',
+      })
+    })
+
+    return () => window.cancelAnimationFrame(rafId)
+  }, [selectedPlayerProfile])
 
   const selectedMatchStageLabel = useMemo(
     () =>
@@ -1291,7 +1475,7 @@ function App() {
         <section className="panel detail-panel">
           {selectedPlayerProfile ? (
             <>
-              <div className="panel-head player-focus-headline">
+              <div className="panel-head player-focus-headline" ref={playerDetailHeadingRef}>
                 <h2>Detail hráče · {selectedPlayerProfile.name}</h2>
                 <button
                   type="button"
@@ -1303,8 +1487,8 @@ function App() {
               </div>
 
               <div className="player-window-controls" role="group" aria-label="Rozsah formy hráče">
-                <span className="player-window-label">Forma:</span>
-                {[3, 5, 10, 'all'].map((option) => {
+                <span className="player-window-label">Výběr:</span>
+                {[5, 10, 15, 20, 25, 'all'].map((option) => {
                   const isActive = selectedPlayerProfile.formWindow === option || (option === 'all' && selectedPlayerProfile.formWindow === 'all')
                   const label = option === 'all' ? 'vše' : String(option)
                   return (
@@ -1321,8 +1505,15 @@ function App() {
               </div>
 
               <p className="player-window-note">
-                Průměr je počítaný z posledních {selectedPlayerProfile.recentCount} vyhodnocených zápasů hráče
-                (celkem vyhodnoceno: {selectedPlayerProfile.evaluatedCount}).
+                {selectedPlayerProfile.formWindow === 'all' ? (
+                  <>
+                    Filtr statistik <strong>všech</strong> posledních vyhodnocených zápasů.
+                  </>
+                ) : (
+                  <>
+                    Filtr statistik za posledních <strong>{selectedPlayerProfile.formWindow}</strong> vyhodnocených zápasů.
+                  </>
+                )}
               </p>
 
               <section className="player-tip-progress-row" aria-label="Aktivita tipování">
@@ -1431,24 +1622,42 @@ function App() {
                   </p>
                 </article>
 
-                <article className="player-focus-card">
+                <article className="player-focus-card is-trend">
                   <h3>Trend</h3>
-                  <p>{selectedPlayerProfile.trendLabel}</p>
+                  <p className={`player-trend-label is-${selectedPlayerProfile.trendDirection}`}>
+                    <span>{selectedPlayerProfile.trendLabel}</span>
+                    {selectedPlayerProfile.trendDeltaText ? (
+                      <strong className="player-trend-delta">{selectedPlayerProfile.trendDeltaText}</strong>
+                    ) : null}
+                  </p>
 
                   {(() => {
-                    const sparkline = buildSparkline(selectedPlayerProfile.recentSeries)
+                    const sparkline = buildSparkline(
+                      selectedPlayerProfile.recentSeries.map((entry) => entry.points),
+                      172,
+                      56,
+                      8,
+                    )
                     if (!sparkline.path) return null
 
+                    const baselineY = 58
+                    const areaPath = sparkline.dots.length > 0
+                      ? `M ${sparkline.dots[0].x.toFixed(2)} ${baselineY} ${sparkline.dots
+                        .map((dot) => `L ${dot.x.toFixed(2)} ${dot.y.toFixed(2)}`)
+                        .join(' ')} L ${sparkline.dots[sparkline.dots.length - 1].x.toFixed(2)} ${baselineY} Z`
+                      : ''
+
                     return (
-                      <svg className="player-sparkline" viewBox="0 0 120 42" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Trend bodů hráče">
+                      <svg className="player-sparkline" viewBox="0 0 180 64" preserveAspectRatio="none" role="img" aria-label="Trend bodů hráče">
+                        <path className="player-sparkline-area" d={areaPath} />
                         <path className="player-sparkline-line" d={sparkline.path} />
                         {sparkline.dots.map((dot, index) => (
                           <circle
                             key={`${selectedPlayerProfile.id}-${index}`}
-                            className="player-sparkline-dot"
+                            className={`player-sparkline-dot ${index === sparkline.dots.length - 1 ? 'is-last' : ''}`}
                             cx={dot.x}
                             cy={dot.y}
-                            r={index === sparkline.dots.length - 1 ? 2.6 : 1.8}
+                            r={index === sparkline.dots.length - 1 ? 2.4 : 1.5}
                           />
                         ))}
                       </svg>
@@ -1481,9 +1690,110 @@ function App() {
                   )}
                 </div>
               </div>
+
+              <section className="player-success" aria-label="Úspěšnost tipů">
+                <div className="player-success-head">
+                  <h3>Úspěšnost tipů</h3>
+                  <span
+                    className={`player-success-benchmark ${
+                      selectedPlayerProfile.successRatesDelta.scored > 0
+                        ? 'is-up'
+                        : selectedPlayerProfile.successRatesDelta.scored < 0
+                          ? 'is-down'
+                          : 'is-flat'
+                    }`}
+                  >
+                    {selectedPlayerProfile.successRatesDelta.scored > 0
+                      ? `o ${selectedPlayerProfile.successRatesDelta.scored} % lepší než průměr`
+                      : selectedPlayerProfile.successRatesDelta.scored < 0
+                        ? `o ${Math.abs(selectedPlayerProfile.successRatesDelta.scored)} % horší než průměr`
+                        : 'stejné jako průměr'}
+                  </span>
+                </div>
+                <div className="player-success-grid">
+                  <div className="player-success-item is-exact">
+                    <span className="player-success-label">10 bodů</span>
+                    <div className="player-success-main">
+                      <strong className="player-success-value">{selectedPlayerProfile.successRates.exact} %</strong>
+                      <span className="player-success-count">{selectedPlayerProfile.successCounts.exact}×</span>
+                    </div>
+                  </div>
+                  <div className="player-success-item is-near">
+                    <span className="player-success-label">5 bodů</span>
+                    <div className="player-success-main">
+                      <strong className="player-success-value">{selectedPlayerProfile.successRates.near} %</strong>
+                      <span className="player-success-count">{selectedPlayerProfile.successCounts.near}×</span>
+                    </div>
+                  </div>
+                  <div className="player-success-item is-win">
+                    <span className="player-success-label">3 body</span>
+                    <div className="player-success-main">
+                      <strong className="player-success-value">{selectedPlayerProfile.successRates.win} %</strong>
+                      <span className="player-success-count">{selectedPlayerProfile.successCounts.win}×</span>
+                    </div>
+                  </div>
+                  <div className="player-success-item is-miss">
+                    <span className="player-success-label">0 bodů</span>
+                    <div className="player-success-main">
+                      <strong className="player-success-value">{selectedPlayerProfile.successRates.miss} %</strong>
+                    </div>
+                  </div>
+                  <div className="player-success-item is-nobet">
+                    <span className="player-success-label">N/N</span>
+                    <div className="player-success-main">
+                      <strong className="player-success-value">{selectedPlayerProfile.successRates.noBet} %</strong>
+                    </div>
+                  </div>
+                  <div className="player-success-item is-total">
+                    <span className="player-success-label">Bodované tipy</span>
+                    <div className="player-success-main">
+                      <strong className="player-success-value">{selectedPlayerProfile.successRates.scored} %</strong>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
               <p className="player-focus-index">
                 Index formy: <strong>{selectedPlayerProfile.recentFormIndex}/100</strong>
               </p>
+
+              <section className="player-money-wide" aria-label="Peněžní bilance hráče">
+                <div className="player-money-head">
+                  <h3>Peněžní bilance</h3>
+                  <span>Tato statistika se nefiltruje</span>
+                </div>
+                <div className="player-money-grid">
+                  <article className="money-stat-box is-outflow">
+                    <span>Vloženo celkem</span>
+                    <strong>{formatMoneyWithSign(-selectedPlayerProfile.moneySummary.totalInserted)}</strong>
+                  </article>
+                  <article className="money-stat-box is-win">
+                    <span>Výhry ze zápasů</span>
+                    <strong>{formatMoneyWithSign(selectedPlayerProfile.moneySummary.realizedWinnings)}</strong>
+                  </article>
+                  <article className={`money-stat-box is-now ${selectedPlayerProfile.moneySummary.currentBalance >= 0 ? 'is-up' : 'is-down'}`}>
+                    <span>Aktuálně jsi na</span>
+                    <strong>{formatMoneyWithSign(selectedPlayerProfile.moneySummary.currentBalance)}</strong>
+                  </article>
+                </div>
+                <article className="money-potential-strip" aria-label="Potenciální výhra při 1. 2. a 3. místě">
+                  <span className="money-potential-label">Potenciální výhra při 1., 2., 3. místě</span>
+                  <div className="money-potential-values">
+                    <p className="money-potential-value">
+                      <span>1.</span>
+                      <strong>{formatMoneyWithSign(selectedPlayerProfile.moneySummary.place1Balance)}</strong>
+                    </p>
+                    <p className="money-potential-value">
+                      <span>2.</span>
+                      <strong>{formatMoneyWithSign(selectedPlayerProfile.moneySummary.place2Balance)}</strong>
+                    </p>
+                    <p className="money-potential-value">
+                      <span>3.</span>
+                      <strong>{formatMoneyWithSign(selectedPlayerProfile.moneySummary.place3Balance)}</strong>
+                    </p>
+                  </div>
+                </article>
+              </section>
               </section>
             </>
           ) : null}

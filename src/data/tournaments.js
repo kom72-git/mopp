@@ -6,6 +6,7 @@ export const tournaments = [
     tabTitle: 'MS fotbal 2026', // title v záložce prohlížeče
     sheetId: '1cdrtECld-UgY8qjcc2UajQwcO3F85u1EgV2EU2sc9Lw',
     gid: '134828351',
+    tipStampGid: '462126038',
     heroLogo: '/tournaments/2026-logo.svg',
     favicon: '/icons/ball.svg',
     roundLabel: 'den',
@@ -43,13 +44,11 @@ export const tournaments = [
         'V případě i této rovnosti následuje los :-)',
       ],
     },
-    // Editace času tipů pro jednotlivé zápasy (u starých tipů)
-    // příklad: 'm1, p8, 2026-06-29 17:30'
-    manualTipTimestampEntries: [
-      'm41, p11, 2026-06-28 12:14',
-      'm45, p4, 2026-06-30 6:53', 
-
-    ],
+    // Nouzova zaloha: kdyby nebyl dostupny tip-stamp list, docasne odkomentuj
+    // manualTipTimestampEntries: [
+    //   'm41, p11, 2026-06-28 12:14',
+    //   'm45, p4, 2026-06-30 6:53',
+    // ],
   },
   {
     id: 'PO-2025',
@@ -79,11 +78,10 @@ export const tournaments = [
         'V případě i této rovnosti následuje los :-)',
       ],
     },
-    // Editace času tipů pro jednotlivé zápasy (u starých tipů)
-    // příklad: 'm1, p8, 2026-06-29 17:30'
-    manualTipTimestampEntries: [
-       
-    ],
+    // Nouzova zaloha: kdyby nebyl dostupny tip-stamp list, docasne odkomentuj 3 řádky níže
+    // manualTipTimestampEntries: [
+    //   'm1, p8, 2026-06-29 17:30',
+    // ],
   },
 ]
 

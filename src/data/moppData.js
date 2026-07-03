@@ -2,57 +2,57 @@ export const players = [
   {
     "id": "p1",
     "name": "Kom",
-    "points": 84
+    "points": 93
   },
   {
     "id": "p2",
     "name": "Kraty",
-    "points": 90
+    "points": 103
   },
   {
     "id": "p3",
     "name": "Radek",
-    "points": 94
+    "points": 110
   },
   {
     "id": "p4",
     "name": "Roman",
-    "points": 104
+    "points": 124
   },
   {
     "id": "p5",
     "name": "Špáca",
-    "points": 124
+    "points": 140
   },
   {
     "id": "p6",
     "name": "Slanec",
-    "points": 119
+    "points": 140
   },
   {
     "id": "p7",
     "name": "Láďa",
-    "points": 94
+    "points": 97
   },
   {
     "id": "p8",
     "name": "Prd",
-    "points": 127
+    "points": 138
   },
   {
     "id": "p9",
     "name": "Jony",
-    "points": 92
+    "points": 105
   },
   {
     "id": "p10",
     "name": "Mirax",
-    "points": 75
+    "points": 84
   },
   {
     "id": "p11",
     "name": "Honza",
-    "points": 104
+    "points": 120
   }
 ]
 
@@ -70,67 +70,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "1:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p2",
         "pick": "2:1",
         "points": 5,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p3",
         "pick": "4:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p4",
         "pick": "3:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p5",
         "pick": "2:0",
         "points": 10,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p6",
         "pick": "3:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p7",
         "pick": "2:0",
         "points": 10,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p8",
         "pick": "2:0",
         "points": 10,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p9",
         "pick": "2:0",
         "points": 10,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p10",
         "pick": "4:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p11",
         "pick": "3:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       }
     ]
   },
@@ -147,67 +158,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "2:0",
         "points": 5,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p2",
         "pick": "3:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p3",
         "pick": "1:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p4",
         "pick": "2:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p5",
         "pick": "1:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p6",
         "pick": "2:1",
         "points": 10,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p7",
         "pick": "1:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p8",
         "pick": "2:1",
         "points": 10,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p9",
         "pick": "1:3",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p10",
         "pick": "1:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p11",
         "pick": "2:1",
         "points": 10,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       }
     ]
   },
@@ -224,67 +246,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "1:0",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p2",
         "pick": "2:0",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p3",
         "pick": "2:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p4",
         "pick": "2:2",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p5",
         "pick": "1:1",
         "points": 10,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p6",
         "pick": "1:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p7",
         "pick": "2:0",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p8",
         "pick": "1:1",
         "points": 10,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p9",
         "pick": "1:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p10",
         "pick": "3:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p11",
         "pick": "0:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       }
     ]
   },
@@ -301,67 +334,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "2:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p2",
         "pick": "1:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p3",
         "pick": "2:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p4",
         "pick": "2:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p5",
         "pick": "2:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p6",
         "pick": "2:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p7",
         "pick": "1:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p8",
         "pick": "1:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p9",
         "pick": "2:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p10",
         "pick": "1:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p11",
         "pick": "1:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       }
     ]
   },
@@ -378,67 +422,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "0:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p2",
         "pick": "0:3",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p3",
         "pick": "0:3",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p4",
         "pick": "0:3",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p5",
         "pick": "0:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p6",
         "pick": "0:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p7",
         "pick": "0:3",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p8",
         "pick": "0:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p9",
         "pick": "0:3",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p10",
         "pick": "1:4",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p11",
         "pick": "1:3",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       }
     ]
   },
@@ -455,67 +510,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "1:1",
         "points": 10,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p2",
         "pick": "3:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p3",
         "pick": "3:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p4",
         "pick": "3:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p5",
         "pick": "2:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p6",
         "pick": "2:0",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p7",
         "pick": "2:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p8",
         "pick": "3:0",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p9",
         "pick": "4:0",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p10",
         "pick": "4:3",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p11",
         "pick": "2:2",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       }
     ]
   },
@@ -532,67 +598,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "2:0",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p2",
         "pick": "2:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p3",
         "pick": "1:0",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p4",
         "pick": "4:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p5",
         "pick": "2:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p6",
         "pick": "3:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p7",
         "pick": "2:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p8",
         "pick": "1:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p9",
         "pick": "3:0",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p10",
         "pick": "2:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p11",
         "pick": "3:0",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       }
     ]
   },
@@ -609,67 +686,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "1:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p2",
         "pick": "2:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p3",
         "pick": "2:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p4",
         "pick": "2:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p5",
         "pick": "1:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p6",
         "pick": "1:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p7",
         "pick": "0:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p8",
         "pick": "1:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p9",
         "pick": "0:0",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p10",
         "pick": "2:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p11",
         "pick": "2:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       }
     ]
   },
@@ -686,67 +774,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "4:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p2",
         "pick": "3:0",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p3",
         "pick": "2:0",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p4",
         "pick": "3:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p5",
         "pick": "1:1",
         "points": 10,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p6",
         "pick": "2:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p7",
         "pick": "3:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p8",
         "pick": "2:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p9",
         "pick": "4:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p10",
         "pick": "3:0",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p11",
         "pick": "1:0",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       }
     ]
   },
@@ -763,67 +862,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "0:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p2",
         "pick": "0:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p3",
         "pick": "0:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p4",
         "pick": "1:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p5",
         "pick": "0:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p6",
         "pick": "1:3",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p7",
         "pick": "1:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p8",
         "pick": "1:3",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p9",
         "pick": "1:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p10",
         "pick": "0:3",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p11",
         "pick": "0:3",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       }
     ]
   },
@@ -840,67 +950,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "1:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p2",
         "pick": "3:1",
         "points": 10,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p3",
         "pick": "2:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p4",
         "pick": "2:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p5",
         "pick": "2:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p6",
         "pick": "3:0",
         "points": 5,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p7",
         "pick": "2:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p8",
         "pick": "2:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p9",
         "pick": "3:0",
         "points": 5,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p10",
         "pick": "5:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p11",
         "pick": "4:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       }
     ]
   },
@@ -917,67 +1038,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "3:0",
         "points": 5,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p2",
         "pick": "4:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p3",
         "pick": "2:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p4",
         "pick": "2:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p5",
         "pick": "2:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p6",
         "pick": "1:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p7",
         "pick": "1:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p8",
         "pick": "1:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p9",
         "pick": "2:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p10",
         "pick": "2:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p11",
         "pick": "2:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       }
     ]
   },
@@ -994,67 +1126,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "1:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p2",
         "pick": "2:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p3",
         "pick": "1:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p4",
         "pick": "2:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p5",
         "pick": "1:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p6",
         "pick": "2:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p7",
         "pick": "2:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p8",
         "pick": "2:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p9",
         "pick": "2:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p10",
         "pick": "3:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p11",
         "pick": "2:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       }
     ]
   },
@@ -1071,67 +1214,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "1:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p2",
         "pick": "2:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p3",
         "pick": "2:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p4",
         "pick": "3:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p5",
         "pick": "2:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p6",
         "pick": "2:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p7",
         "pick": "3:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p8",
         "pick": "2:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p9",
         "pick": "0:0",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p10",
         "pick": "2:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p11",
         "pick": "2:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       }
     ]
   },
@@ -1148,67 +1302,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "1:0",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p2",
         "pick": "2:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p3",
         "pick": "2:0",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p4",
         "pick": "2:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p5",
         "pick": "2:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p6",
         "pick": "2:0",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p7",
         "pick": "1:0",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p8",
         "pick": "1:1",
         "points": 10,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p9",
         "pick": "0:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p10",
         "pick": "1:1",
         "points": 10,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p11",
         "pick": "2:0",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       }
     ]
   },
@@ -1225,67 +1390,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "1:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p2",
         "pick": "1:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p3",
         "pick": "2:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p4",
         "pick": "4:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p5",
         "pick": "2:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p6",
         "pick": "3:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p7",
         "pick": "2:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p8",
         "pick": "1:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p9",
         "pick": "2:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p10",
         "pick": "3:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p11",
         "pick": "2:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       }
     ]
   },
@@ -1302,67 +1478,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "3:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p2",
         "pick": "1:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p3",
         "pick": "2:1",
         "points": 5,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p4",
         "pick": "4:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p5",
         "pick": "2:1",
         "points": 5,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p6",
         "pick": "2:1",
         "points": 5,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p7",
         "pick": "3:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p8",
         "pick": "3:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p9",
         "pick": "1:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p10",
         "pick": "3:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p11",
         "pick": "2:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       }
     ]
   },
@@ -1379,67 +1566,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "5:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p2",
         "pick": "7:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p3",
         "pick": "4:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p4",
         "pick": "5:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p5",
         "pick": "4:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p6",
         "pick": "4:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p7",
         "pick": "5:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p8",
         "pick": "4:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p9",
         "pick": "3:0",
         "points": 10,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p10",
         "pick": "6:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p11",
         "pick": "4:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       }
     ]
   },
@@ -1456,67 +1654,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "1:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p2",
         "pick": "1:2",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p3",
         "pick": "2:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p4",
         "pick": "1:3",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p5",
         "pick": "3:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p6",
         "pick": "1:2",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p7",
         "pick": "3:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p8",
         "pick": "2:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p9",
         "pick": "2:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p10",
         "pick": "3:0",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p11",
         "pick": "1:2",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       }
     ]
   },
@@ -1533,67 +1742,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "1:3",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p2",
         "pick": "0:2",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p3",
         "pick": "0:3",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p4",
         "pick": "0:2",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p5",
         "pick": "1:2",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p6",
         "pick": "0:2",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p7",
         "pick": "0:3",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p8",
         "pick": "1:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p9",
         "pick": "1:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p10",
         "pick": "0:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p11",
         "pick": "0:2",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       }
     ]
   },
@@ -1610,67 +1830,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "2:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p2",
         "pick": "3:0",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p3",
         "pick": "2:0",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p4",
         "pick": "3:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p5",
         "pick": "2:0",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p6",
         "pick": "2:0",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p7",
         "pick": "3:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p8",
         "pick": "3:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p9",
         "pick": "3:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p10",
         "pick": "2:0",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p11",
         "pick": "3:0",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       }
     ]
   },
@@ -1687,67 +1918,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "0:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p2",
         "pick": "0:2",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p3",
         "pick": "0:3",
         "points": 5,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p4",
         "pick": "1:2",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p5",
         "pick": "0:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p6",
         "pick": "1:3",
         "points": 10,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p7",
         "pick": "0:3",
         "points": 5,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p8",
         "pick": "2:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p9",
         "pick": "0:2",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p10",
         "pick": "1:2",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p11",
         "pick": "1:3",
         "points": 10,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       }
     ]
   },
@@ -1764,67 +2006,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "5:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p2",
         "pick": "3:0",
         "points": 10,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p3",
         "pick": "4:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p4",
         "pick": "6:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p5",
         "pick": "3:0",
         "points": 10,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p6",
         "pick": "6:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p7",
         "pick": "3:0",
         "points": 10,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p8",
         "pick": "5:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p9",
         "pick": "4:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p10",
         "pick": "5:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p11",
         "pick": "4:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       }
     ]
   },
@@ -1841,67 +2094,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "2:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p2",
         "pick": "1:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p3",
         "pick": "1:3",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p4",
         "pick": "0:2",
         "points": 5,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p5",
         "pick": "1:2",
         "points": 10,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p6",
         "pick": "0:2",
         "points": 5,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p7",
         "pick": "0:2",
         "points": 5,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p8",
         "pick": "1:3",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p9",
         "pick": "0:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p10",
         "pick": "1:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p11",
         "pick": "1:3",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       }
     ]
   },
@@ -1918,67 +2182,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "3:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p2",
         "pick": "4:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p3",
         "pick": "2:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p4",
         "pick": "3:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p5",
         "pick": "2:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p6",
         "pick": "5:0",
         "points": 10,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p7",
         "pick": "4:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p8",
         "pick": "4:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p9",
         "pick": "3:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p10",
         "pick": "3:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p11",
         "pick": "4:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       }
     ]
   },
@@ -1995,67 +2270,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "2:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p2",
         "pick": "1:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p3",
         "pick": "N:N",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p4",
         "pick": "2:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p5",
         "pick": "2:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p6",
         "pick": "2:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p7",
         "pick": "3:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p8",
         "pick": "3:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p9",
         "pick": "2:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p10",
         "pick": "2:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p11",
         "pick": "1:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       }
     ]
   },
@@ -2072,67 +2358,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "3:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p2",
         "pick": "2:1",
         "points": 10,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p3",
         "pick": "2:3",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p4",
         "pick": "2:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p5",
         "pick": "2:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p6",
         "pick": "0:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p7",
         "pick": "3:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p8",
         "pick": "1:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p9",
         "pick": "0:0",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p10",
         "pick": "3:3",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p11",
         "pick": "1:3",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       }
     ]
   },
@@ -2149,67 +2446,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "0:2",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p2",
         "pick": "0:4",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p3",
         "pick": "0:2",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p4",
         "pick": "0:3",
         "points": 10,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p5",
         "pick": "0:2",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p6",
         "pick": "1:2",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p7",
         "pick": "0:3",
         "points": 10,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p8",
         "pick": "1:4",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p9",
         "pick": "0:2",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p10",
         "pick": "2:4",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p11",
         "pick": "1:4",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       }
     ]
   },
@@ -2226,67 +2534,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "0:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p2",
         "pick": "1:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p3",
         "pick": "1:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p4",
         "pick": "0:3",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p5",
         "pick": "1:3",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p6",
         "pick": "0:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p7",
         "pick": "0:3",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p8",
         "pick": "0:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p9",
         "pick": "1:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p10",
         "pick": "2:4",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p11",
         "pick": "0:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       }
     ]
   },
@@ -2303,67 +2622,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "2:2",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p2",
         "pick": "2:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p3",
         "pick": "3:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p4",
         "pick": "3:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p5",
         "pick": "2:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p6",
         "pick": "1:0",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p7",
         "pick": "1:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p8",
         "pick": "1:1",
         "points": 10,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p9",
         "pick": "1:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p10",
         "pick": "3:0",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p11",
         "pick": "1:1",
         "points": 10,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       }
     ]
   },
@@ -2380,67 +2710,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "1:2",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p2",
         "pick": "2:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p3",
         "pick": "2:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p4",
         "pick": "1:3",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p5",
         "pick": "1:3",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p6",
         "pick": "2:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p7",
         "pick": "N:N",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p8",
         "pick": "2:3",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p9",
         "pick": "2:3",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p10",
         "pick": "1:3",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p11",
         "pick": "1:3",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       }
     ]
   },
@@ -2457,67 +2798,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "1:3",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p2",
         "pick": "1:3",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p3",
         "pick": "2:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p4",
         "pick": "0:3",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p5",
         "pick": "1:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p6",
         "pick": "1:2",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p7",
         "pick": "1:3",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p8",
         "pick": "0:1",
         "points": 10,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p9",
         "pick": "0:4",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p10",
         "pick": "2:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p11",
         "pick": "1:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       }
     ]
   },
@@ -2534,67 +2886,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "0:5",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p2",
         "pick": "0:4",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p3",
         "pick": "1:3",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p4",
         "pick": "0:3",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p5",
         "pick": "0:3",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p6",
         "pick": "0:2",
         "points": 10,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p7",
         "pick": "0:4",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p8",
         "pick": "0:2",
         "points": 10,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p9",
         "pick": "0:2",
         "points": 10,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p10",
         "pick": "0:4",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p11",
         "pick": "0:4",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       }
     ]
   },
@@ -2611,67 +2974,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "0:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p2",
         "pick": "1:3",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p3",
         "pick": "1:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p4",
         "pick": "1:3",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p5",
         "pick": "1:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p6",
         "pick": "2:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p7",
         "pick": "1:3",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p8",
         "pick": "1:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p9",
         "pick": "0:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p10",
         "pick": "1:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p11",
         "pick": "1:4",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       }
     ]
   },
@@ -2688,67 +3062,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "1:0",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p2",
         "pick": "0:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p3",
         "pick": "1:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p4",
         "pick": "3:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p5",
         "pick": "1:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p6",
         "pick": "1:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p7",
         "pick": "0:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p8",
         "pick": "1:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p9",
         "pick": "0:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p10",
         "pick": "1:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p11",
         "pick": "2:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       }
     ]
   },
@@ -2765,67 +3150,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "1:0",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": "2026-06-28 16:10",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p2",
         "pick": "2:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": "2026-06-28 12:15",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p3",
         "pick": "1:2",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": "2026-06-27 12:29",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p4",
         "pick": "1:2",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": "2026-06-27 12:29",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p5",
         "pick": "1:2",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": "2026-06-28 12:16",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p6",
         "pick": "1:2",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": "2026-06-28 12:13",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p7",
         "pick": "1:3",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": "2026-06-28 18:39",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p8",
         "pick": "1:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": "2026-06-26 19:01",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p9",
         "pick": "1:3",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": "2026-06-28 12:16",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p10",
         "pick": "0:2",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": "2026-06-28 18:40",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p11",
         "pick": "0:1",
         "points": 10,
-        "updatedAt": null
+        "updatedAt": "2026-06-28 12:14",
+        "updatedState": "inserted"
       }
     ]
   },
@@ -2842,67 +3238,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "2:1",
         "points": 10,
-        "updatedAt": null
+        "updatedAt": "2026-06-29 15:28",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p2",
         "pick": "3:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": "2026-06-28 12:15",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p3",
         "pick": "2:1",
         "points": 10,
-        "updatedAt": null
+        "updatedAt": "2026-06-28 12:16",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p4",
         "pick": "3:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": "2026-06-28 18:03",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p5",
         "pick": "2:1",
         "points": 10,
-        "updatedAt": null
+        "updatedAt": "2026-06-29 19:15",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p6",
         "pick": "2:0",
         "points": 5,
-        "updatedAt": null
+        "updatedAt": "2026-06-28 12:14",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p7",
         "pick": "4:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": "2026-06-29 19:17",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p8",
         "pick": "3:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": "2026-06-28 18:04",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p9",
         "pick": "3:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": "2026-06-29 19:17",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p10",
         "pick": "3:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": "2026-06-28 18:40",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p11",
         "pick": "3:2",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": "2026-06-28 12:14",
+        "updatedState": "inserted"
       }
     ]
   },
@@ -2919,67 +3326,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "4:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": "2026-06-29 19:16",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p2",
         "pick": "3:0",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": "2026-06-28 12:15",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p3",
         "pick": "3:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": "2026-06-28 12:16",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p4",
         "pick": "4:0",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": "2026-06-28 18:03",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p5",
         "pick": "3:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": "2026-06-29 19:15",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p6",
         "pick": "2:0",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": "2026-06-28 18:57",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p7",
         "pick": "2:0",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": "2026-06-29 19:17",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p8",
         "pick": "4:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": "2026-06-28 18:04",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p9",
         "pick": "2:0",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": "2026-06-29 19:17",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p10",
         "pick": "4:0",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": "2026-06-28 18:40",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p11",
         "pick": "2:0",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": "2026-06-28 12:14",
+        "updatedState": "inserted"
       }
     ]
   },
@@ -2996,67 +3414,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "1:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": "2026-06-29 19:16",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p2",
         "pick": "2:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": "2026-06-28 12:15",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p3",
         "pick": "2:0",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": "2026-06-28 12:17",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p4",
         "pick": "1:1",
         "points": 10,
-        "updatedAt": null
+        "updatedAt": "2026-06-28 18:03",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p5",
         "pick": "1:1",
         "points": 10,
-        "updatedAt": null
+        "updatedAt": "2026-06-29 19:15",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p6",
         "pick": "3:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": "2026-06-28 19:42",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p7",
         "pick": "2:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": "2026-06-29 19:17",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p8",
         "pick": "2:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": "2026-06-28 18:04",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p9",
         "pick": "2:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": "2026-06-29 19:17",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p10",
         "pick": "3:0",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": "2026-06-28 18:41",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p11",
         "pick": "2:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": "2026-06-28 12:14",
+        "updatedState": "inserted"
       }
     ]
   },
@@ -3073,67 +3502,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "2:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": "2026-06-30 12:52",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p2",
         "pick": "0:2",
         "points": 5,
-        "updatedAt": null
+        "updatedAt": "2026-06-28 12:15",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p3",
         "pick": "1:2",
         "points": 10,
-        "updatedAt": null
+        "updatedAt": "2026-06-28 12:17",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p4",
         "pick": "1:2",
         "points": 10,
-        "updatedAt": null
+        "updatedAt": "2026-06-28 18:03",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p5",
         "pick": "1:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": "2026-06-30 20:54",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p6",
         "pick": "0:2",
         "points": 5,
-        "updatedAt": null
+        "updatedAt": "2026-06-29 21:11",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p7",
         "pick": "1:3",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": "2026-06-30 20:55",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p8",
         "pick": "2:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": "2026-06-28 18:05",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p9",
         "pick": "1:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": "2026-06-30 20:54",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p10",
         "pick": "0:2",
         "points": 5,
-        "updatedAt": null
+        "updatedAt": "2026-06-28 18:41",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p11",
         "pick": "2:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": "2026-06-28 12:14",
+        "updatedState": "inserted"
       }
     ]
   },
@@ -3150,67 +3590,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "2:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": "2026-06-30 12:53",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p2",
         "pick": "3:1",
         "points": 5,
-        "updatedAt": null
+        "updatedAt": "2026-06-28 12:15",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p3",
         "pick": "3:0",
         "points": 10,
-        "updatedAt": null
+        "updatedAt": "2026-06-28 12:17",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p4",
         "pick": "3:0",
         "points": 10,
-        "updatedAt": null
+        "updatedAt": "2026-06-28 18:03",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p5",
         "pick": "3:0",
         "points": 10,
-        "updatedAt": null
+        "updatedAt": "2026-06-30 20:55",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p6",
         "pick": "3:1",
         "points": 5,
-        "updatedAt": null
+        "updatedAt": "2026-06-29 21:11",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p7",
         "pick": "4:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": "2026-06-30 20:55",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p8",
         "pick": "3:0",
         "points": 10,
-        "updatedAt": null
+        "updatedAt": "2026-06-28 18:05",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p9",
         "pick": "3:0",
         "points": 10,
-        "updatedAt": null
+        "updatedAt": "2026-06-30 20:54",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p10",
         "pick": "4:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": "2026-06-28 18:41",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p11",
         "pick": "3:0",
         "points": 10,
-        "updatedAt": null
+        "updatedAt": "2026-06-28 12:14",
+        "updatedState": "inserted"
       }
     ]
   },
@@ -3227,67 +3678,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "3:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": "2026-06-30 21:28",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p2",
         "pick": "N:N",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": "2026-07-01 9:25",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p3",
         "pick": "1:1",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": "2026-06-30 22:33",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p4",
         "pick": "2:1",
         "points": 5,
-        "updatedAt": null
+        "updatedAt": "2026-06-30 12:46",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p5",
         "pick": "0:0",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": "2026-06-30 20:55",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p6",
         "pick": "2:0",
         "points": 10,
-        "updatedAt": null
+        "updatedAt": "2026-06-29 21:11",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p7",
         "pick": "1:2",
         "points": 0,
-        "updatedAt": null
+        "updatedAt": "2026-06-30 20:55",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p8",
         "pick": "2:1",
         "points": 5,
-        "updatedAt": null
+        "updatedAt": "2026-06-29 21:21",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p9",
         "pick": "2:1",
         "points": 5,
-        "updatedAt": null
+        "updatedAt": "2026-06-30 20:54",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p10",
         "pick": "3:1",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": "2026-06-29 19:27",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p11",
         "pick": "1:0",
         "points": 3,
-        "updatedAt": null
+        "updatedAt": "2026-06-30 12:49",
+        "updatedState": "inserted"
       }
     ]
   },
@@ -3297,74 +3759,85 @@ export const matches = [
     "startsAt": "21. (st) 01.07. 18:00",
     "home": "Anglie",
     "away": "DR Kongo",
-    "score": null,
+    "score": "2:1",
     "bank": 110,
     "tips": [
       {
         "playerId": "p1",
         "pick": "3:1",
-        "points": null,
-        "updatedAt": null
+        "points": 3,
+        "updatedAt": "2026-06-30 21:29",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p2",
-        "pick": "-",
-        "points": null,
-        "updatedAt": null
+        "pick": "N:N",
+        "points": 0,
+        "updatedAt": "2026-07-02 1:13",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p3",
         "pick": "1:0",
-        "points": null,
-        "updatedAt": "2026-07-01T11:29:53.756Z"
+        "points": 3,
+        "updatedAt": "2026-07-01 13:29",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p4",
         "pick": "2:0",
-        "points": null,
-        "updatedAt": null
+        "points": 5,
+        "updatedAt": "2026-06-30 12:46",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p5",
-        "pick": "-",
-        "points": null,
-        "updatedAt": null
+        "pick": "N:N",
+        "points": 0,
+        "updatedAt": "2026-07-02 1:14",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p6",
         "pick": "2:0",
-        "points": null,
-        "updatedAt": null
+        "points": 5,
+        "updatedAt": "2026-06-30 21:25",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p7",
-        "pick": "-",
-        "points": null,
-        "updatedAt": null
+        "pick": "N:N",
+        "points": 0,
+        "updatedAt": "2026-07-02 1:27",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p8",
         "pick": "2:0",
-        "points": null,
-        "updatedAt": null
+        "points": 5,
+        "updatedAt": "2026-06-29 21:21",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p9",
         "pick": "3:0",
-        "points": null,
-        "updatedAt": "2026-07-01T11:27:54.370Z"
+        "points": 3,
+        "updatedAt": "2026-07-01 13:26",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p10",
         "pick": "3:0",
-        "points": null,
-        "updatedAt": null
+        "points": 3,
+        "updatedAt": "2026-06-29 19:27",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p11",
         "pick": "4:0",
-        "points": null,
-        "updatedAt": null
+        "points": 3,
+        "updatedAt": "2026-06-30 12:49",
+        "updatedState": "inserted"
       }
     ]
   },
@@ -3374,74 +3847,85 @@ export const matches = [
     "startsAt": "21. (st) 01.07. 22:00",
     "home": "Belgie",
     "away": "Senegal",
-    "score": null,
-    "bank": 0,
+    "score": "2:2",
+    "bank": 220,
     "tips": [
       {
         "playerId": "p1",
         "pick": "1:2",
-        "points": null,
-        "updatedAt": null
+        "points": 0,
+        "updatedAt": "2026-06-30 21:29",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p2",
-        "pick": "-",
-        "points": null,
-        "updatedAt": null
+        "pick": "2:0",
+        "points": 0,
+        "updatedAt": "2026-07-02 1:23",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p3",
         "pick": "3:2",
-        "points": null,
-        "updatedAt": "2026-07-01T11:29:53.756Z"
+        "points": 0,
+        "updatedAt": "2026-07-01 13:29",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p4",
         "pick": "1:2",
-        "points": null,
-        "updatedAt": null
+        "points": 0,
+        "updatedAt": "2026-06-30 12:47",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p5",
-        "pick": "-",
-        "points": null,
-        "updatedAt": null
+        "pick": "2:2",
+        "points": 10,
+        "updatedAt": "2026-07-02 1:19",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p6",
         "pick": "1:1",
-        "points": null,
-        "updatedAt": null
+        "points": 3,
+        "updatedAt": "2026-06-30 21:25",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p7",
-        "pick": "-",
-        "points": null,
-        "updatedAt": null
+        "pick": "N:N",
+        "points": 0,
+        "updatedAt": "2026-07-02 1:27",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p8",
         "pick": "0:1",
-        "points": null,
-        "updatedAt": null
+        "points": 0,
+        "updatedAt": "2026-06-29 21:21",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p9",
         "pick": "3:0",
-        "points": null,
-        "updatedAt": "2026-07-01T11:27:54.370Z"
+        "points": 0,
+        "updatedAt": "2026-07-01 13:26",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p10",
         "pick": "2:1",
-        "points": null,
-        "updatedAt": null
+        "points": 0,
+        "updatedAt": "2026-06-28 18:42",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p11",
         "pick": "1:1",
-        "points": null,
-        "updatedAt": null
+        "points": 3,
+        "updatedAt": "2026-06-30 12:49",
+        "updatedState": "inserted"
       }
     ]
   },
@@ -3451,74 +3935,85 @@ export const matches = [
     "startsAt": "22. (čt) 02.07. 02:00",
     "home": "USA",
     "away": "Bosna a Hercegovina",
-    "score": null,
-    "bank": 0,
+    "score": "2:0",
+    "bank": 110,
     "tips": [
       {
         "playerId": "p1",
         "pick": "1:0",
-        "points": null,
-        "updatedAt": null
+        "points": 3,
+        "updatedAt": "2026-06-30 21:29",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p2",
-        "pick": "-",
-        "points": null,
-        "updatedAt": null
+        "pick": "2:0",
+        "points": 10,
+        "updatedAt": "2026-07-02 1:28",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p3",
         "pick": "2:0",
-        "points": null,
-        "updatedAt": "2026-07-01T11:29:53.756Z"
+        "points": 10,
+        "updatedAt": "2026-07-01 13:29",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p4",
         "pick": "2:0",
-        "points": null,
-        "updatedAt": null
+        "points": 10,
+        "updatedAt": "2026-06-30 12:47",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p5",
-        "pick": "-",
-        "points": null,
-        "updatedAt": null
+        "pick": "3:1",
+        "points": 3,
+        "updatedAt": "2026-07-02 1:20",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p6",
         "pick": "2:0",
-        "points": null,
-        "updatedAt": null
+        "points": 10,
+        "updatedAt": "2026-06-30 21:25",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p7",
-        "pick": "-",
-        "points": null,
-        "updatedAt": null
+        "pick": "N:N",
+        "points": 0,
+        "updatedAt": "2026-07-02 2:10",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p8",
         "pick": "3:1",
-        "points": null,
-        "updatedAt": null
+        "points": 3,
+        "updatedAt": "2026-06-29 21:21",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p9",
         "pick": "1:1",
-        "points": null,
-        "updatedAt": "2026-07-01T11:27:54.370Z"
+        "points": 0,
+        "updatedAt": "2026-07-01 13:26",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p10",
         "pick": "3:1",
-        "points": null,
-        "updatedAt": null
+        "points": 3,
+        "updatedAt": "2026-06-29 19:32",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p11",
         "pick": "1:1",
-        "points": null,
-        "updatedAt": null
+        "points": 0,
+        "updatedAt": "2026-06-30 12:49",
+        "updatedState": "inserted"
       }
     ]
   },
@@ -3528,74 +4023,85 @@ export const matches = [
     "startsAt": "22. (čt) 02.07. 21:00",
     "home": "Španělsko",
     "away": "Rakousko",
-    "score": null,
-    "bank": 0,
+    "score": "3:0",
+    "bank": 110,
     "tips": [
       {
         "playerId": "p1",
-        "pick": "-",
-        "points": null,
-        "updatedAt": null
+        "pick": "4:0",
+        "points": 3,
+        "updatedAt": "2026-07-02 10:09",
+        "updatedState": "updated"
       },
       {
         "playerId": "p2",
-        "pick": "-",
-        "points": null,
-        "updatedAt": null
+        "pick": "2:0",
+        "points": 3,
+        "updatedAt": "2026-07-02 5:12",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p3",
-        "pick": "-",
-        "points": null,
-        "updatedAt": null
+        "pick": "1:0",
+        "points": 3,
+        "updatedAt": "2026-07-02 5:11",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p4",
         "pick": "3:1",
-        "points": null,
-        "updatedAt": null
+        "points": 5,
+        "updatedAt": "2026-06-30 12:47",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p5",
-        "pick": "-",
-        "points": null,
-        "updatedAt": null
+        "pick": "2:0",
+        "points": 3,
+        "updatedAt": "2026-07-02 19:06",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p6",
         "pick": "4:1",
-        "points": null,
-        "updatedAt": null
+        "points": 3,
+        "updatedAt": "2026-06-30 21:25",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p7",
-        "pick": "-",
-        "points": null,
-        "updatedAt": null
+        "pick": "4:1",
+        "points": 3,
+        "updatedAt": "2026-07-02 12:32",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p8",
         "pick": "2:0",
-        "points": null,
-        "updatedAt": null
+        "points": 3,
+        "updatedAt": "2026-06-29 21:21",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p9",
         "pick": "3:0",
-        "points": null,
-        "updatedAt": "2026-07-01T11:27:54.370Z"
+        "points": 10,
+        "updatedAt": "2026-07-01 13:26",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p10",
         "pick": "2:0",
-        "points": null,
-        "updatedAt": null
+        "points": 3,
+        "updatedAt": "2026-06-29 19:28",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p11",
         "pick": "3:0",
-        "points": null,
-        "updatedAt": null
+        "points": 10,
+        "updatedAt": "2026-06-30 12:50",
+        "updatedState": "inserted"
       }
     ]
   },
@@ -3606,73 +4112,84 @@ export const matches = [
     "home": "Portugalsko",
     "away": "Chorvatsko",
     "score": null,
-    "bank": 0,
+    "bank": 110,
     "tips": [
       {
         "playerId": "p1",
-        "pick": "-",
+        "pick": "2:1",
         "points": null,
-        "updatedAt": null
+        "updatedAt": "2026-07-02 10:10",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p2",
-        "pick": "-",
+        "pick": "2:0",
         "points": null,
-        "updatedAt": null
+        "updatedAt": "2026-07-02 5:12",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p3",
-        "pick": "-",
+        "pick": "1:1",
         "points": null,
-        "updatedAt": null
+        "updatedAt": "2026-07-02 5:11",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p4",
         "pick": "2:1",
         "points": null,
-        "updatedAt": null
+        "updatedAt": "2026-06-30 12:48",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p5",
-        "pick": "-",
+        "pick": "0:0",
         "points": null,
-        "updatedAt": null
+        "updatedAt": "2026-07-02 19:06",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p6",
-        "pick": "-",
+        "pick": "2:1",
         "points": null,
-        "updatedAt": null
+        "updatedAt": "2026-07-02 21:33",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p7",
-        "pick": "-",
+        "pick": "3:1",
         "points": null,
-        "updatedAt": null
+        "updatedAt": "2026-07-02 12:32",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p8",
         "pick": "3:1",
         "points": null,
-        "updatedAt": null
+        "updatedAt": "2026-06-29 21:21",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p9",
         "pick": "2:2",
         "points": null,
-        "updatedAt": "2026-07-01T11:27:54.370Z"
+        "updatedAt": "2026-07-01 13:26",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p10",
         "pick": "3:2",
         "points": null,
-        "updatedAt": null
+        "updatedAt": "2026-06-29 19:28",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p11",
         "pick": "2:2",
         "points": null,
-        "updatedAt": null
+        "updatedAt": "2026-06-30 12:50",
+        "updatedState": "inserted"
       }
     ]
   },
@@ -3687,69 +4204,80 @@ export const matches = [
     "tips": [
       {
         "playerId": "p1",
-        "pick": "-",
+        "pick": "1:1",
         "points": null,
-        "updatedAt": null
+        "updatedAt": "2026-07-02 10:10",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p2",
-        "pick": "-",
+        "pick": "2:0",
         "points": null,
-        "updatedAt": null
+        "updatedAt": "2026-07-02 5:12",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p3",
-        "pick": "-",
+        "pick": "2:1",
         "points": null,
-        "updatedAt": null
+        "updatedAt": "2026-07-02 5:12",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p4",
         "pick": "1:1",
         "points": null,
-        "updatedAt": null
+        "updatedAt": "2026-06-30 12:48",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p5",
-        "pick": "-",
+        "pick": "1:1",
         "points": null,
-        "updatedAt": null
+        "updatedAt": "2026-07-02 19:06",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p6",
-        "pick": "-",
+        "pick": "1:1",
         "points": null,
-        "updatedAt": null
+        "updatedAt": "2026-07-02 21:33",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p7",
-        "pick": "-",
+        "pick": "3:0",
         "points": null,
-        "updatedAt": null
+        "updatedAt": "2026-07-02 12:32",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p8",
         "pick": "2:2",
         "points": null,
-        "updatedAt": null
+        "updatedAt": "2026-06-29 21:21",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p9",
         "pick": "1:2",
         "points": null,
-        "updatedAt": "2026-07-01T11:27:54.370Z"
+        "updatedAt": "2026-07-01 13:27",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p10",
         "pick": "3:0",
         "points": null,
-        "updatedAt": null
+        "updatedAt": "2026-06-29 19:28",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p11",
         "pick": "0:0",
         "points": null,
-        "updatedAt": null
+        "updatedAt": "2026-06-30 12:50",
+        "updatedState": "inserted"
       }
     ]
   },
@@ -3766,67 +4294,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "-",
         "points": null,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p2",
         "pick": "-",
         "points": null,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p3",
-        "pick": "-",
+        "pick": "1:1",
         "points": null,
-        "updatedAt": null
+        "updatedAt": "2026-07-02 23:42",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p4",
         "pick": "1:2",
         "points": null,
-        "updatedAt": null
+        "updatedAt": "2026-06-30 12:48",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p5",
         "pick": "-",
         "points": null,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p6",
-        "pick": "-",
+        "pick": "0:2",
         "points": null,
-        "updatedAt": null
+        "updatedAt": "2026-07-02 21:33",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p7",
         "pick": "-",
         "points": null,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p8",
         "pick": "1:2",
         "points": null,
-        "updatedAt": null
+        "updatedAt": "2026-06-29 21:22",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p9",
         "pick": "0:1",
         "points": null,
-        "updatedAt": "2026-07-01T11:27:54.370Z"
+        "updatedAt": "2026-07-01 13:27",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p10",
         "pick": "1:2",
         "points": null,
-        "updatedAt": null
+        "updatedAt": "2026-06-28 18:42",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p11",
         "pick": "1:3",
         "points": null,
-        "updatedAt": null
+        "updatedAt": "2026-06-30 12:50",
+        "updatedState": "inserted"
       }
     ]
   },
@@ -3843,67 +4382,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "-",
         "points": null,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p2",
         "pick": "-",
         "points": null,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p3",
-        "pick": "-",
+        "pick": "3:0",
         "points": null,
-        "updatedAt": null
+        "updatedAt": "2026-07-02 23:43",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p4",
         "pick": "6:0",
         "points": null,
-        "updatedAt": null
+        "updatedAt": "2026-06-30 12:48",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p5",
         "pick": "-",
         "points": null,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p6",
-        "pick": "-",
+        "pick": "4:0",
         "points": null,
-        "updatedAt": null
+        "updatedAt": "2026-07-02 21:33",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p7",
         "pick": "-",
         "points": null,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p8",
         "pick": "4:0",
         "points": null,
-        "updatedAt": null
+        "updatedAt": "2026-06-29 21:22",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p9",
         "pick": "3:0",
         "points": null,
-        "updatedAt": "2026-07-01T11:27:54.370Z"
+        "updatedAt": "2026-07-01 13:27",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p10",
         "pick": "5:0",
         "points": null,
-        "updatedAt": null
+        "updatedAt": "2026-06-29 19:28",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p11",
         "pick": "3:0",
         "points": null,
-        "updatedAt": null
+        "updatedAt": "2026-06-30 12:50",
+        "updatedState": "inserted"
       }
     ]
   },
@@ -3920,67 +4470,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "-",
         "points": null,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p2",
         "pick": "-",
         "points": null,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p3",
-        "pick": "-",
+        "pick": "1:0",
         "points": null,
-        "updatedAt": null
+        "updatedAt": "2026-07-02 23:43",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p4",
         "pick": "2:1",
         "points": null,
-        "updatedAt": null
+        "updatedAt": "2026-06-30 12:48",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p5",
         "pick": "-",
         "points": null,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p6",
-        "pick": "-",
+        "pick": "2:0",
         "points": null,
-        "updatedAt": null
+        "updatedAt": "2026-07-02 21:33",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p7",
         "pick": "-",
         "points": null,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p8",
         "pick": "2:1",
         "points": null,
-        "updatedAt": null
+        "updatedAt": "2026-06-29 21:22",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p9",
         "pick": "1:1",
         "points": null,
-        "updatedAt": "2026-07-01T11:27:54.370Z"
+        "updatedAt": "2026-07-01 13:27",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p10",
         "pick": "1:2",
         "points": null,
-        "updatedAt": null
+        "updatedAt": "2026-06-29 19:28",
+        "updatedState": "inserted"
       },
       {
         "playerId": "p11",
         "pick": "1:1",
         "points": null,
-        "updatedAt": null
+        "updatedAt": "2026-06-30 12:50",
+        "updatedState": "inserted"
       }
     ]
   },
@@ -3997,67 +4558,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "-",
         "points": null,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p2",
         "pick": "-",
         "points": null,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p3",
         "pick": "-",
         "points": null,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p4",
         "pick": "-",
         "points": null,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p5",
         "pick": "-",
         "points": null,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p6",
         "pick": "-",
         "points": null,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p7",
         "pick": "-",
         "points": null,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p8",
         "pick": "-",
         "points": null,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p9",
         "pick": "-",
         "points": null,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p10",
         "pick": "-",
         "points": null,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p11",
         "pick": "-",
         "points": null,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       }
     ]
   },
@@ -4074,67 +4646,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "-",
         "points": null,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p2",
         "pick": "-",
         "points": null,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p3",
         "pick": "-",
         "points": null,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p4",
         "pick": "-",
         "points": null,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p5",
         "pick": "-",
         "points": null,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p6",
         "pick": "-",
         "points": null,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p7",
         "pick": "-",
         "points": null,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p8",
         "pick": "-",
         "points": null,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p9",
         "pick": "-",
         "points": null,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p10",
         "pick": "-",
         "points": null,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p11",
         "pick": "-",
         "points": null,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       }
     ]
   },
@@ -4151,67 +4734,78 @@ export const matches = [
         "playerId": "p1",
         "pick": "-",
         "points": null,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p2",
         "pick": "-",
         "points": null,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p3",
         "pick": "-",
         "points": null,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p4",
         "pick": "-",
         "points": null,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p5",
         "pick": "-",
         "points": null,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p6",
         "pick": "-",
         "points": null,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p7",
         "pick": "-",
         "points": null,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p8",
         "pick": "-",
         "points": null,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p9",
         "pick": "-",
         "points": null,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p10",
         "pick": "-",
         "points": null,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       },
       {
         "playerId": "p11",
         "pick": "-",
         "points": null,
-        "updatedAt": null
+        "updatedAt": null,
+        "updatedState": null
       }
     ]
   }

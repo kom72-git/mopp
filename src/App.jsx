@@ -290,12 +290,17 @@ function formatTipUpdatedAt(updatedAt) {
     return String(updatedAt).trim()
   }
 
-  return new Intl.DateTimeFormat('cs-CZ', {
-    day: '2-digit',
-    month: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(date)
+  const day = String(date.getDate()).padStart(2, '0')
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const hour = String(date.getHours()).padStart(2, '0')
+  const minute = String(date.getMinutes()).padStart(2, '0')
+  return `${day}.${month}. ${hour}:${minute}`
+}
+
+function formatTipNote(updatedAt, updatedState) {
+  if (!updatedAt) return ''
+  const actionLabel = updatedState === 'updated' ? 'upraveno' : 'vloženo'
+  return `${actionLabel}: ${formatTipUpdatedAt(updatedAt)}`
 }
 
 function toTipTimestampMs(value) {
@@ -750,7 +755,7 @@ function App() {
         return {
           ...tip,
           playerName: player?.name ?? tip.playerId,
-          tipNote: tip.updatedAt ? `vloženo ${formatTipUpdatedAt(tip.updatedAt)}` : '',
+          tipNote: formatTipNote(tip.updatedAt, tip.updatedState),
           rank,
           rankDelta,
           payout,
@@ -798,23 +803,25 @@ function App() {
     }
   }, [])
 
-  const showTooltip = (message, duration = 3200) => {
+  const showTooltip = (message, duration = 5200) => {
     if (tooltipTimerRef.current) {
       clearTimeout(tooltipTimerRef.current)
     }
+    const text = String(message ?? '')
+    const adaptiveDuration = Math.min(12000, Math.max(duration, 2600 + text.length * 30))
     setSyncMessage(message)
     setShowSyncTooltip(true)
     tooltipTimerRef.current = setTimeout(() => {
       setShowSyncTooltip(false)
       tooltipTimerRef.current = null
-    }, duration)
+    }, adaptiveDuration)
   }
 
   const handleLogoClick = async (event) => {
     if (event.detail < 3 || isSyncing) return
 
     setIsSyncing(true)
-    showTooltip('Synchronizace s Google tabulkou...')
+    showTooltip('Synchronizace s Google tabulkou...', 15000)
 
     try {
       if (import.meta.env.PROD) {

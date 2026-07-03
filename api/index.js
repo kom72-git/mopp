@@ -35,21 +35,7 @@ app.get("/api/data", async (req, res) => {
   try {
     const { fetchSheetData } = await loadSheetDataModule();
     const tournamentId = typeof req.query?.tournament === "string" ? req.query.tournament : undefined;
-    const tipAuditFile = path.resolve(__dirname, "../public/tip-audit.json");
-
-    let tipAuditByKey = {};
-    try {
-      const auditText = await fs.readFile(tipAuditFile, "utf8");
-      const auditPayload = JSON.parse(auditText);
-      const tips = auditPayload?.byTournament?.[tournamentId]?.tips;
-      if (tips && typeof tips === "object") {
-        tipAuditByKey = tips;
-      }
-    } catch {
-      tipAuditByKey = {};
-    }
-
-    const data = await fetchSheetData({ tournamentId, tipAuditByKey });
+    const data = await fetchSheetData({ tournamentId });
     res.set("Cache-Control", "no-store");
     return res.json({ ok: true, tournamentId: tournamentId ?? null, ...data });
   } catch (error) {

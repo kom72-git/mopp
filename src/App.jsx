@@ -85,6 +85,16 @@ function pointsClass(points) {
   return 'tip-pill is-pending'
 }
 
+function formBlockClass(entry) {
+  if (entry?.isNoBet) return 'is-no-bet'
+  const points = entry?.points
+  if (points === 10) return 'is-exact'
+  if (points === 5) return 'is-near'
+  if (points === 3) return 'is-win'
+  if (points === 0) return 'is-miss'
+  return 'is-pending'
+}
+
 function extractRound(match) {
   if (Number.isFinite(match?.round)) return match.round
   const matched = match?.startsAt?.match(/^(\d+)\./)
@@ -404,6 +414,37 @@ function getTeamLogoClassName(tournamentId) {
   return tournamentId === 'PO-2025' ? 'is-round-logo' : 'is-rect-logo'
 }
 
+function buildSparkline(points, width = 120, height = 42, padding = 4) {
+  const values = Array.isArray(points) ? points.filter((value) => Number.isFinite(value)) : []
+  if (values.length === 0) {
+    return { path: '', dots: [] }
+  }
+
+  if (values.length === 1) {
+    const x = width / 2
+    const y = height / 2
+    return { path: `M ${x} ${y}`, dots: [{ x, y, value: values[0] }] }
+  }
+
+  const minValue = Math.min(...values)
+  const maxValue = Math.max(...values)
+  const range = maxValue - minValue || 1
+  const stepX = (width - padding * 2) / (values.length - 1)
+
+  const dots = values.map((value, index) => {
+    const x = padding + stepX * index
+    const normalized = (value - minValue) / range
+    const y = height - padding - normalized * (height - padding * 2)
+    return { x, y, value }
+  })
+
+  const path = dots
+    .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`)
+    .join(' ')
+
+  return { path, dots }
+}
+
 function App() {
   const tooltipTimerRef = useRef(null)
   const touchLegendHandledRef = useRef(false)
@@ -606,6 +647,8 @@ function App() {
   const visiblePlayerIds = currentViewState.visiblePlayerIds ?? scoreboard.map((player) => player.id)
   const hoveredPlayerId = currentViewState.hoveredPlayerId ?? ''
   const selectedMatchId = currentViewState.selectedMatchId ?? ''
+  const selectedPlayerId = currentViewState.selectedPlayerId ?? ''
+  const playerFormWindow = currentViewState.playerFormWindow ?? 10
   const showLongTermBankInfo = currentViewState.showLongTermBankInfo ?? false
 
   const updateCurrentTournamentState = (patch) => {
@@ -650,6 +693,24 @@ function App() {
     }))
   }
 
+  const setSelectedPlayerId = (value) => {
+    updateCurrentTournamentState((current) => ({
+      selectedPlayerId:
+        typeof value === 'function' ? value(current.selectedPlayerId ?? '') : value,
+    }))
+  }
+
+  const setPlayerFormWindow = (value) => {
+    updateCurrentTournamentState((current) => ({
+      playerFormWindow:
+        typeof value === 'function' ? value(current.playerFormWindow ?? 10) : value,
+    }))
+  }
+
+  const toggleSelectedPlayerId = (playerId) => {
+    setSelectedPlayerId((prev) => (prev === playerId ? '' : playerId))
+  }
+
   const setShowLongTermBankInfo = (value) => {
     updateCurrentTournamentState((current) => ({
       showLongTermBankInfo:
@@ -690,6 +751,123 @@ function App() {
     () => roundMatches.find((match) => match.id === effectiveSelectedMatchId) ?? roundMatches[0],
     [roundMatches, effectiveSelectedMatchId],
   )
+
+  const effectiveSelectedPlayerId = useMemo(() => {
+    if (standings.length === 0) return ''
+    if (!selectedPlayerId) return ''
+    const exists = standings.some((player) => player.id === selectedPlayerId)
+    return exists ? selectedPlayerId : ''
+  }, [standings, selectedPlayerId])
+
+  const playedMatches = useMemo(
+    () => matches.filter((match) => match.score && match.score !== '--:--'),
+    [matches],
+  )
+
+  const allPlayersTipProgress = useMemo(() => {
+    const totalTipSlots = playedMatches.length * players.length
+    const submittedTips = playedMatches.reduce((sum, match) => {
+      const tipsInMatch = (match.tips ?? []).filter(
+        (tip) => tip.pick && tip.pick !== '-' && !isNoBetPick(tip.pick),
+      ).length
+      return sum + tipsInMatch
+    }, 0)
+    const coverage = totalTipSlots > 0 ? Math.round((submittedTips / totalTipSlots) * 100) : 0
+
+    return {
+      submittedTips,
+      totalTipSlots,
+      coverage,
+    }
+  }, [playedMatches, players.length])
+
+  const selectedPlayerProfile = useMemo(() => {
+    if (!effectiveSelectedPlayerId) return null
+
+    const selectedStanding = standings.find((player) => player.id === effectiveSelectedPlayerId)
+    if (!selectedStanding) return null
+
+    const timeline = matches
+      .map((match) => {
+        const tip = (match.tips ?? []).find((item) => item.playerId === effectiveSelectedPlayerId)
+        if (!tip || !Number.isFinite(tip.points)) return null
+        return {
+          matchId: match.id,
+          points: tip.points,
+          isNoBet: isNoBetPick(tip.pick),
+        }
+      })
+      .filter(Boolean)
+
+    const evaluatedCount = timeline.length
+    const requestedWindow = playerFormWindow === 'all' ? evaluatedCount : Number(playerFormWindow)
+    const recentWindowSize = Math.max(1, Math.min(evaluatedCount || 1, Number.isFinite(requestedWindow) ? requestedWindow : 10))
+    const recent = timeline.slice(-recentWindowSize)
+    const previous = timeline.slice(-recentWindowSize * 2, -recentWindowSize)
+
+    const recentPoints = recent.reduce((sum, item) => sum + item.points, 0)
+    const recentAverage = recent.length > 0 ? recentPoints / recent.length : 0
+    const previousAverage = previous.length > 0
+      ? previous.reduce((sum, item) => sum + item.points, 0) / previous.length
+      : null
+
+    let trendLabel = 'bez srovnání'
+    if (previousAverage !== null) {
+      const diff = recentAverage - previousAverage
+      if (diff > 0.2) trendLabel = `roste (+${diff.toFixed(2)} b/z)`
+      else if (diff < -0.2) trendLabel = `klesá (${diff.toFixed(2)} b/z)`
+      else trendLabel = 'stabilní'
+    }
+
+    const currentPositiveStreak = (() => {
+      let streak = 0
+      for (let i = timeline.length - 1; i >= 0; i -= 1) {
+        if (timeline[i].points > 0) streak += 1
+        else break
+      }
+      return streak
+    })()
+
+    const tippedMatchesCount = playedMatches.reduce((sum, match) => {
+      const tip = (match.tips ?? []).find((item) => item.playerId === effectiveSelectedPlayerId)
+      if (!tip || !tip.pick || tip.pick === '-' || isNoBetPick(tip.pick)) return sum
+      return sum + 1
+    }, 0)
+    const totalMatchesCount = playedMatches.length
+    const playerTipCoverage = totalMatchesCount > 0 ? Math.round((tippedMatchesCount / totalMatchesCount) * 100) : 0
+
+    return {
+      id: selectedStanding.id,
+      name: selectedStanding.name,
+      evaluatedCount,
+      formWindow: playerFormWindow === 'all' ? 'all' : recentWindowSize,
+      recentCount: recent.length,
+      recentPoints,
+      recentAverage: recentAverage.toFixed(2),
+      recentFormIndex: Math.round((recentAverage / 10) * 100),
+      trendLabel,
+      currentPositiveStreak,
+      recentSequence: recent.map((item) => (item.isNoBet ? 'N' : item.points)).join(', '),
+      recentSeries: recent.map((item) => ({ points: item.points, isNoBet: item.isNoBet })),
+      tippedMatchesCount,
+      totalMatchesCount,
+      playerTipCoverage,
+    }
+  }, [effectiveSelectedPlayerId, standings, playedMatches, playerFormWindow])
+
+  const selectedPlayerRankSeries = useMemo(() => {
+    if (!effectiveSelectedPlayerId) return null
+    if (rankTimeline.rounds.length === 0 || rankTimeline.series.length === 0) return null
+
+    const series = rankTimeline.series.find((player) => player.id === effectiveSelectedPlayerId)
+    if (!series || series.ranks.length === 0) return null
+
+    return {
+      ...series,
+      rounds: rankTimeline.rounds,
+      maxRank: rankTimeline.series.length,
+    }
+  }, [effectiveSelectedPlayerId, rankTimeline])
 
   const selectedMatchStageLabel = useMemo(
     () =>
@@ -1070,7 +1248,16 @@ function App() {
               <article className="stand-card" key={player.id}>
                 <div className="stand-top">
                   <p className="stand-rank">{index + 1}.</p>
-                  <h3>{player.name}</h3>
+                  <h3>
+                    <button
+                      type="button"
+                      className={`stand-player-button ${player.id === effectiveSelectedPlayerId ? 'is-active' : ''}`}
+                      onClick={() => toggleSelectedPlayerId(player.id)}
+                      title="Zobrazit detail hráče"
+                    >
+                      <span>{player.name}</span>
+                    </button>
+                  </h3>
                   <strong className="stand-points">{player.points} b</strong>
                 </div>
 
@@ -1098,12 +1285,212 @@ function App() {
               </article>
             ))}
           </div>
+
         </aside>
 
         <section className="panel detail-panel">
+          {selectedPlayerProfile ? (
+            <>
+              <div className="panel-head player-focus-headline">
+                <h2>Detail hráče · {selectedPlayerProfile.name}</h2>
+                <button
+                  type="button"
+                  className="info-toggle"
+                  onClick={() => setSelectedPlayerId('')}
+                >
+                  Zavřít
+                </button>
+              </div>
+
+              <div className="player-window-controls" role="group" aria-label="Rozsah formy hráče">
+                <span className="player-window-label">Forma:</span>
+                {[3, 5, 10, 'all'].map((option) => {
+                  const isActive = selectedPlayerProfile.formWindow === option || (option === 'all' && selectedPlayerProfile.formWindow === 'all')
+                  const label = option === 'all' ? 'vše' : String(option)
+                  return (
+                    <button
+                      key={String(option)}
+                      type="button"
+                      className={`player-window-tab ${isActive ? 'is-active' : ''}`}
+                      onClick={() => setPlayerFormWindow(option)}
+                    >
+                      {label}
+                    </button>
+                  )
+                })}
+              </div>
+
+              <p className="player-window-note">
+                Průměr je počítaný z posledních {selectedPlayerProfile.recentCount} vyhodnocených zápasů hráče
+                (celkem vyhodnoceno: {selectedPlayerProfile.evaluatedCount}).
+              </p>
+
+              <section className="player-tip-progress-row" aria-label="Aktivita tipování">
+                <article className="player-tip-progress">
+                  <h3>Natipováno hráčem (odehrané zápasy)</h3>
+                  <p>
+                    <strong>{selectedPlayerProfile.tippedMatchesCount}/{selectedPlayerProfile.totalMatchesCount}</strong>
+                    {' '}
+                    ({selectedPlayerProfile.playerTipCoverage} %)
+                  </p>
+                </article>
+                <article className="player-tip-progress">
+                  <h3>Natipováno všichni hráči (odehrané zápasy)</h3>
+                  <p>
+                    <strong>{allPlayersTipProgress.submittedTips}/{allPlayersTipProgress.totalTipSlots}</strong>
+                    {' '}
+                    ({allPlayersTipProgress.coverage} %)
+                  </p>
+                </article>
+              </section>
+
+              <section className="player-rank-mini" aria-label="Vývoj pořadí hráče">
+                <h3>Vývoj pořadí hráče</h3>
+                {selectedPlayerRankSeries ? (
+                  <div className="player-rank-mini-wrap" role="img" aria-label={`Vývoj pořadí hráče ${selectedPlayerProfile.name}`}>
+                    {(() => {
+                      const width = 940
+                      const height = 104
+                      const margin = { top: 12, right: 20, bottom: 24, left: 36 }
+                      const innerWidth = width - margin.left - margin.right
+                      const innerHeight = height - margin.top - margin.bottom
+                      const rounds = selectedPlayerRankSeries.rounds
+                      const ranks = selectedPlayerRankSeries.ranks
+                      const maxRank = selectedPlayerRankSeries.maxRank
+                      const stepX = rounds.length > 1 ? innerWidth / (rounds.length - 1) : 0
+                      const rankToY = (rank) => margin.top + ((rank - 1) / Math.max(1, maxRank - 1)) * innerHeight
+                      const indexToX = (index) => margin.left + index * stepX
+                      const path = ranks
+                        .map((rank, index) => `${index === 0 ? 'M' : 'L'} ${indexToX(index)} ${rankToY(rank)}`)
+                        .join(' ')
+
+                      return (
+                        <svg viewBox={`0 0 ${width} ${height}`} className="player-rank-mini-chart" preserveAspectRatio="none">
+                          <rect x="0" y="0" width={width} height={height} fill="#f9fcff" />
+
+                          {[1, maxRank].filter((value, index, arr) => arr.indexOf(value) === index).map((rank) => (
+                            <g key={`mini-grid-${rank}`}>
+                              <line
+                                x1={margin.left}
+                                y1={rankToY(rank)}
+                                x2={width - margin.right}
+                                y2={rankToY(rank)}
+                                className="rank-grid-line"
+                              />
+                              <text x={8} y={rankToY(rank) + 4} className="rank-axis-label">
+                                {rank}.
+                              </text>
+                            </g>
+                          ))}
+
+                          {rounds.map((round, index) => (
+                            <text
+                              key={`mini-x-${round}`}
+                              x={indexToX(index)}
+                              y={height - 8}
+                              textAnchor="middle"
+                              className="rank-axis-label"
+                            >
+                              {round}
+                            </text>
+                          ))}
+
+                          <path d={path} stroke={selectedPlayerRankSeries.color} className="rank-line" />
+                          {ranks.map((rank, index) => (
+                            <circle
+                              key={`${selectedPlayerProfile.id}-mini-rank-${index}`}
+                              cx={indexToX(index)}
+                              cy={rankToY(rank)}
+                              r="2.8"
+                              fill={selectedPlayerRankSeries.color}
+                              className="rank-line-end"
+                            />
+                          ))}
+                        </svg>
+                      )
+                    })()}
+                  </div>
+                ) : (
+                  <p className="player-rank-mini-empty">Pro tohoto hráče zatím není graf pořadí k dispozici.</p>
+                )}
+              </section>
+
+              <section className="player-focus-wide" aria-label="Detail hráče">
+                <div className="player-focus-grid">
+                <article className="player-focus-card">
+                  <h3>Posledních {selectedPlayerProfile.recentCount} zápasů</h3>
+                  <p>
+                    <strong>{selectedPlayerProfile.recentPoints} b</strong>
+                  </p>
+                </article>
+
+                <article className="player-focus-card">
+                  <h3>Průměr</h3>
+                  <p>
+                    <strong>{selectedPlayerProfile.recentAverage}</strong> b/z
+                  </p>
+                </article>
+
+                <article className="player-focus-card">
+                  <h3>Trend</h3>
+                  <p>{selectedPlayerProfile.trendLabel}</p>
+
+                  {(() => {
+                    const sparkline = buildSparkline(selectedPlayerProfile.recentSeries)
+                    if (!sparkline.path) return null
+
+                    return (
+                      <svg className="player-sparkline" viewBox="0 0 120 42" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Trend bodů hráče">
+                        <path className="player-sparkline-line" d={sparkline.path} />
+                        {sparkline.dots.map((dot, index) => (
+                          <circle
+                            key={`${selectedPlayerProfile.id}-${index}`}
+                            className="player-sparkline-dot"
+                            cx={dot.x}
+                            cy={dot.y}
+                            r={index === sparkline.dots.length - 1 ? 2.6 : 1.8}
+                          />
+                        ))}
+                      </svg>
+                    )
+                  })()}
+                </article>
+
+                <article className="player-focus-card">
+                  <h3>Série bodovaných tipů</h3>
+                  <p>
+                    <strong>{selectedPlayerProfile.currentPositiveStreak}</strong>
+                  </p>
+                </article>
+              </div>
+
+              <div className="player-focus-seq">
+                <span className="player-focus-seq-label">Body (od nejstaršího)</span>
+                <div className="player-form-blocks" aria-label="Body v posledních zápasech">
+                  {selectedPlayerProfile.recentSeries.length > 0 ? (
+                    selectedPlayerProfile.recentSeries.map((entry, index) => (
+                      <span
+                        key={`${selectedPlayerProfile.id}-form-${index}`}
+                        className={`player-form-block ${formBlockClass(entry)}`}
+                        title={entry.isNoBet ? 'N/N (bez tipu)' : `${entry.points} b`}
+                        aria-label={entry.isNoBet ? 'N/N bez tipu' : `${entry.points} bodů`}
+                      />
+                    ))
+                  ) : (
+                    <span className="player-form-empty">–</span>
+                  )}
+                </div>
+              </div>
+              <p className="player-focus-index">
+                Index formy: <strong>{selectedPlayerProfile.recentFormIndex}/100</strong>
+              </p>
+              </section>
+            </>
+          ) : null}
+
           {selectedMatch ? (
             <>
-              <div className="panel-head">
+              <div className="panel-head tips-panel-head">
                 <h2>Tipy hráčů pro zápas</h2>
                 <span className="tag">
                   Tipy {selectedMatchTips.filter((tip) => tip.pick && tip.pick !== '-').length}/
@@ -1193,7 +1580,14 @@ function App() {
                       )}
                     </span>
                     <span className="name-cell">
-                      <span className="player-name">{tip.playerName}</span>
+                      <button
+                        type="button"
+                        className={`tip-player-button ${tip.playerId === effectiveSelectedPlayerId ? 'is-active' : ''}`}
+                        onClick={() => toggleSelectedPlayerId(tip.playerId)}
+                        title="Zobrazit detail hráče"
+                      >
+                        <span className="player-name">{tip.playerName}</span>
+                      </button>
                       {tip.tipNote ? <span className="tip-note">{tip.tipNote}</span> : null}
                     </span>
 

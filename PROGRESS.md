@@ -44,5 +44,29 @@ API běží samostatně na `http://localhost:4000/`.
 4. **Autentizace** – přihlašování hráčů (později)
 5. **GitHub + Vercel deploy** – jako u známek
 
+## Nápady po MS (roadmapa)
+1. **Detail hráče po kliku na jméno**
+  - Drawer/panel s profilem hráče.
+  - Aktuální forma (např. posledních 5/9 zápasů, body na zápas).
+  - Jednoznačný text trendu (roste/klesá/stagnuje).
+2. **Grafy pro jednoho hráče**
+  - Vývoj bodů po kolech.
+  - Vývoj pořadí po kolech.
+3. **Heatmapa tipů hráče**
+  - Přehled zápasů s barvami 10/5/3/0/N.
+  - Rychlý přehled silných/slabých úseků turnaje.
+4. **Srovnání hráče**
+  - Proti průměru všech.
+  - Proti nejbližšímu soupeři v pořadí.
+5. **Streak a mini analytika**
+  - Série bodovaných tipů.
+  - Série bez bodu.
+  - Úspěšnost přesný výsledek / vítěz / no-bet.
+6. **Implementační pořadí (bez přepisu od nuly)**
+  - Nejprve detail hráče + forma.
+  - Poté grafy jednoho hráče.
+  - Pak heatmapa a porovnání.
+  - Nakonec napojení na budoucí auth + DB backend.
+
 ---
 Pokud jsi nový v projektu: přečti si toto, pak se podívej na prototyp na http://localhost:4173/

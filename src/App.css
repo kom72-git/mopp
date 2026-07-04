@@ -868,6 +868,27 @@
   margin-bottom: 0.45rem;
 }
 
+.player-focus-title {
+  margin: 0;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.42rem;
+  flex-wrap: wrap;
+}
+
+.player-focus-player-name {
+  font-size: 1.08em;
+  font-weight: 900;
+  color: #10395c;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.player-focus-separator {
+  color: #7b93a8;
+  font-weight: 700;
+}
+
 .player-window-controls {
   display: inline-flex;
   align-items: center;
@@ -1007,6 +1028,40 @@
   font-size: 0.86rem;
 }
 
+.player-card-unit {
+  font-size: 0.78em;
+  font-weight: 500;
+  color: #5c758b;
+}
+
+.player-streak-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.34rem;
+  font-size: 0.75rem;
+  color: #5d778d;
+}
+
+.player-streak-line strong {
+  color: #173a5a;
+  font-size: 0.86rem;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.28rem;
+}
+
+.player-streak-badge {
+  font-size: 0.6rem;
+  font-weight: 800;
+  color: #155f37;
+  background: #e7f8ee;
+  border: 1px solid #bfe7ce;
+  border-radius: 999px;
+  padding: 0.03rem 0.32rem;
+  letter-spacing: 0.03em;
+}
+
 .player-money-wide {
   margin-top: 0.36rem;
   border: 1px solid #d6e4f1;
@@ -1068,6 +1123,18 @@
   color: #173a5a;
   font-size: 0.92rem;
   white-space: nowrap;
+}
+
+.money-amount.is-positive {
+  color: #14723b;
+}
+
+.money-amount.is-negative {
+  color: #b03636;
+}
+
+.money-amount.is-neutral {
+  color: #4f6a80;
 }
 
 .money-stat-box.is-outflow {
@@ -1152,9 +1219,11 @@
 .player-focus-card.is-trend p {
   position: relative;
   z-index: 1;
-  max-width: fit-content;
-  padding: 0.06rem 0.3rem;
-  border-radius: 999px;
+  display: inline-flex;
+  align-items: baseline;
+  width: fit-content;
+  padding: 0.09rem 0.34rem;
+  border-radius: 8px;
   background: rgb(255 255 255 / 72%);
   backdrop-filter: blur(1px);
 }
@@ -1167,6 +1236,12 @@
 
 .player-trend-delta {
   font-size: 0.78rem;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.05rem;
+}
+
+.player-trend-delta-value {
   font-weight: 800;
 }
 
@@ -1323,6 +1398,59 @@
 
 .player-success-item.is-nobet {
   border-color: #e5bec3;
+}
+
+.player-field-compare {
+  display: grid;
+  gap: 0.3rem;
+  margin-top: 0.08rem;
+}
+
+.player-field-compare h3 {
+  margin: 0;
+  font-size: 0.72rem;
+  color: #4f6a80;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.player-field-compare-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: 0.26rem;
+}
+
+.player-field-item {
+  border: 1px solid #d6e4f1;
+  border-radius: 9px;
+  background: #fff;
+  padding: 0.3rem 0.42rem;
+  display: grid;
+  gap: 0.1rem;
+}
+
+.player-field-item span {
+  font-size: 0.68rem;
+  color: #5c758b;
+  font-weight: 700;
+}
+
+.player-field-item strong {
+  font-size: 0.88rem;
+  color: #173a5a;
+  line-height: 1.15;
+}
+
+.player-field-value.is-up {
+  color: #14723b;
+}
+
+.player-field-value.is-down {
+  color: #b03636;
+}
+
+.player-field-value.is-flat {
+  color: #4f6a80;
 }
 
 .player-form-blocks {

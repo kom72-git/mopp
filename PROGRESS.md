@@ -1,12 +1,20 @@
 # MOPP – Master of PP Project
-**Status:** Statický prototyp hotový a běží
+**Status:** Aktivní verze běží (frontend + API + hráčské statistiky)
 
 ## Co je hotovo
-- ✅ React + Vite frontend (stejný stack jako u známek)
-- ✅ Statický prototyp s:
-  1. **Zápasy** – mobilní karty se jménem zápasu, časem, výsledkem, bankem
-  2. **Tipy hráčů** – pod každým zápasem seznam tipů s body (10=přesný, 5=vítěz, 3=skóre, 0=miss)
-  3. **Pořadí hráčů** – žebříček seřazený podle celkových bodů
+- ✅ React + Vite frontend
+- ✅ Node/Express API (`/api/data`, `/api/sync-sheet`)
+- ✅ Zápasy dne + výběr kola
+- ✅ Tipy hráčů pro vybraný zápas (body, výhry, čas úpravy tipu)
+- ✅ Pořadí hráčů + mini trend pořadí
+- ✅ Detail hráče se statistikami:
+  1. **Filtr formy** (`5/10/15/20/25/vše`) s výchozí volbou `vše`
+  2. **Souhrn formy** (body, průměr, trend, index)
+  3. **Série bodovaných tipů** (aktuální + historické maximum)
+  4. **Úspěšnost tipů** (10/5/3/0/N + benchmark proti průměru)
+  5. **Peněžní bilance** (vloženo, výhry, aktuální stav + potenciál 1./2./3. místo)
+- ✅ Posun pořadí u tipů se zobrazuje jen u vyhodnocených zápasů
+- ✅ Mobilní auto-scroll na detail hráče
 
 ## Jak spustit
 ```bash
@@ -25,10 +33,10 @@ API běží samostatně na `http://localhost:4000/`.
   - Žlutá (3 b) = jen vítěz
   - Šedá (0 b) = žádné body
 
-## Testovací data (zatím hardcodované v App.jsx)
-- **4 zápasy**: 2 hotové, 1 v běhu, 1 čekající
-- **5 hráčů**: Kom, Kraty, Radek, Roman, Spaca
-- **Tipy**: každý hráč má tip na každý zápas s příslušnými body
+## Data
+- Primárně živá data přes API `/api/data`
+- Fallback data v `src/data/moppData.js`
+- Audit časů změn tipů v `public/tip-audit.json`
 
 ## Příslušné soubory
 - `src/App.jsx` – komponenta s daty a renderingem
@@ -38,35 +46,15 @@ API běží samostatně na `http://localhost:4000/`.
 - `package.json` – dependencies
 
 ## Příští kroky (pak řešíme)
-1. **Admin interface** – editovat zápasy a tipy
-2. **Backend API** – Node.js endpoints pro zápasy, tipy, hráče
-3. **MongoDB** – ukládat skutečná data
-4. **Autentizace** – přihlašování hráčů (později)
-5. **GitHub + Vercel deploy** – jako u známek
+1. **Dotažení statistik** – další srovnání hráče proti poli
+2. **Admin interface** – editace zápasů/tipů bez zásahu do zdrojáků
+3. **Perzistence** – DB vrstva místo souborových fallbacků
+4. **Autentizace** – přihlášení hráčů (později)
+5. **Deploy polish** – produkční monitoring a automatické kontroly
 
-## Nápady po MS (roadmapa)
-1. **Detail hráče po kliku na jméno**
-  - Drawer/panel s profilem hráče.
-  - Aktuální forma (např. posledních 5/9 zápasů, body na zápas).
-  - Jednoznačný text trendu (roste/klesá/stagnuje).
-2. **Grafy pro jednoho hráče**
-  - Vývoj bodů po kolech.
-  - Vývoj pořadí po kolech.
-3. **Heatmapa tipů hráče**
-  - Přehled zápasů s barvami 10/5/3/0/N.
-  - Rychlý přehled silných/slabých úseků turnaje.
-4. **Srovnání hráče**
-  - Proti průměru všech.
-  - Proti nejbližšímu soupeři v pořadí.
-5. **Streak a mini analytika**
-  - Série bodovaných tipů.
-  - Série bez bodu.
-  - Úspěšnost přesný výsledek / vítěz / no-bet.
-6. **Implementační pořadí (bez přepisu od nuly)**
-  - Nejprve detail hráče + forma.
-  - Poté grafy jednoho hráče.
-  - Pak heatmapa a porovnání.
-  - Nakonec napojení na budoucí auth + DB backend.
+## Poznámka k filtrům statistik
+- **Filtr formy** ovlivňuje výkonnostní statistiky hráče (forma, trend, úspěšnost, série v rámci zobrazení).
+- **Peněžní bilance** je celosezónní pohled a filtrem formy se nemění.
 
 ---
 Pokud jsi nový v projektu: přečti si toto, pak se podívej na prototyp na http://localhost:4173/

@@ -452,6 +452,13 @@ function formatMoneyWithSign(value) {
   return `${sign}${new Intl.NumberFormat('cs-CZ').format(absolute)} Kč`
 }
 
+function moneyAmountClass(value) {
+  const amount = Number(value) || 0
+  if (amount > 0) return 'is-positive'
+  if (amount < 0) return 'is-negative'
+  return 'is-neutral'
+}
+
 function App() {
   const tooltipTimerRef = useRef(null)
   const touchLegendHandledRef = useRef(false)
@@ -656,7 +663,7 @@ function App() {
   const hoveredPlayerId = currentViewState.hoveredPlayerId ?? ''
   const selectedMatchId = currentViewState.selectedMatchId ?? ''
   const selectedPlayerId = currentViewState.selectedPlayerId ?? ''
-  const playerFormWindow = currentViewState.playerFormWindow ?? 10
+  const playerFormWindow = currentViewState.playerFormWindow ?? 'all'
   const showLongTermBankInfo = currentViewState.showLongTermBankInfo ?? false
 
   const updateCurrentTournamentState = (patch) => {
@@ -711,7 +718,7 @@ function App() {
   const setPlayerFormWindow = (value) => {
     updateCurrentTournamentState((current) => ({
       playerFormWindow:
-        typeof value === 'function' ? value(current.playerFormWindow ?? 10) : value,
+        typeof value === 'function' ? value(current.playerFormWindow ?? 'all') : value,
     }))
   }
 
@@ -816,19 +823,27 @@ function App() {
       : (Number.isFinite(requestedWindow) ? requestedWindow : 10)
     const recent = timeline.slice(-recentWindowSize)
     const previous = timeline.slice(-recentWindowSize * 2, -recentWindowSize)
+    const trendWindowSize = playerFormWindow === 'all'
+      ? Math.max(2, Math.floor(evaluatedCount / 2))
+      : recentWindowSize
+    const trendRecent = timeline.slice(-trendWindowSize)
+    const trendPrevious = timeline.slice(-trendWindowSize * 2, -trendWindowSize)
     const recentRounds = [...new Set(recent.map((item) => item.round).filter((round) => Number.isFinite(round)))]
 
     const recentPoints = recent.reduce((sum, item) => sum + item.points, 0)
     const recentAverage = recent.length > 0 ? recentPoints / recent.length : 0
-    const previousAverage = previous.length > 0
-      ? previous.reduce((sum, item) => sum + item.points, 0) / previous.length
+    const trendRecentAverage = trendRecent.length > 0
+      ? trendRecent.reduce((sum, item) => sum + item.points, 0) / trendRecent.length
+      : 0
+    const previousAverage = trendPrevious.length > 0
+      ? trendPrevious.reduce((sum, item) => sum + item.points, 0) / trendPrevious.length
       : null
 
     let trendLabel = 'bez srovnání'
     let trendDirection = 'neutral'
     let trendDeltaText = ''
     if (previousAverage !== null) {
-      const diff = recentAverage - previousAverage
+      const diff = trendRecentAverage - previousAverage
       if (diff > 0.2) {
         trendLabel = 'roste'
         trendDirection = 'up'
@@ -850,6 +865,20 @@ function App() {
         else break
       }
       return streak
+    })()
+
+    const longestPositiveStreak = (() => {
+      let best = 0
+      let streak = 0
+      for (const entry of timeline) {
+        if (entry.points > 0) {
+          streak += 1
+          if (streak > best) best = streak
+        } else {
+          streak = 0
+        }
+      }
+      return best
     })()
 
     const tippedMatchesCount = playedMatches.reduce((sum, match) => {
@@ -949,6 +978,67 @@ function App() {
       }
     })()
 
+    const fieldComparison = (() => {
+      const playerFormStats = players
+        .map((player) => {
+          let totalPoints = 0
+          let totalTips = 0
+
+          for (const match of matchesInRecentRounds) {
+            const tip = (match.tips ?? []).find((item) => item.playerId === player.id)
+            if (!tip || !Number.isFinite(tip.points)) continue
+            totalPoints += tip.points
+            totalTips += 1
+          }
+
+          return {
+            id: player.id,
+            avg: totalTips > 0 ? totalPoints / totalTips : 0,
+            totalPoints,
+          }
+        })
+        .sort((a, b) => {
+          if (b.avg !== a.avg) return b.avg - a.avg
+          if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints
+          return a.id.localeCompare(b.id)
+        })
+
+      const formRank = Math.max(1, playerFormStats.findIndex((item) => item.id === selectedStanding.id) + 1)
+      const totalPlayers = Math.max(1, playerFormStats.length)
+      const percentile = totalPlayers <= 1
+        ? 100
+        : Math.round(((totalPlayers - formRank) / (totalPlayers - 1)) * 100)
+
+      const sortedAverages = playerFormStats
+        .map((item) => item.avg)
+        .sort((a, b) => a - b)
+      const middleIndex = Math.floor(sortedAverages.length / 2)
+      const middleAverage = sortedAverages.length === 0
+        ? 0
+        : sortedAverages.length % 2 === 1
+          ? sortedAverages[middleIndex]
+          : (sortedAverages[middleIndex - 1] + sortedAverages[middleIndex]) / 2
+
+      const vsMiddle = Math.round((recentAverage - middleAverage) * 100) / 100
+
+      const currentPoints = Number(selectedStanding.points ?? 0)
+      const thirdPoints = Number(standings[2]?.points ?? currentPoints)
+      const fourthPoints = Number(standings[3]?.points ?? currentPoints)
+      const top3GapLabel = selectedRank <= 3 ? 'Náskok na 4. místo' : 'Ztráta na 3. místo'
+      const top3GapValue = selectedRank <= 3
+        ? Math.max(0, currentPoints - fourthPoints)
+        : Math.max(0, thirdPoints - currentPoints)
+
+      return {
+        percentile,
+        vsMiddle,
+        formRank,
+        totalPlayers,
+        top3GapLabel,
+        top3GapValue,
+      }
+    })()
+
     return {
       id: selectedStanding.id,
       name: selectedStanding.name,
@@ -962,6 +1052,7 @@ function App() {
       trendDirection,
       trendDeltaText,
       currentPositiveStreak,
+      longestPositiveStreak,
       recentSequence: recent.map((item) => (item.isNoBet ? 'N' : item.points)).join(', '),
       recentSeries: recent.map((item) => ({ points: item.points, isNoBet: item.isNoBet })),
       recentRounds,
@@ -981,6 +1072,7 @@ function App() {
       successRatesDelta: {
         scored: toPercent(recentScoredCount, recent.length) - averageRates.scored,
       },
+      fieldComparison,
       moneySummary: {
         realizedWinnings,
         matchStakeTotal,
@@ -1096,6 +1188,7 @@ function App() {
 
   const selectedMatchTips = useMemo(() => {
     if (!selectedMatch) return []
+    const isMatchEvaluated = Boolean(selectedMatch.score && selectedMatch.score !== '--:--')
 
     const playerOrder = new Map(players.map((player, index) => [player.id, index]))
     const payoutsByPlayer = calculateMatchPayouts(
@@ -1112,7 +1205,8 @@ function App() {
           rankByPlayerForSelectedRound.get(tip.playerId) ??
           scoreboard.findIndex((item) => item.id === tip.playerId) + 1
         const previousRank = rankByPlayerForPreviousRound.get(tip.playerId)
-        const rankDelta = Number.isFinite(previousRank) ? previousRank - rank : 0
+        const canShowRankDelta = isMatchEvaluated && Number.isFinite(tip.points)
+        const rankDelta = canShowRankDelta && Number.isFinite(previousRank) ? previousRank - rank : 0
         const payout = payoutsByPlayer.get(tip.playerId) ?? 0
         return {
           ...tip,
@@ -1476,7 +1570,11 @@ function App() {
           {selectedPlayerProfile ? (
             <>
               <div className="panel-head player-focus-headline" ref={playerDetailHeadingRef}>
-                <h2>Detail hráče · {selectedPlayerProfile.name}</h2>
+                <h2 className="player-focus-title">
+                  <span>Statistika hráče</span>
+                  <span className="player-focus-separator" aria-hidden="true">|</span>
+                  <span className="player-focus-player-name">{selectedPlayerProfile.name}</span>
+                </h2>
                 <button
                   type="button"
                   className="info-toggle"
@@ -1551,6 +1649,12 @@ function App() {
                       const stepX = rounds.length > 1 ? innerWidth / (rounds.length - 1) : 0
                       const rankToY = (rank) => margin.top + ((rank - 1) / Math.max(1, maxRank - 1)) * innerHeight
                       const indexToX = (index) => margin.left + index * stepX
+                      const middleRanks = maxRank >= 8
+                        ? [Math.round((maxRank + 1) / 3), Math.round((2 * (maxRank + 1)) / 3)]
+                        : [Math.round((maxRank + 1) / 2)]
+                      const axisRanks = [1, ...middleRanks, maxRank]
+                        .filter((rank, index, arr) => Number.isFinite(rank) && arr.indexOf(rank) === index)
+                        .sort((a, b) => a - b)
                       const path = ranks
                         .map((rank, index) => `${index === 0 ? 'M' : 'L'} ${indexToX(index)} ${rankToY(rank)}`)
                         .join(' ')
@@ -1559,7 +1663,7 @@ function App() {
                         <svg viewBox={`0 0 ${width} ${height}`} className="player-rank-mini-chart" preserveAspectRatio="none">
                           <rect x="0" y="0" width={width} height={height} fill="#f9fcff" />
 
-                          {[1, maxRank].filter((value, index, arr) => arr.indexOf(value) === index).map((rank) => (
+                          {axisRanks.map((rank) => (
                             <g key={`mini-grid-${rank}`}>
                               <line
                                 x1={margin.left}
@@ -1609,16 +1713,18 @@ function App() {
               <section className="player-focus-wide" aria-label="Detail hráče">
                 <div className="player-focus-grid">
                 <article className="player-focus-card">
-                  <h3>Posledních {selectedPlayerProfile.recentCount} zápasů</h3>
+                  <h3>Za {selectedPlayerProfile.recentCount} zápasů získáno</h3>
                   <p>
-                    <strong>{selectedPlayerProfile.recentPoints} b</strong>
+                    <strong>{selectedPlayerProfile.recentPoints}</strong>
+                    <span className="player-card-unit"> b</span>
                   </p>
                 </article>
 
                 <article className="player-focus-card">
                   <h3>Průměr</h3>
                   <p>
-                    <strong>{selectedPlayerProfile.recentAverage}</strong> b/z
+                    <strong>{selectedPlayerProfile.recentAverage}</strong>
+                    <span className="player-card-unit"> b/z</span>
                   </p>
                 </article>
 
@@ -1627,7 +1733,10 @@ function App() {
                   <p className={`player-trend-label is-${selectedPlayerProfile.trendDirection}`}>
                     <span>{selectedPlayerProfile.trendLabel}</span>
                     {selectedPlayerProfile.trendDeltaText ? (
-                      <strong className="player-trend-delta">{selectedPlayerProfile.trendDeltaText}</strong>
+                      <span className="player-trend-delta">
+                        <strong className="player-trend-delta-value">{selectedPlayerProfile.trendDeltaText.split(' ')[0]}</strong>
+                        <span className="player-card-unit"> {selectedPlayerProfile.trendDeltaText.split(' ').slice(1).join(' ')}</span>
+                      </span>
                     ) : null}
                   </p>
 
@@ -1666,9 +1775,20 @@ function App() {
                 </article>
 
                 <article className="player-focus-card">
-                  <h3>Série bodovaných tipů</h3>
-                  <p>
-                    <strong>{selectedPlayerProfile.currentPositiveStreak}</strong>
+                  <h3>Série tipů s body</h3>
+                  <p className="player-streak-line">
+                    <span>Aktuální</span>
+                    <strong>
+                      {selectedPlayerProfile.currentPositiveStreak}
+                      {selectedPlayerProfile.currentPositiveStreak > 0 &&
+                      selectedPlayerProfile.currentPositiveStreak === selectedPlayerProfile.longestPositiveStreak ? (
+                        <span className="player-streak-badge">REKORD</span>
+                      ) : null}
+                    </strong>
+                  </p>
+                  <p className="player-streak-line">
+                    <span>Historické max</span>
+                    <strong>{selectedPlayerProfile.longestPositiveStreak}</strong>
                   </p>
                 </article>
               </div>
@@ -1753,6 +1873,41 @@ function App() {
                 </div>
               </section>
 
+              <section className="player-field-compare" aria-label="Srovnání hráče s polem">
+                <h3>Srovnání s polem</h3>
+                <div className="player-field-compare-grid">
+                  <div className="player-field-item">
+                    <span>V poli je před</span>
+                    <strong>{selectedPlayerProfile.fieldComparison.percentile} % hráčů</strong>
+                  </div>
+                  <div className="player-field-item">
+                    <span>Proti středu pole</span>
+                    <strong
+                      className={`player-field-value ${
+                        selectedPlayerProfile.fieldComparison.vsMiddle > 0
+                          ? 'is-up'
+                          : selectedPlayerProfile.fieldComparison.vsMiddle < 0
+                            ? 'is-down'
+                            : 'is-flat'
+                      }`}
+                    >
+                      {selectedPlayerProfile.fieldComparison.vsMiddle > 0 ? '+' : ''}
+                      {selectedPlayerProfile.fieldComparison.vsMiddle.toFixed(2)} b/z
+                    </strong>
+                  </div>
+                  <div className="player-field-item">
+                    <span>{selectedPlayerProfile.fieldComparison.top3GapLabel}</span>
+                    <strong>{selectedPlayerProfile.fieldComparison.top3GapValue} b</strong>
+                  </div>
+                  <div className="player-field-item">
+                    <span>Forma pořadí</span>
+                    <strong>
+                      {selectedPlayerProfile.fieldComparison.formRank}. z {selectedPlayerProfile.fieldComparison.totalPlayers}
+                    </strong>
+                  </div>
+                </div>
+              </section>
+
               <p className="player-focus-index">
                 Index formy: <strong>{selectedPlayerProfile.recentFormIndex}/100</strong>
               </p>
@@ -1765,31 +1920,43 @@ function App() {
                 <div className="player-money-grid">
                   <article className="money-stat-box is-outflow">
                     <span>Vloženo celkem</span>
-                    <strong>{formatMoneyWithSign(-selectedPlayerProfile.moneySummary.totalInserted)}</strong>
+                    <strong className={`money-amount ${moneyAmountClass(-selectedPlayerProfile.moneySummary.totalInserted)}`}>
+                      {formatMoneyWithSign(-selectedPlayerProfile.moneySummary.totalInserted)}
+                    </strong>
                   </article>
                   <article className="money-stat-box is-win">
                     <span>Výhry ze zápasů</span>
-                    <strong>{formatMoneyWithSign(selectedPlayerProfile.moneySummary.realizedWinnings)}</strong>
+                    <strong className={`money-amount ${moneyAmountClass(selectedPlayerProfile.moneySummary.realizedWinnings)}`}>
+                      {formatMoneyWithSign(selectedPlayerProfile.moneySummary.realizedWinnings)}
+                    </strong>
                   </article>
                   <article className={`money-stat-box is-now ${selectedPlayerProfile.moneySummary.currentBalance >= 0 ? 'is-up' : 'is-down'}`}>
-                    <span>Aktuálně jsi na</span>
-                    <strong>{formatMoneyWithSign(selectedPlayerProfile.moneySummary.currentBalance)}</strong>
+                    <span>Aktuální bilance</span>
+                    <strong className={`money-amount ${moneyAmountClass(selectedPlayerProfile.moneySummary.currentBalance)}`}>
+                      {formatMoneyWithSign(selectedPlayerProfile.moneySummary.currentBalance)}
+                    </strong>
                   </article>
                 </div>
                 <article className="money-potential-strip" aria-label="Potenciální výhra při 1. 2. a 3. místě">
-                  <span className="money-potential-label">Potenciální výhra při 1., 2., 3. místě</span>
+                  <span className="money-potential-label">Potenciální výhra při umístění na 1.  2.  3. místě</span>
                   <div className="money-potential-values">
                     <p className="money-potential-value">
                       <span>1.</span>
-                      <strong>{formatMoneyWithSign(selectedPlayerProfile.moneySummary.place1Balance)}</strong>
+                      <strong className={`money-amount ${moneyAmountClass(selectedPlayerProfile.moneySummary.place1Balance)}`}>
+                        {formatMoneyWithSign(selectedPlayerProfile.moneySummary.place1Balance)}
+                      </strong>
                     </p>
                     <p className="money-potential-value">
                       <span>2.</span>
-                      <strong>{formatMoneyWithSign(selectedPlayerProfile.moneySummary.place2Balance)}</strong>
+                      <strong className={`money-amount ${moneyAmountClass(selectedPlayerProfile.moneySummary.place2Balance)}`}>
+                        {formatMoneyWithSign(selectedPlayerProfile.moneySummary.place2Balance)}
+                      </strong>
                     </p>
                     <p className="money-potential-value">
                       <span>3.</span>
-                      <strong>{formatMoneyWithSign(selectedPlayerProfile.moneySummary.place3Balance)}</strong>
+                      <strong className={`money-amount ${moneyAmountClass(selectedPlayerProfile.moneySummary.place3Balance)}`}>
+                        {formatMoneyWithSign(selectedPlayerProfile.moneySummary.place3Balance)}
+                      </strong>
                     </p>
                   </div>
                 </article>

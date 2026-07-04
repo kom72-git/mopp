@@ -100,3 +100,23 @@ Poznamka:
 - Jednodussi varianta je `manualTipTimestampEntries` s radky typu `m1, p8, 2026-06-29 17:30`.
 - Format: `{ m12: { p1: '2026-06-12T09:15:00+02:00', p4: '2026-06-12T09:20:00+02:00' } }`.
 - Rucni hodnoty maji prednost pred automatickym casem ze synchronizace, aby se neprepisovaly.
+
+## Statistiky hrace (hotovo)
+
+- Detail hrace se otevre klikem na jmeno ve stojicim poradi nebo v tabulce tipu.
+- Filtr formy ma volby `5/10/15/20/25/vse` a vychozi stav je `vse`.
+- V detailu hrace je souhrn formy (body, prumer, trend, index).
+- V detailu hrace je vyvoj poradi hrace.
+- V detailu hrace je serie bodovanych tipu (aktualni + historicke maximum).
+- V detailu hrace je uspesnost typu (10/5/3/0/N) + benchmark proti prumeru.
+- V detailu hrace je penezni bilance (vlozeno, vyhry, aktualni stav, potencial 1./2./3. misto).
+
+### Co filtruje a co ne
+
+- Filtr formy ovlivnuje vykonnostni statistiky hrace.
+- Penezni bilance je celosezonni a zamerne se filtrem formy nemeni.
+
+### Posun poradi u tipu
+
+- Sipky posunu poradi se zobrazuji jen u vyhodnocenych zapasu.
+- U neodehranych zapasu se posun poradi nezobrazuje.

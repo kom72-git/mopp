@@ -292,6 +292,14 @@
   gap: 0.35rem;
 }
 
+.standings-window-controls {
+  margin-top: 0.7rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
 .info-toggle {
   border: 1px solid #cedfed;
   background: #f4f7fb;
@@ -1219,13 +1227,24 @@
 .player-focus-card.is-trend p {
   position: relative;
   z-index: 1;
-  display: inline-flex;
-  align-items: baseline;
-  width: fit-content;
-  padding: 0.09rem 0.34rem;
+}
+
+.player-focus-card.is-trend .trend-chip {
+  display: inline-block;
+  line-height: 1;
+  padding: 1px 6px;
   border-radius: 8px;
   background: rgb(255 255 255 / 72%);
   backdrop-filter: blur(1px);
+}
+
+.player-focus-card.is-trend .trend-chip-inline {
+  display: inline-flex;
+  align-items: baseline;
+}
+
+.player-focus-card.is-streak .player-streak-line:first-of-type {
+  margin-top: 6px;
 }
 
 .player-trend-label {
@@ -1439,6 +1458,29 @@
   font-size: 0.88rem;
   color: #173a5a;
   line-height: 1.15;
+}
+
+.player-field-item-placement {
+  text-align: left;
+}
+
+.player-field-item-placement strong {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: flex-start;
+  gap: 0.26rem;
+}
+
+.player-field-item-placement .placement-current {
+  line-height: 1.15;
+  font-size: 0.88rem;
+  color: #173a5a;
+}
+
+.player-field-item-placement .placement-range {
+  line-height: 1;
+  font-size: 0.76rem;
+  color: #4f6a80;
 }
 
 .player-field-value.is-up {

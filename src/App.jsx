@@ -286,6 +286,20 @@ function isNoBetPick(pick) {
   return /^\s*n\s*:\s*n\s*$/i.test(String(pick ?? ''))
 }
 
+function pickToOutcome(pick) {
+  const { home, away } = parseTipValue(pick)
+  if (home === '-' || away === '-') return ''
+  if (String(home).toUpperCase() === 'N' || String(away).toUpperCase() === 'N') return ''
+
+  const homeGoals = Number(home)
+  const awayGoals = Number(away)
+  if (!Number.isFinite(homeGoals) || !Number.isFinite(awayGoals)) return ''
+
+  if (homeGoals > awayGoals) return '1'
+  if (homeGoals < awayGoals) return '2'
+  return 'X'
+}
+
 function formatTipUpdatedAt(updatedAt) {
   if (!updatedAt) return ''
 
@@ -664,6 +678,7 @@ function App() {
   const selectedMatchId = currentViewState.selectedMatchId ?? ''
   const selectedPlayerId = currentViewState.selectedPlayerId ?? ''
   const playerFormWindow = currentViewState.playerFormWindow ?? 'all'
+  const standingsFormWindow = currentViewState.standingsFormWindow ?? 'all'
   const showLongTermBankInfo = currentViewState.showLongTermBankInfo ?? false
 
   const updateCurrentTournamentState = (patch) => {
@@ -719,6 +734,13 @@ function App() {
     updateCurrentTournamentState((current) => ({
       playerFormWindow:
         typeof value === 'function' ? value(current.playerFormWindow ?? 'all') : value,
+    }))
+  }
+
+  const setStandingsFormWindow = (value) => {
+    updateCurrentTournamentState((current) => ({
+      standingsFormWindow:
+        typeof value === 'function' ? value(current.standingsFormWindow ?? 'all') : value,
     }))
   }
 
@@ -779,6 +801,7 @@ function App() {
     [matches],
   )
 
+  /*
   const allPlayersTipProgress = useMemo(() => {
     const totalTipSlots = playedMatches.length * players.length
     const submittedTips = playedMatches.reduce((sum, match) => {
@@ -795,6 +818,7 @@ function App() {
       coverage,
     }
   }, [playedMatches, players.length])
+  */
 
   const selectedPlayerProfile = useMemo(() => {
     if (!effectiveSelectedPlayerId) return null
@@ -822,7 +846,6 @@ function App() {
       ? 'all'
       : (Number.isFinite(requestedWindow) ? requestedWindow : 10)
     const recent = timeline.slice(-recentWindowSize)
-    const previous = timeline.slice(-recentWindowSize * 2, -recentWindowSize)
     const trendWindowSize = playerFormWindow === 'all'
       ? Math.max(2, Math.floor(evaluatedCount / 2))
       : recentWindowSize
@@ -1039,6 +1062,54 @@ function App() {
       }
     })()
 
+    const valueInsights = (() => {
+      let againstMajority = 0
+      let exactAgainstMajority = 0
+      let pointsAgainstMajority = 0
+
+      for (const match of playedMatches) {
+        const selectedTip = (match.tips ?? []).find((tip) => tip.playerId === effectiveSelectedPlayerId)
+        if (!selectedTip || !selectedTip.pick || selectedTip.pick === '-' || isNoBetPick(selectedTip.pick)) continue
+
+        const selectedOutcome = pickToOutcome(selectedTip.pick)
+        if (!selectedOutcome) continue
+
+        const outcomeCounts = new Map()
+        for (const tip of match.tips ?? []) {
+          if (!tip.pick || tip.pick === '-' || isNoBetPick(tip.pick)) continue
+
+          const outcome = pickToOutcome(tip.pick)
+          if (!outcome) continue
+          outcomeCounts.set(outcome, (outcomeCounts.get(outcome) ?? 0) + 1)
+        }
+        if (outcomeCounts.size === 0) continue
+
+        let maxCount = 0
+        for (const count of outcomeCounts.values()) {
+          if (count > maxCount) maxCount = count
+        }
+        const majorityOutcomes = [...outcomeCounts.entries()]
+          .filter(([, count]) => count === maxCount)
+          .map(([outcome]) => outcome)
+
+        // Pri remize nejde urcit jasnou vetsinu, zapas preskocime.
+        if (majorityOutcomes.length !== 1) continue
+        if (selectedOutcome === majorityOutcomes[0]) continue
+
+        againstMajority += 1
+        pointsAgainstMajority += Number(selectedTip.points) || 0
+        if (selectedTip.points === 10) exactAgainstMajority += 1
+      }
+
+      return {
+        againstMajority,
+        exactAgainstMajority,
+        pointsAgainstMajority,
+        exactRate: toPercent(exactAgainstMajority, againstMajority),
+        avgPoints: againstMajority > 0 ? (pointsAgainstMajority / againstMajority).toFixed(2) : '0.00',
+      }
+    })()
+
     return {
       id: selectedStanding.id,
       name: selectedStanding.name,
@@ -1073,6 +1144,7 @@ function App() {
         scored: toPercent(recentScoredCount, recent.length) - averageRates.scored,
       },
       fieldComparison,
+      valueInsights,
       moneySummary: {
         realizedWinnings,
         matchStakeTotal,
@@ -1124,11 +1196,25 @@ function App() {
     }
   }, [effectiveSelectedPlayerId, rankTimeline, selectedPlayerProfile])
 
+  const selectedPlayerPlacement = useMemo(() => {
+    if (!effectiveSelectedPlayerId) return null
+
+    const currentRank = Math.max(1, standings.findIndex((item) => item.id === effectiveSelectedPlayerId) + 1)
+    const series = rankTimeline.series.find((player) => player.id === effectiveSelectedPlayerId)
+    const ranks = (series?.ranks ?? []).filter((rank) => Number.isFinite(rank))
+
+    const bestRank = ranks.length > 0 ? Math.min(...ranks) : currentRank
+    const worstRank = ranks.length > 0 ? Math.max(...ranks) : currentRank
+
+    return {
+      currentRank,
+      bestRank,
+      worstRank,
+    }
+  }, [effectiveSelectedPlayerId, standings, rankTimeline])
+
   useEffect(() => {
     if (!selectedPlayerProfile || typeof window === 'undefined') return
-
-    const isMobile = window.matchMedia('(max-width: 760px)').matches
-    if (!isMobile) return
 
     const target = playerDetailHeadingRef.current
     if (!target) return
@@ -1223,6 +1309,57 @@ function App() {
   const [syncMessage, setSyncMessage] = useState('')
   const [showSyncTooltip, setShowSyncTooltip] = useState(false)
   const [isSyncing, setIsSyncing] = useState(false)
+
+  const displayedStandings = useMemo(() => {
+    if (standingsFormWindow === 'all') return standings
+
+    const windowSize = Number(standingsFormWindow)
+    if (!Number.isFinite(windowSize) || windowSize <= 0) return standings
+
+    const recentPlayedMatches = playedMatches.slice(-windowSize)
+    const playerOrder = new Map(scoreboard.map((player, index) => [player.id, index]))
+    const pointsByPlayer = new Map(scoreboard.map((player) => [player.id, 0]))
+    const statsByPlayer = new Map(
+      scoreboard.map((player) => [
+        player.id,
+        {
+          exact: 0,
+          near: 0,
+          win: 0,
+          noBet: 0,
+        },
+      ]),
+    )
+
+    for (const match of recentPlayedMatches) {
+      for (const tip of match.tips ?? []) {
+        if (!pointsByPlayer.has(tip.playerId)) continue
+
+        const points = Number.isFinite(tip.points) ? tip.points : 0
+        pointsByPlayer.set(tip.playerId, (pointsByPlayer.get(tip.playerId) ?? 0) + points)
+
+        const stats = statsByPlayer.get(tip.playerId)
+        if (!stats) continue
+        if (tip.points === 10) stats.exact += 1
+        if (tip.points === 5) stats.near += 1
+        if (tip.points === 3) stats.win += 1
+        if (isNoBetPick(tip.pick)) stats.noBet += 1
+      }
+    }
+
+    return scoreboard
+      .map((player) => ({
+        ...player,
+        points: pointsByPlayer.get(player.id) ?? 0,
+        stats: statsByPlayer.get(player.id) ?? { exact: 0, near: 0, win: 0, noBet: 0 },
+        winnings: (totalPayoutsByPlayer.get(player.id) ?? 0) + (bonusWinningsByPlayerId[player.id] ?? 0),
+      }))
+      .sort((a, b) => {
+        const diff = (b.points ?? 0) - (a.points ?? 0)
+        if (diff !== 0) return diff
+        return (playerOrder.get(a.id) ?? 999) - (playerOrder.get(b.id) ?? 999)
+      })
+  }, [standingsFormWindow, standings, playedMatches, scoreboard, totalPayoutsByPlayer])
 
   useEffect(() => {
     let cancelled = false
@@ -1522,7 +1659,7 @@ function App() {
           ) : null}
 
           <div className="standings-list">
-            {standings.map((player, index) => (
+            {displayedStandings.map((player, index) => (
               <article className="stand-card" key={player.id}>
                 <div className="stand-top">
                   <p className="stand-rank">{index + 1}.</p>
@@ -1564,6 +1701,24 @@ function App() {
             ))}
           </div>
 
+          <div className="standings-window-controls" role="group" aria-label="Rozsah pořadí podle formy">
+            <span className="player-window-label">Aktuální forma:</span>
+            {[5, 10, 15, 'all'].map((option) => {
+              const isActive = standingsFormWindow === option || (option === 'all' && standingsFormWindow === 'all')
+              const label = option === 'all' ? 'celkem' : `${option} z`
+              return (
+                <button
+                  key={`standings-window-${option}`}
+                  type="button"
+                  className={`player-window-tab ${isActive ? 'is-active' : ''}`}
+                  onClick={() => setStandingsFormWindow(option)}
+                >
+                  {label}
+                </button>
+              )
+            })}
+          </div>
+
         </aside>
 
         <section className="panel detail-panel">
@@ -1585,7 +1740,7 @@ function App() {
               </div>
 
               <div className="player-window-controls" role="group" aria-label="Rozsah formy hráče">
-                <span className="player-window-label">Výběr:</span>
+                <span className="player-window-label">Vyber:</span>
                 {[5, 10, 15, 20, 25, 'all'].map((option) => {
                   const isActive = selectedPlayerProfile.formWindow === option || (option === 'all' && selectedPlayerProfile.formWindow === 'all')
                   const label = option === 'all' ? 'vše' : String(option)
@@ -1614,6 +1769,7 @@ function App() {
                 )}
               </p>
 
+              {/*
               <section className="player-tip-progress-row" aria-label="Aktivita tipování">
                 <article className="player-tip-progress">
                   <h3>Natipováno hráčem (odehrané zápasy)</h3>
@@ -1632,6 +1788,7 @@ function App() {
                   </p>
                 </article>
               </section>
+              */}
 
               <section className="player-rank-mini" aria-label="Vývoj pořadí hráče">
                 <h3>Vývoj pořadí hráče</h3>
@@ -1729,15 +1886,17 @@ function App() {
                 </article>
 
                 <article className="player-focus-card is-trend">
-                  <h3>Trend</h3>
-                  <p className={`player-trend-label is-${selectedPlayerProfile.trendDirection}`}>
-                    <span>{selectedPlayerProfile.trendLabel}</span>
-                    {selectedPlayerProfile.trendDeltaText ? (
-                      <span className="player-trend-delta">
-                        <strong className="player-trend-delta-value">{selectedPlayerProfile.trendDeltaText.split(' ')[0]}</strong>
-                        <span className="player-card-unit"> {selectedPlayerProfile.trendDeltaText.split(' ').slice(1).join(' ')}</span>
-                      </span>
-                    ) : null}
+                  <h3><span className="trend-chip">Trend</span></h3>
+                  <p>
+                    <span className={`player-trend-label is-${selectedPlayerProfile.trendDirection} trend-chip trend-chip-inline`}>
+                      <span>{selectedPlayerProfile.trendLabel}</span>
+                      {selectedPlayerProfile.trendDeltaText ? (
+                        <span className="player-trend-delta">
+                          <strong className="player-trend-delta-value">{selectedPlayerProfile.trendDeltaText.split(' ')[0]}</strong>
+                          <span className="player-card-unit"> {selectedPlayerProfile.trendDeltaText.split(' ').slice(1).join(' ')}</span>
+                        </span>
+                      ) : null}
+                    </span>
                   </p>
 
                   {(() => {
@@ -1774,7 +1933,7 @@ function App() {
                   })()}
                 </article>
 
-                <article className="player-focus-card">
+                <article className="player-focus-card is-streak">
                   <h3>Série tipů s body</h3>
                   <p className="player-streak-line">
                     <span>Aktuální</span>
@@ -1794,7 +1953,7 @@ function App() {
               </div>
 
               <div className="player-focus-seq">
-                <span className="player-focus-seq-label">Body (od nejstaršího)</span>
+                <span className="player-focus-seq-label">Grafický zisk bodů (od nejstaršího)</span>
                 <div className="player-form-blocks" aria-label="Body v posledních zápasech">
                   {selectedPlayerProfile.recentSeries.length > 0 ? (
                     selectedPlayerProfile.recentSeries.map((entry, index) => (
@@ -1873,6 +2032,28 @@ function App() {
                 </div>
               </section>
 
+              <section className="player-field-compare" aria-label="Tipy proti většině">
+                <h3>Tipy proti většině</h3>
+                <div className="player-field-compare-grid">
+                  <div className="player-field-item">
+                    <span>Tipy mimo většinu</span>
+                    <strong>{selectedPlayerProfile.valueInsights.againstMajority}×</strong>
+                  </div>
+                  <div className="player-field-item">
+                    <span>10b u odlišných tipů</span>
+                    <strong>{selectedPlayerProfile.valueInsights.exactRate} % ({selectedPlayerProfile.valueInsights.exactAgainstMajority}×)</strong>
+                  </div>
+                  <div className="player-field-item">
+                    <span>Body z těchto tipů</span>
+                    <strong>{selectedPlayerProfile.valueInsights.pointsAgainstMajority} b</strong>
+                  </div>
+                  <div className="player-field-item">
+                    <span>Průměr z těchto tipů</span>
+                    <strong>{selectedPlayerProfile.valueInsights.avgPoints} b/z</strong>
+                  </div>
+                </div>
+              </section>
+
               <section className="player-field-compare" aria-label="Srovnání hráče s polem">
                 <h3>Srovnání s polem</h3>
                 <div className="player-field-compare-grid">
@@ -1899,18 +2080,15 @@ function App() {
                     <span>{selectedPlayerProfile.fieldComparison.top3GapLabel}</span>
                     <strong>{selectedPlayerProfile.fieldComparison.top3GapValue} b</strong>
                   </div>
-                  <div className="player-field-item">
-                    <span>Forma pořadí</span>
+                  <div className="player-field-item player-field-item-placement">
+                    <span>Umístění (nejlépe | nejhůře)</span>
                     <strong>
-                      {selectedPlayerProfile.fieldComparison.formRank}. z {selectedPlayerProfile.fieldComparison.totalPlayers}
+                      <span className="placement-current">{selectedPlayerPlacement?.currentRank ?? '-'}.</span>
+                      <span className="placement-range">({selectedPlayerPlacement?.bestRank ?? '-'}. | {selectedPlayerPlacement?.worstRank ?? '-'}.)</span>
                     </strong>
                   </div>
                 </div>
               </section>
-
-              <p className="player-focus-index">
-                Index formy: <strong>{selectedPlayerProfile.recentFormIndex}/100</strong>
-              </p>
 
               <section className="player-money-wide" aria-label="Peněžní bilance hráče">
                 <div className="player-money-head">

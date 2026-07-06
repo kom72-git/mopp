@@ -1625,7 +1625,7 @@ function App() {
       <section className="workspace">
         <aside className="panel match-list-panel">
           <div className="panel-head">
-            <h2>Pořadí hráčů</h2>
+            <h2>{standingsFormWindow === 'all' ? 'Pořadí hráčů' : `Pořadí hráčů (${standingsFormWindow}z)`}</h2>
             <button
               type="button"
               className="info-toggle"

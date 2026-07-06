@@ -1319,6 +1319,7 @@ function App() {
     const recentPlayedMatches = playedMatches.slice(-windowSize)
     const playerOrder = new Map(scoreboard.map((player, index) => [player.id, index]))
     const pointsByPlayer = new Map(scoreboard.map((player) => [player.id, 0]))
+    const payoutsByPlayer = new Map(scoreboard.map((player) => [player.id, 0]))
     const statsByPlayer = new Map(
       scoreboard.map((player) => [
         player.id,
@@ -1332,6 +1333,16 @@ function App() {
     )
 
     for (const match of recentPlayedMatches) {
+      const payouts = calculateMatchPayouts(
+        match,
+        playerOrder,
+        manualPayoutOverridesByMatchId,
+        remainderRecipientByMatchId,
+      )
+      for (const [playerId, payout] of payouts.entries()) {
+        payoutsByPlayer.set(playerId, (payoutsByPlayer.get(playerId) ?? 0) + (Number(payout) || 0))
+      }
+
       for (const tip of match.tips ?? []) {
         if (!pointsByPlayer.has(tip.playerId)) continue
 
@@ -1352,14 +1363,14 @@ function App() {
         ...player,
         points: pointsByPlayer.get(player.id) ?? 0,
         stats: statsByPlayer.get(player.id) ?? { exact: 0, near: 0, win: 0, noBet: 0 },
-        winnings: (totalPayoutsByPlayer.get(player.id) ?? 0) + (bonusWinningsByPlayerId[player.id] ?? 0),
+        winnings: (payoutsByPlayer.get(player.id) ?? 0) + (bonusWinningsByPlayerId[player.id] ?? 0),
       }))
       .sort((a, b) => {
         const diff = (b.points ?? 0) - (a.points ?? 0)
         if (diff !== 0) return diff
         return (playerOrder.get(a.id) ?? 999) - (playerOrder.get(b.id) ?? 999)
       })
-  }, [standingsFormWindow, standings, playedMatches, scoreboard, totalPayoutsByPlayer])
+  }, [standingsFormWindow, standings, playedMatches, scoreboard, remainderRecipientByMatchId])
 
   useEffect(() => {
     let cancelled = false
@@ -1705,7 +1716,7 @@ function App() {
             <span className="player-window-label">Aktuální forma:</span>
             {[5, 10, 15, 'all'].map((option) => {
               const isActive = standingsFormWindow === option || (option === 'all' && standingsFormWindow === 'all')
-              const label = option === 'all' ? 'celkem' : `${option} z`
+              const label = option === 'all' ? 'vše' : `${option} z`
               return (
                 <button
                   key={`standings-window-${option}`}

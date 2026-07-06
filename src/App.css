@@ -1695,6 +1695,34 @@
   color: #5b7288;
 }
 
+.tip-callout {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.22rem;
+  margin-top: 5px;
+}
+
+.tip-callout-icon {
+  width: 0.74rem;
+  height: 0.74rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.56rem;
+  font-weight: 700;
+  color: #5b7288;
+  border: 1px solid #9ab0c4;
+  background: transparent;
+  line-height: 1;
+}
+
+.tip-callout-label {
+  font-weight: 700;
+  color: #4e667d;
+}
+
 .rank-legend-item {
   border: 0;
   cursor: pointer;
@@ -1820,7 +1848,14 @@
   }
 
   .round-tabs {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.24rem;
+  }
+
+  .round-tab {
+    padding: 0.26rem 0.28rem;
+    font-size: 0.67rem;
+    line-height: 1.02;
   }
 
   .day-matches-row {
@@ -1890,5 +1925,11 @@
   .money-potential-value:first-child {
     border-top: 0;
     padding-top: 0;
+  }
+}
+
+@media (max-width: 390px) {
+  .round-tabs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }

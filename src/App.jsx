@@ -2402,7 +2402,11 @@ function App() {
                 </button>
               ))}
             </div>
-            <p className="rank-legend-hint">Kliknutím na jméno hráče v legendě čáru skryješ/zobrazíš.</p>
+            <p className="rank-legend-hint tip-callout">
+              <span className="tip-callout-icon" aria-hidden="true">i</span>
+              <span className="tip-callout-label">Tip:</span>
+              <span>přejetím přes jméno hráče v legendě grafu čáru zvýrazníš, kliknutím na jméno hráče čáru skryješ/zobrazíš.</span>
+            </p>
           </>
         ) : (
           <p>Zatím nejsou data pro graf.</p>

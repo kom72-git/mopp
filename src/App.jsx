@@ -300,6 +300,20 @@ function pickToOutcome(pick) {
   return 'X'
 }
 
+function isOneGoalOffPick(pick, score) {
+  const parsedScore = parseScore(score)
+  if (!Number.isFinite(parsedScore.home) || !Number.isFinite(parsedScore.away)) return false
+  if (!pick || pick === '-' || isNoBetPick(pick)) return false
+
+  const { home, away } = parseTipValue(pick)
+  const homeGoals = Number(home)
+  const awayGoals = Number(away)
+  if (!Number.isFinite(homeGoals) || !Number.isFinite(awayGoals)) return false
+
+  const totalMiss = Math.abs(homeGoals - parsedScore.home) + Math.abs(awayGoals - parsedScore.away)
+  return totalMiss === 1
+}
+
 function formatTipUpdatedAt(updatedAt) {
   if (!updatedAt) return ''
 
@@ -567,6 +581,7 @@ function App() {
           exact: 0,
           near: 0,
           win: 0,
+          miss: 0,
           noBet: 0,
         }
 
@@ -578,6 +593,7 @@ function App() {
           if (tip.points === 5) stats.near += 1
           if (tip.points === 3) stats.win += 1
           if (isNoBetPick(tip.pick)) stats.noBet += 1
+          if (tip.points === 0 && !isNoBetPick(tip.pick)) stats.miss += 1
         }
 
         return {
@@ -673,12 +689,14 @@ function App() {
   const [viewStateByTournament, setViewStateByTournament] = useState({})
   const currentViewState = viewStateByTournament[selectedTournamentId] ?? {}
   const selectedRound = currentViewState.selectedRound ?? currentRound
+  const hidePlayedRounds = currentViewState.hidePlayedRounds ?? false
   const visiblePlayerIds = currentViewState.visiblePlayerIds ?? scoreboard.map((player) => player.id)
   const hoveredPlayerId = currentViewState.hoveredPlayerId ?? ''
   const selectedMatchId = currentViewState.selectedMatchId ?? ''
   const selectedPlayerId = currentViewState.selectedPlayerId ?? ''
   const playerFormWindow = currentViewState.playerFormWindow ?? 'all'
   const standingsFormWindow = currentViewState.standingsFormWindow ?? 'all'
+  const standingsMetric = currentViewState.standingsMetric ?? 'points'
   const showLongTermBankInfo = currentViewState.showLongTermBankInfo ?? false
 
   const updateCurrentTournamentState = (patch) => {
@@ -698,6 +716,13 @@ function App() {
   const setSelectedRound = (value) => {
     updateCurrentTournamentState((current) => ({
       selectedRound: typeof value === 'function' ? value(current.selectedRound ?? currentRound) : value,
+    }))
+  }
+
+  const setHidePlayedRounds = (value) => {
+    updateCurrentTournamentState((current) => ({
+      hidePlayedRounds:
+        typeof value === 'function' ? value(current.hidePlayedRounds ?? false) : value,
     }))
   }
 
@@ -744,6 +769,13 @@ function App() {
     }))
   }
 
+  const setStandingsMetric = (value) => {
+    updateCurrentTournamentState((current) => ({
+      standingsMetric:
+        typeof value === 'function' ? value(current.standingsMetric ?? 'points') : value,
+    }))
+  }
+
   const toggleSelectedPlayerId = (playerId) => {
     setSelectedPlayerId((prev) => (prev === playerId ? '' : playerId))
   }
@@ -766,17 +798,67 @@ function App() {
     )
   }
 
+  const playedRounds = useMemo(() => {
+    const byRound = new Map()
+
+    for (const match of matches) {
+      const round = extractRound(match)
+      if (!Number.isFinite(round)) continue
+      if (!byRound.has(round)) byRound.set(round, [])
+      byRound.get(round).push(match)
+    }
+
+    const completedRounds = new Set()
+    for (const [round, roundMatchesInRound] of byRound.entries()) {
+      const isCompleted = roundMatchesInRound.length > 0 && roundMatchesInRound.every((match) => {
+        if (!match.score || match.score === '--:--') return false
+        return (match.tips ?? []).every((tip) => Number.isFinite(tip.points))
+      })
+      if (isCompleted) completedRounds.add(round)
+    }
+
+    return completedRounds
+  }, [matches])
+
+  const visibleRounds = useMemo(() => {
+    if (!hidePlayedRounds) return rounds
+    const filtered = rounds.filter((round) => !playedRounds.has(round))
+    return filtered.length > 0 ? filtered : rounds
+  }, [hidePlayedRounds, rounds, playedRounds])
+
+  const effectiveSelectedRound = useMemo(() => {
+    if (visibleRounds.length === 0) return selectedRound
+    if (visibleRounds.includes(selectedRound)) return selectedRound
+    if (visibleRounds.includes(currentRound)) return currentRound
+    return visibleRounds[0]
+  }, [visibleRounds, selectedRound, currentRound])
+
   const roundMatches = useMemo(
-    () => matches.filter((match) => extractRound(match) === selectedRound),
-    [matches, selectedRound],
+    () => matches.filter((match) => extractRound(match) === effectiveSelectedRound),
+    [matches, effectiveSelectedRound],
   )
 
   const roundDateLabel = useMemo(() => {
+    const tournamentYear = Number(String(selectedTournament?.startDate ?? '').slice(0, 4))
+    const withYear = (token) => {
+      const matched = String(token ?? '').trim().match(/^(\d{1,2})\.\s*(\d{1,2})\.?$/)
+      if (matched) {
+        const day = Number(matched[1])
+        const month = Number(matched[2])
+        if (Number.isFinite(tournamentYear)) return `${day}. ${month}. ${tournamentYear}`
+        return `${day}. ${month}.`
+      }
+
+      const cleaned = String(token ?? '').trim().replace(/\.$/, '')
+      if (!cleaned) return ''
+      return Number.isFinite(tournamentYear) ? `${cleaned}. ${tournamentYear}` : `${cleaned}.`
+    }
+
     const dates = [...new Set(roundMatches.map((match) => extractCalendarDate(match.startsAt)).filter(Boolean))]
     if (dates.length === 0) return ''
-    if (dates.length === 1) return dates[0]
-    return `${dates[0]}–${dates[dates.length - 1]}`
-  }, [roundMatches])
+    if (dates.length === 1) return withYear(dates[0])
+    return `${withYear(dates[0])} – ${withYear(dates[dates.length - 1])}`
+  }, [roundMatches, selectedTournament?.startDate])
 
   const effectiveSelectedMatchId = useMemo(() => {
     if (roundMatches.length === 0) return ''
@@ -835,6 +917,7 @@ function App() {
           round: extractRound(match),
           points: tip.points,
           isNoBet: isNoBetPick(tip.pick),
+          isOneGoalOff: isOneGoalOffPick(tip.pick, match.score),
         }
       })
       .filter(Boolean)
@@ -916,6 +999,7 @@ function App() {
     const recentNearCount = recent.filter((item) => item.points === 5).length
     const recentWinCount = recent.filter((item) => item.points === 3).length
     const recentNoBetCount = recent.filter((item) => item.isNoBet).length
+    const recentOneGoalOffCount = recent.filter((item) => item.isOneGoalOff).length
     const recentMissCount = Math.max(0, recent.length - recentExactCount - recentNearCount - recentWinCount - recentNoBetCount)
     const recentScoredCount = recentExactCount + recentNearCount + recentWinCount
     const toPercent = (value, total) => (total > 0 ? Math.round((value / total) * 100) : 0)
@@ -1132,6 +1216,7 @@ function App() {
         exact: toPercent(recentExactCount, recent.length),
         near: toPercent(recentNearCount, recent.length),
         win: toPercent(recentWinCount, recent.length),
+        oneGoalOff: toPercent(recentOneGoalOffCount, recent.length),
         miss: toPercent(recentMissCount, recent.length),
         noBet: toPercent(recentNoBetCount, recent.length),
       },
@@ -1139,6 +1224,9 @@ function App() {
         exact: recentExactCount,
         near: recentNearCount,
         win: recentWinCount,
+        miss: recentMissCount,
+        noBet: recentNoBetCount,
+        oneGoalOff: recentOneGoalOffCount,
       },
       successRatesDelta: {
         scored: toPercent(recentScoredCount, recent.length) - averageRates.scored,
@@ -1243,7 +1331,7 @@ function App() {
 
   const rankByPlayerForSelectedRound = useMemo(() => {
     const fallback = new Map(scoreboard.map((player, index) => [player.id, index + 1]))
-    const roundIndex = rankTimeline.rounds.indexOf(selectedRound)
+    const roundIndex = rankTimeline.rounds.indexOf(effectiveSelectedRound)
     if (roundIndex < 0) return fallback
 
     const byRound = new Map()
@@ -1255,10 +1343,10 @@ function App() {
     }
 
     return byRound.size > 0 ? byRound : fallback
-  }, [rankTimeline, scoreboard, selectedRound])
+  }, [rankTimeline, scoreboard, effectiveSelectedRound])
 
   const rankByPlayerForPreviousRound = useMemo(() => {
-    const roundIndex = rankTimeline.rounds.indexOf(selectedRound)
+    const roundIndex = rankTimeline.rounds.indexOf(effectiveSelectedRound)
     if (roundIndex <= 0) return new Map()
 
     const byRound = new Map()
@@ -1270,7 +1358,7 @@ function App() {
     }
 
     return byRound
-  }, [rankTimeline, selectedRound])
+  }, [rankTimeline, effectiveSelectedRound])
 
   const selectedMatchTips = useMemo(() => {
     if (!selectedMatch) return []
@@ -1310,67 +1398,122 @@ function App() {
   const [showSyncTooltip, setShowSyncTooltip] = useState(false)
   const [isSyncing, setIsSyncing] = useState(false)
 
+  const standingsMetricOptions = [
+    { value: 'points', label: 'Body' },
+    { value: 'winnings', label: 'Peníze' },
+    { value: 'exact', label: '10 bodů' },
+    { value: 'near', label: '5 bodů' },
+    { value: 'win', label: '3 body' },
+    { value: 'miss', label: '0 bodů' },
+    { value: 'noBet', label: 'N/N' },
+  ]
+
+  const selectedStandingsMetricLabel =
+    standingsMetricOptions.find((option) => option.value === standingsMetric)?.label ?? 'Body'
+
+  const getStandingsMetricValue = (player, metric) => {
+    if (metric === 'winnings') return Number(player.winnings) || 0
+    if (metric === 'exact') return Number(player.stats?.exact) || 0
+    if (metric === 'near') return Number(player.stats?.near) || 0
+    if (metric === 'win') return Number(player.stats?.win) || 0
+    if (metric === 'miss') return Number(player.stats?.miss) || 0
+    if (metric === 'noBet') return Number(player.stats?.noBet) || 0
+    return Number(player.points) || 0
+  }
+
+  const formatStandingsMetricValue = (player, metric) => {
+    if (metric === 'winnings') return `${Number(player.winnings) || 0} Kč`
+    if (metric === 'exact') return `${Number(player.stats?.exact) || 0}×`
+    if (metric === 'near') return `${Number(player.stats?.near) || 0}×`
+    if (metric === 'win') return `${Number(player.stats?.win) || 0}×`
+    if (metric === 'miss') return `${Number(player.stats?.miss) || 0}×`
+    if (metric === 'noBet') return `${Number(player.stats?.noBet) || 0}×`
+    return `${Number(player.points) || 0} b`
+  }
+
+  const formatStandingsSecondaryValue = (player, metric) => {
+    if (metric === 'winnings') return `${Number(player.points) || 0} b`
+    return `${Number(player.winnings) || 0} Kč`
+  }
+
   const displayedStandings = useMemo(() => {
-    if (standingsFormWindow === 'all') return standings
-
-    const windowSize = Number(standingsFormWindow)
-    if (!Number.isFinite(windowSize) || windowSize <= 0) return standings
-
-    const recentPlayedMatches = playedMatches.slice(-windowSize)
     const playerOrder = new Map(scoreboard.map((player, index) => [player.id, index]))
-    const pointsByPlayer = new Map(scoreboard.map((player) => [player.id, 0]))
-    const payoutsByPlayer = new Map(scoreboard.map((player) => [player.id, 0]))
-    const statsByPlayer = new Map(
-      scoreboard.map((player) => [
-        player.id,
-        {
-          exact: 0,
-          near: 0,
-          win: 0,
-          noBet: 0,
-        },
-      ]),
-    )
+    const rows = (() => {
+      if (standingsFormWindow === 'all') {
+        return standings.map((player) => ({
+          ...player,
+          stats: player.stats ?? { exact: 0, near: 0, win: 0, miss: 0, noBet: 0 },
+          winnings: Number(player.winnings) || 0,
+        }))
+      }
 
-    for (const match of recentPlayedMatches) {
-      const payouts = calculateMatchPayouts(
-        match,
-        playerOrder,
-        manualPayoutOverridesByMatchId,
-        remainderRecipientByMatchId,
+      const windowSize = Number(standingsFormWindow)
+      if (!Number.isFinite(windowSize) || windowSize <= 0) {
+        return standings.map((player) => ({
+          ...player,
+          stats: player.stats ?? { exact: 0, near: 0, win: 0, miss: 0, noBet: 0 },
+          winnings: Number(player.winnings) || 0,
+        }))
+      }
+
+      const recentPlayedMatches = playedMatches.slice(-windowSize)
+      const pointsByPlayer = new Map(scoreboard.map((player) => [player.id, 0]))
+      const payoutsByPlayer = new Map(scoreboard.map((player) => [player.id, 0]))
+      const statsByPlayer = new Map(
+        scoreboard.map((player) => [
+          player.id,
+          {
+            exact: 0,
+            near: 0,
+            win: 0,
+            miss: 0,
+            noBet: 0,
+          },
+        ]),
       )
-      for (const [playerId, payout] of payouts.entries()) {
-        payoutsByPlayer.set(playerId, (payoutsByPlayer.get(playerId) ?? 0) + (Number(payout) || 0))
+
+      for (const match of recentPlayedMatches) {
+        const payouts = calculateMatchPayouts(
+          match,
+          playerOrder,
+          manualPayoutOverridesByMatchId,
+          remainderRecipientByMatchId,
+        )
+        for (const [playerId, payout] of payouts.entries()) {
+          payoutsByPlayer.set(playerId, (payoutsByPlayer.get(playerId) ?? 0) + (Number(payout) || 0))
+        }
+
+        for (const tip of match.tips ?? []) {
+          if (!pointsByPlayer.has(tip.playerId)) continue
+
+          const points = Number.isFinite(tip.points) ? tip.points : 0
+          pointsByPlayer.set(tip.playerId, (pointsByPlayer.get(tip.playerId) ?? 0) + points)
+
+          const stats = statsByPlayer.get(tip.playerId)
+          if (!stats) continue
+          if (tip.points === 10) stats.exact += 1
+          if (tip.points === 5) stats.near += 1
+          if (tip.points === 3) stats.win += 1
+          if (isNoBetPick(tip.pick)) stats.noBet += 1
+          if (tip.points === 0 && !isNoBetPick(tip.pick)) stats.miss += 1
+        }
       }
 
-      for (const tip of match.tips ?? []) {
-        if (!pointsByPlayer.has(tip.playerId)) continue
-
-        const points = Number.isFinite(tip.points) ? tip.points : 0
-        pointsByPlayer.set(tip.playerId, (pointsByPlayer.get(tip.playerId) ?? 0) + points)
-
-        const stats = statsByPlayer.get(tip.playerId)
-        if (!stats) continue
-        if (tip.points === 10) stats.exact += 1
-        if (tip.points === 5) stats.near += 1
-        if (tip.points === 3) stats.win += 1
-        if (isNoBetPick(tip.pick)) stats.noBet += 1
-      }
-    }
-
-    return scoreboard
-      .map((player) => ({
+      return scoreboard.map((player) => ({
         ...player,
         points: pointsByPlayer.get(player.id) ?? 0,
-        stats: statsByPlayer.get(player.id) ?? { exact: 0, near: 0, win: 0, noBet: 0 },
+        stats: statsByPlayer.get(player.id) ?? { exact: 0, near: 0, win: 0, miss: 0, noBet: 0 },
         winnings: (payoutsByPlayer.get(player.id) ?? 0) + (bonusWinningsByPlayerId[player.id] ?? 0),
       }))
+    })()
+
+    return rows
       .sort((a, b) => {
-        const diff = (b.points ?? 0) - (a.points ?? 0)
+        const diff = getStandingsMetricValue(b, standingsMetric) - getStandingsMetricValue(a, standingsMetric)
         if (diff !== 0) return diff
         return (playerOrder.get(a.id) ?? 999) - (playerOrder.get(b.id) ?? 999)
       })
-  }, [standingsFormWindow, standings, playedMatches, scoreboard, remainderRecipientByMatchId])
+  }, [standingsFormWindow, standings, playedMatches, scoreboard, remainderRecipientByMatchId, standingsMetric])
 
   useEffect(() => {
     let cancelled = false
@@ -1531,11 +1674,27 @@ function App() {
 
       <section className="panel controls-panel">
         <div className="panel-head">
-          <h2>{formatRound(selectedRound, roundLabel)}</h2>
+          <h2>
+            {formatRound(effectiveSelectedRound, roundLabel)}
+            {roundDateLabel ? (
+              <span className="heading-meta" aria-hidden="true">
+                <span className="heading-separator">·</span>
+                <span>{roundDateLabel}</span>
+              </span>
+            ) : null}
+          </h2>
+          <button
+            type="button"
+            className={`info-toggle round-filter-toggle ${hidePlayedRounds ? 'is-active' : ''}`.trim()}
+            aria-pressed={hidePlayedRounds}
+            onClick={() => setHidePlayedRounds((prev) => !prev)}
+          >
+            {hidePlayedRounds ? 'Zobrazit odehraná kola' : 'Skrýt odehraná kola'}
+          </button>
         </div>
 
         <div className="round-tabs" role="tablist" aria-label={`Výběr ${roundLabel}`}>
-          {rounds.map((round) => {
+          {visibleRounds.map((round) => {
             const timeClass =
               highlightCurrentRound
                 ? round < currentRound
@@ -1544,7 +1703,7 @@ function App() {
                     ? 'is-future'
                     : 'is-current'
                 : ''
-            const activeClass = round === selectedRound ? 'is-active' : ''
+            const activeClass = round === effectiveSelectedRound ? 'is-active' : ''
             const isCurrentRound = highlightCurrentRound && round === currentRound
 
             return (
@@ -1625,49 +1784,28 @@ function App() {
       <section className="workspace">
         <aside className="panel match-list-panel">
           <div className="panel-head">
-            <h2>{standingsFormWindow === 'all' ? 'Pořadí hráčů' : `Pořadí hráčů (${standingsFormWindow}z)`}</h2>
-            <button
-              type="button"
-              className="info-toggle"
-              aria-expanded={showLongTermBankInfo}
-              onClick={() => setShowLongTermBankInfo((prev) => !prev)}
-            >
-              Dlouhodobý bank
-            </button>
-          </div>
-
-          {showLongTermBankInfo ? (
-            <div className="long-term-bank-info">
-              <p className="long-term-bank-summary">
-                {longTermBank?.introLabel ?? 'Dlouhodobý bank'}{' '}
-                <strong>{longTermBank?.totalAmount ?? 0} Kč</strong>{' '}
-                {longTermBank?.introSuffix ?? 'se rozdělí:'}
-              </p>
-
-              <ol className="long-term-bank-payouts">
-                {(longTermBank?.payouts ?? []).map((item) => (
-                  <li
-                    key={item.place}
-                    className={`long-term-bank-place ${
-                      item.place === 1 ? 'is-exact' : item.place === 2 ? 'is-near' : 'is-win'
-                    }`}
-                  >
-                    <strong>{item.place}.</strong>
-                    <span className="long-term-bank-amount">{item.amount} Kč</span>
-                  </li>
+            <h2>
+              {standingsFormWindow === 'all' ? 'Pořadí hráčů' : `Pořadí hráčů (${standingsFormWindow}z)`}
+              <span className="standings-metric-active" aria-hidden="true">
+                <span className="heading-separator">·</span>
+                <span>{selectedStandingsMetricLabel}</span>
+              </span>
+            </h2>
+            <span className="standings-metric-shell">
+              <select
+                className="standings-metric-select"
+                aria-label="Řazení pořadí"
+                value={standingsMetric}
+                onChange={(event) => setStandingsMetric(event.target.value)}
+              >
+                {standingsMetricOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
                 ))}
-              </ol>
-
-              <div className="long-term-bank-rules">
-                <h3>{longTermBank?.tieBreakHeading ?? 'V případě shodného počtu bodů rozhoduje:'}</h3>
-                <ol>
-                  {(longTermBank?.tieBreakRules ?? []).map((rule) => (
-                    <li key={rule}>{rule}</li>
-                  ))}
-                </ol>
-              </div>
-            </div>
-          ) : null}
+              </select>
+            </span>
+          </div>
 
           <div className="standings-list">
             {displayedStandings.map((player, index) => (
@@ -1684,7 +1822,7 @@ function App() {
                       <span>{player.name}</span>
                     </button>
                   </h3>
-                  <strong className="stand-points">{player.points} b</strong>
+                  <strong className="stand-points">{formatStandingsMetricValue(player, standingsMetric)}</strong>
                 </div>
 
                 <div className="stand-bottom">
@@ -1702,11 +1840,11 @@ function App() {
                       <strong className="stat-count">{player.stats.win}×</strong>
                     </span>
                     <span className="stat-pill is-miss">
-                      <span className="stat-label">N</span>
+                      <span className="stat-label">N/N</span>
                       <strong className="stat-count">{player.stats.noBet}×</strong>
                     </span>
                   </div>
-                  <span className="stand-winnings">{player.winnings} Kč</span>
+                  <span className="stand-winnings">{formatStandingsSecondaryValue(player, standingsMetric)}</span>
                 </div>
               </article>
             ))}
@@ -1768,16 +1906,16 @@ function App() {
                 })}
               </div>
 
-              <p className="player-window-note">
-                {selectedPlayerProfile.formWindow === 'all' ? (
-                  <>
-                    Filtr statistik <strong>všech</strong> posledních vyhodnocených zápasů.
-                  </>
-                ) : (
-                  <>
-                    Filtr statistik za posledních <strong>{selectedPlayerProfile.formWindow}</strong> vyhodnocených zápasů.
-                  </>
-                )}
+              <p className="player-window-note tip-callout tip-callout-note">
+                <span className="tip-callout-prefix">
+                  <span className="tip-callout-icon" aria-hidden="true">i</span>
+                  <span className="tip-callout-label">Tip:</span>
+                </span>
+                <span className="tip-callout-text">
+                  {selectedPlayerProfile.formWindow === 'all'
+                    ? 'aktuálně se statistiky počítají ze všech vyhodnocených zápasů.'
+                    : `aktuálně se statistiky počítají z posledních ${selectedPlayerProfile.formWindow} vyhodnocených zápasů.`}
+                </span>
               </p>
 
               {/*
@@ -2004,40 +2142,49 @@ function App() {
                   <div className="player-success-item is-exact">
                     <span className="player-success-label">10 bodů</span>
                     <div className="player-success-main">
-                      <strong className="player-success-value">{selectedPlayerProfile.successRates.exact} %</strong>
-                      <span className="player-success-count">{selectedPlayerProfile.successCounts.exact}×</span>
+                      <strong className="player-success-value">{selectedPlayerProfile.successCounts.exact}×</strong>
+                      <span className="player-success-count">{selectedPlayerProfile.successRates.exact} %</span>
                     </div>
                   </div>
                   <div className="player-success-item is-near">
                     <span className="player-success-label">5 bodů</span>
                     <div className="player-success-main">
-                      <strong className="player-success-value">{selectedPlayerProfile.successRates.near} %</strong>
-                      <span className="player-success-count">{selectedPlayerProfile.successCounts.near}×</span>
+                      <strong className="player-success-value">{selectedPlayerProfile.successCounts.near}×</strong>
+                      <span className="player-success-count">{selectedPlayerProfile.successRates.near} %</span>
                     </div>
                   </div>
                   <div className="player-success-item is-win">
                     <span className="player-success-label">3 body</span>
                     <div className="player-success-main">
-                      <strong className="player-success-value">{selectedPlayerProfile.successRates.win} %</strong>
-                      <span className="player-success-count">{selectedPlayerProfile.successCounts.win}×</span>
+                      <strong className="player-success-value">{selectedPlayerProfile.successCounts.win}×</strong>
+                      <span className="player-success-count">{selectedPlayerProfile.successRates.win} %</span>
+                    </div>
+                  </div>
+                  <div className="player-success-item is-total">
+                    <span className="player-success-label">Úspěšnost</span>
+                    <div className="player-success-main">
+                      <strong className="player-success-value">{selectedPlayerProfile.successRates.scored} %</strong>
                     </div>
                   </div>
                   <div className="player-success-item is-miss">
                     <span className="player-success-label">0 bodů</span>
                     <div className="player-success-main">
-                      <strong className="player-success-value">{selectedPlayerProfile.successRates.miss} %</strong>
+                      <strong className="player-success-value">{selectedPlayerProfile.successCounts.miss}×</strong>
+                      <span className="player-success-count">{selectedPlayerProfile.successRates.miss} %</span>
                     </div>
                   </div>
                   <div className="player-success-item is-nobet">
                     <span className="player-success-label">N/N</span>
                     <div className="player-success-main">
-                      <strong className="player-success-value">{selectedPlayerProfile.successRates.noBet} %</strong>
+                      <strong className="player-success-value">{selectedPlayerProfile.successCounts.noBet}×</strong>
+                      <span className="player-success-count">{selectedPlayerProfile.successRates.noBet} %</span>
                     </div>
                   </div>
-                  <div className="player-success-item is-total">
-                    <span className="player-success-label">Bodované tipy</span>
+                  <div className="player-success-item is-one-goal">
+                    <span className="player-success-label">±1 gól</span>
                     <div className="player-success-main">
-                      <strong className="player-success-value">{selectedPlayerProfile.successRates.scored} %</strong>
+                      <strong className="player-success-value">{selectedPlayerProfile.successCounts.oneGoalOff}×</strong>
+                      <span className="player-success-count">{selectedPlayerProfile.successRates.oneGoalOff} %</span>
                     </div>
                   </div>
                 </div>
@@ -2277,6 +2424,50 @@ function App() {
         </section>
       </section>
 
+      <section className="panel long-term-bank-panel" aria-label="Dlouhodobý bank">
+        <article className={`long-term-bank-card ${showLongTermBankInfo ? 'is-open' : ''}`.trim()}>
+          <button
+            type="button"
+            className="long-term-bank-toggle"
+            aria-expanded={showLongTermBankInfo}
+            onClick={() => setShowLongTermBankInfo((prev) => !prev)}
+          >
+            <span className="long-term-bank-toggle-label">{longTermBank?.introLabel ?? 'Dlouhodobý bank'}</span>
+            <strong className="long-term-bank-toggle-value">{longTermBank?.totalAmount ?? 0} Kč</strong>
+            <span className="long-term-bank-toggle-hint">{showLongTermBankInfo ? 'Skrýt detail' : 'Zobrazit detail'}</span>
+          </button>
+
+          {showLongTermBankInfo ? (
+            <div className="long-term-bank-info">
+              <p className="long-term-bank-summary">{longTermBank?.introSuffix ?? 'se rozdělí:'}</p>
+
+              <ol className="long-term-bank-payouts">
+                {(longTermBank?.payouts ?? []).map((item) => (
+                  <li
+                    key={item.place}
+                    className={`long-term-bank-place ${
+                      item.place === 1 ? 'is-exact' : item.place === 2 ? 'is-near' : 'is-win'
+                    }`}
+                  >
+                    <strong>{item.place}.</strong>
+                    <span className="long-term-bank-amount">{item.amount} Kč</span>
+                  </li>
+                ))}
+              </ol>
+
+              <div className="long-term-bank-rules">
+                <h3>{longTermBank?.tieBreakHeading ?? 'V případě shodného počtu bodů rozhoduje:'}</h3>
+                <ol>
+                  {(longTermBank?.tieBreakRules ?? []).map((rule) => (
+                    <li key={rule}>{rule}</li>
+                  ))}
+                </ol>
+              </div>
+            </div>
+          ) : null}
+        </article>
+      </section>
+
       <section className="panel rank-chart-panel">
         <div className="panel-head">
           <h2>Vývoj pořadí hráčů</h2>
@@ -2403,9 +2594,11 @@ function App() {
               ))}
             </div>
             <p className="rank-legend-hint tip-callout">
-              <span className="tip-callout-icon" aria-hidden="true">i</span>
-              <span className="tip-callout-label">Tip:</span>
-              <span>přejetím přes jméno hráče v legendě grafu čáru zvýrazníš, kliknutím na jméno hráče čáru skryješ/zobrazíš.</span>
+              <span className="tip-callout-prefix">
+                <span className="tip-callout-icon" aria-hidden="true">i</span>
+                <span className="tip-callout-label">Tip:</span>
+              </span>
+              <span className="tip-callout-text">přejetím přes jméno hráče v legendě grafu čáru zvýrazníš, kliknutím na jméno hráče čáru skryješ/zobrazíš.</span>
             </p>
           </>
         ) : (

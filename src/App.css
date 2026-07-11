@@ -1073,6 +1073,19 @@
   margin-bottom: 0.45rem;
 }
 
+.player-focus-close {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+}
+
+.player-focus-close-icon {
+  font-size: 1.14em;
+  line-height: 1;
+  font-weight: 700;
+  opacity: 0.82;
+}
+
 .player-focus-title {
   margin: 0;
   display: inline-flex;
@@ -2131,8 +2144,19 @@
   }
 
   .round-tabs {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 0.24rem;
+  }
+
+  .round-tabs.is-multi-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    justify-content: start;
+    justify-items: stretch;
+  }
+
+  .round-tabs.is-multi-row .round-tab {
+    min-width: 0;
+    max-width: none;
   }
 
   .round-tab {

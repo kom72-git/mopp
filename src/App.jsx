@@ -2047,10 +2047,11 @@ function App() {
                 </h2>
                 <button
                   type="button"
-                  className="info-toggle"
+                  className="info-toggle player-focus-close"
                   onClick={() => setSelectedPlayerId('')}
                 >
-                  Zavřít
+                  <span>Zavřít</span>
+                  <span className="player-focus-close-icon" aria-hidden="true">&times;</span>
                 </button>
               </div>
 

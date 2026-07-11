@@ -1021,8 +1021,8 @@ function App() {
 
     const currentPositiveStreak = (() => {
       let streak = 0
-      for (let i = timeline.length - 1; i >= 0; i -= 1) {
-        if (timeline[i].points > 0) streak += 1
+      for (let i = recent.length - 1; i >= 0; i -= 1) {
+        if (recent[i].points > 0) streak += 1
         else break
       }
       return streak
@@ -1031,7 +1031,7 @@ function App() {
     const longestPositiveStreak = (() => {
       let best = 0
       let streak = 0
-      for (const entry of timeline) {
+      for (const entry of recent) {
         if (entry.points > 0) {
           streak += 1
           if (streak > best) best = streak
@@ -1044,8 +1044,8 @@ function App() {
 
     const currentNegativeStreak = (() => {
       let streak = 0
-      for (let i = timeline.length - 1; i >= 0; i -= 1) {
-        if (timeline[i].points > 0) break
+      for (let i = recent.length - 1; i >= 0; i -= 1) {
+        if (recent[i].points > 0) break
         streak += 1
       }
       return streak
@@ -1054,7 +1054,7 @@ function App() {
     const longestNegativeStreak = (() => {
       let best = 0
       let streak = 0
-      for (const entry of timeline) {
+      for (const entry of recent) {
         if (entry.points > 0) {
           streak = 0
         } else {

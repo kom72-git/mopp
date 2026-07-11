@@ -491,6 +491,7 @@ function App() {
   const tooltipTimerRef = useRef(null)
   const touchLegendHandledRef = useRef(false)
   const playerDetailHeadingRef = useRef(null)
+  const roundTabsRef = useRef(null)
   const initialTournamentId = getStoredTournamentId()
   const [selectedTournamentId, setSelectedTournamentId] = useState(initialTournamentId)
   const [data, setData] = useState(
@@ -499,6 +500,7 @@ function App() {
       : emptyData,
   )
   const [isLiveLoading, setIsLiveLoading] = useState(true)
+  const [isRoundTabsMultiRow, setIsRoundTabsMultiRow] = useState(false)
   useEffect(() => {
     try {
       window.localStorage.setItem('mopp-selected-tournament', selectedTournamentId)
@@ -574,6 +576,24 @@ function App() {
     return totals
   }, [matches, players, remainderRecipientByMatchId])
 
+  const longTermPayoutByPlayer = useMemo(() => {
+    const payouts = new Map(players.map((player) => [player.id, 0]))
+    const payoutConfig = (selectedTournament?.longTermBank?.payouts ?? [])
+      .map((item) => ({
+        place: Number(item?.place),
+        amount: Number(item?.amount) || 0,
+      }))
+      .filter((item) => Number.isFinite(item.place) && item.place >= 1 && item.amount > 0)
+
+    for (const payout of payoutConfig) {
+      const playerAtPlace = scoreboard[payout.place - 1]
+      if (!playerAtPlace) continue
+      payouts.set(playerAtPlace.id, (payouts.get(playerAtPlace.id) ?? 0) + payout.amount)
+    }
+
+    return payouts
+  }, [players, scoreboard, selectedTournament])
+
   const standings = useMemo(
     () =>
       scoreboard.map((player) => {
@@ -596,13 +616,17 @@ function App() {
           if (tip.points === 0 && !isNoBetPick(tip.pick)) stats.miss += 1
         }
 
+        const matchWinnings = (totalPayoutsByPlayer.get(player.id) ?? 0) + (bonusWinningsByPlayerId[player.id] ?? 0)
+        const longTermPayout = longTermPayoutByPlayer.get(player.id) ?? 0
         return {
           ...player,
-          winnings: (totalPayoutsByPlayer.get(player.id) ?? 0) + (bonusWinningsByPlayerId[player.id] ?? 0),
+          matchWinnings,
+          longTermPayout,
+          winnings: matchWinnings + longTermPayout,
           stats,
         }
       }),
-    [matches, scoreboard, totalPayoutsByPlayer],
+    [longTermPayoutByPlayer, matches, scoreboard, totalPayoutsByPlayer],
   )
 
   const rounds = useMemo(() => {
@@ -833,6 +857,37 @@ function App() {
     return visibleRounds[0]
   }, [visibleRounds, selectedRound, currentRound])
 
+  useEffect(() => {
+    const tabs = roundTabsRef.current
+    if (!tabs) return undefined
+
+    const updateWrappedState = () => {
+      const buttons = Array.from(tabs.querySelectorAll('.round-tab'))
+      if (buttons.length <= 1) {
+        setIsRoundTabsMultiRow(false)
+        return
+      }
+
+      const firstTop = buttons[0].offsetTop
+      const wrapped = buttons.some((button) => button.offsetTop !== firstTop)
+      setIsRoundTabsMultiRow((prev) => (prev === wrapped ? prev : wrapped))
+    }
+
+    updateWrappedState()
+
+    let resizeObserver = null
+    if (typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(updateWrappedState)
+      resizeObserver.observe(tabs)
+    }
+
+    window.addEventListener('resize', updateWrappedState)
+    return () => {
+      window.removeEventListener('resize', updateWrappedState)
+      resizeObserver?.disconnect()
+    }
+  }, [visibleRounds])
+
   const roundMatches = useMemo(
     () => matches.filter((match) => extractRound(match) === effectiveSelectedRound),
     [matches, effectiveSelectedRound],
@@ -987,6 +1042,29 @@ function App() {
       return best
     })()
 
+    const currentNegativeStreak = (() => {
+      let streak = 0
+      for (let i = timeline.length - 1; i >= 0; i -= 1) {
+        if (timeline[i].points > 0) break
+        streak += 1
+      }
+      return streak
+    })()
+
+    const longestNegativeStreak = (() => {
+      let best = 0
+      let streak = 0
+      for (const entry of timeline) {
+        if (entry.points > 0) {
+          streak = 0
+        } else {
+          streak += 1
+          if (streak > best) best = streak
+        }
+      }
+      return best
+    })()
+
     const tippedMatchesCount = playedMatches.reduce((sum, match) => {
       const tip = (match.tips ?? []).find((item) => item.playerId === effectiveSelectedPlayerId)
       if (!tip || !tip.pick || tip.pick === '-' || isNoBetPick(tip.pick)) return sum
@@ -1016,10 +1094,12 @@ function App() {
     const projectedLongTermPayout = Number(
       (selectedTournament?.longTermBank?.payouts ?? []).find((item) => item.place === selectedRank)?.amount ?? 0,
     )
-    const realizedWinnings = Number(selectedStanding.winnings ?? 0)
+    const currentLongTermPayout = Number(selectedStanding.longTermPayout ?? 0)
+    const realizedWinnings = Number(selectedStanding.matchWinnings ?? 0)
     const matchStakeTotal = Math.max(0, entryFeePerMatch * Math.max(0, seasonMatchesCount))
     const totalInserted = matchStakeTotal + longTermContribution
     const currentBalance = realizedWinnings - totalInserted
+    const currentBalanceWithBank = currentBalance + currentLongTermPayout
     const place1Payout = payoutByPlace.get(1) ?? 0
     const place2Payout = payoutByPlace.get(2) ?? 0
     const place3Payout = payoutByPlace.get(3) ?? 0
@@ -1208,6 +1288,8 @@ function App() {
       trendDeltaText,
       currentPositiveStreak,
       longestPositiveStreak,
+      currentNegativeStreak,
+      longestNegativeStreak,
       recentSequence: recent.map((item) => (item.isNoBet ? 'N' : item.points)).join(', '),
       recentSeries: recent.map((item) => ({ points: item.points, isNoBet: item.isNoBet })),
       recentRounds,
@@ -1242,6 +1324,8 @@ function App() {
         place1Balance,
         place2Balance,
         place3Balance,
+        currentLongTermPayout,
+        currentBalanceWithBank,
         projectedLongTermPayout,
         selectedRank,
       },
@@ -1399,7 +1483,7 @@ function App() {
   const [isSyncing, setIsSyncing] = useState(false)
 
   const standingsMetricOptions = [
-    { value: 'points', label: 'Body' },
+    { value: 'points', label: 'Vše' },
     { value: 'winnings', label: 'Peníze' },
     { value: 'exact', label: '10 bodů' },
     { value: 'near', label: '5 bodů' },
@@ -1409,10 +1493,10 @@ function App() {
   ]
 
   const selectedStandingsMetricLabel =
-    standingsMetricOptions.find((option) => option.value === standingsMetric)?.label ?? 'Body'
+    standingsMetricOptions.find((option) => option.value === standingsMetric)?.label ?? 'Vše'
 
   const getStandingsMetricValue = (player, metric) => {
-    if (metric === 'winnings') return Number(player.winnings) || 0
+    if (metric === 'winnings') return Number(player.matchWinnings) || 0
     if (metric === 'exact') return Number(player.stats?.exact) || 0
     if (metric === 'near') return Number(player.stats?.near) || 0
     if (metric === 'win') return Number(player.stats?.win) || 0
@@ -1422,7 +1506,7 @@ function App() {
   }
 
   const formatStandingsMetricValue = (player, metric) => {
-    if (metric === 'winnings') return `${Number(player.winnings) || 0} Kč`
+    if (metric === 'winnings') return `${Number(player.matchWinnings) || 0} Kč`
     if (metric === 'exact') return `${Number(player.stats?.exact) || 0}×`
     if (metric === 'near') return `${Number(player.stats?.near) || 0}×`
     if (metric === 'win') return `${Number(player.stats?.win) || 0}×`
@@ -1432,28 +1516,74 @@ function App() {
   }
 
   const formatStandingsSecondaryValue = (player, metric) => {
-    if (metric === 'winnings') return `${Number(player.points) || 0} b`
+    if (metric !== 'points') return ''
     return `${Number(player.winnings) || 0} Kč`
+  }
+
+  const getStandingsWinningsBreakdown = (player) => {
+    const longTermPayout = Number(player.longTermPayout) || 0
+    if (longTermPayout <= 0) return null
+
+    return {
+      matchWinnings: Number(player.matchWinnings) || 0,
+      longTermPayout,
+    }
   }
 
   const displayedStandings = useMemo(() => {
     const playerOrder = new Map(scoreboard.map((player, index) => [player.id, index]))
-    const rows = (() => {
-      if (standingsFormWindow === 'all') {
-        return standings.map((player) => ({
+    const payoutConfig = (selectedTournament?.longTermBank?.payouts ?? [])
+      .map((item) => ({
+        place: Number(item?.place),
+        amount: Number(item?.amount) || 0,
+      }))
+      .filter((item) => Number.isFinite(item.place) && item.place >= 1 && item.amount > 0)
+
+    const applyLongTermPayout = (baseRows) => {
+      const longTermByPlayer = new Map(baseRows.map((player) => [player.id, 0]))
+      const pointsRankedRows = [...baseRows].sort((a, b) => {
+        const diff = (Number(b.points) || 0) - (Number(a.points) || 0)
+        if (diff !== 0) return diff
+        return (playerOrder.get(a.id) ?? 999) - (playerOrder.get(b.id) ?? 999)
+      })
+
+      for (const payout of payoutConfig) {
+        const playerAtPlace = pointsRankedRows[payout.place - 1]
+        if (!playerAtPlace) continue
+        longTermByPlayer.set(playerAtPlace.id, (longTermByPlayer.get(playerAtPlace.id) ?? 0) + payout.amount)
+      }
+
+      return baseRows.map((player) => {
+        const fallbackMatchWinnings = (Number(player.winnings) || 0) - (Number(player.longTermPayout) || 0)
+        const matchWinnings = Number(player.matchWinnings)
+        const normalizedMatchWinnings = Number.isFinite(matchWinnings) ? matchWinnings : fallbackMatchWinnings
+        const longTermPayout = longTermByPlayer.get(player.id) ?? 0
+        return {
           ...player,
           stats: player.stats ?? { exact: 0, near: 0, win: 0, miss: 0, noBet: 0 },
-          winnings: Number(player.winnings) || 0,
+          matchWinnings: normalizedMatchWinnings,
+          longTermPayout,
+          winnings: normalizedMatchWinnings + longTermPayout,
+        }
+      })
+    }
+
+    const rows = (() => {
+      if (standingsFormWindow === 'all') {
+        const baseRows = standings.map((player) => ({
+          ...player,
+          matchWinnings: Number(player.matchWinnings),
         }))
+        return applyLongTermPayout(baseRows)
       }
 
       const windowSize = Number(standingsFormWindow)
       if (!Number.isFinite(windowSize) || windowSize <= 0) {
-        return standings.map((player) => ({
+        const baseRows = standings.map((player) => ({
           ...player,
-          stats: player.stats ?? { exact: 0, near: 0, win: 0, miss: 0, noBet: 0 },
-          winnings: Number(player.winnings) || 0,
+          matchWinnings: Number(player.matchWinnings),
         }))
+        return applyLongTermPayout(baseRows)
       }
 
       const recentPlayedMatches = playedMatches.slice(-windowSize)
@@ -1499,12 +1629,16 @@ function App() {
         }
       }
 
-      return scoreboard.map((player) => ({
-        ...player,
-        points: pointsByPlayer.get(player.id) ?? 0,
-        stats: statsByPlayer.get(player.id) ?? { exact: 0, near: 0, win: 0, miss: 0, noBet: 0 },
-        winnings: (payoutsByPlayer.get(player.id) ?? 0) + (bonusWinningsByPlayerId[player.id] ?? 0),
-      }))
+      const baseRows = scoreboard.map((player) => {
+        const matchWinnings = (payoutsByPlayer.get(player.id) ?? 0) + (bonusWinningsByPlayerId[player.id] ?? 0)
+        return {
+          ...player,
+          points: pointsByPlayer.get(player.id) ?? 0,
+          stats: statsByPlayer.get(player.id) ?? { exact: 0, near: 0, win: 0, miss: 0, noBet: 0 },
+          matchWinnings,
+        }
+      })
+      return applyLongTermPayout(baseRows)
     })()
 
     return rows
@@ -1513,7 +1647,7 @@ function App() {
         if (diff !== 0) return diff
         return (playerOrder.get(a.id) ?? 999) - (playerOrder.get(b.id) ?? 999)
       })
-  }, [standingsFormWindow, standings, playedMatches, scoreboard, remainderRecipientByMatchId, standingsMetric])
+  }, [standingsFormWindow, standings, playedMatches, scoreboard, remainderRecipientByMatchId, standingsMetric, selectedTournament])
 
   useEffect(() => {
     let cancelled = false
@@ -1693,7 +1827,12 @@ function App() {
           </button>
         </div>
 
-        <div className="round-tabs" role="tablist" aria-label={`Výběr ${roundLabel}`}>
+        <div
+          ref={roundTabsRef}
+          className={`round-tabs ${isRoundTabsMultiRow ? 'is-multi-row' : ''}`.trim()}
+          role="tablist"
+          aria-label={`Výběr ${roundLabel}`}
+        >
           {visibleRounds.map((round) => {
             const timeClass =
               highlightCurrentRound
@@ -1791,7 +1930,7 @@ function App() {
                 <span>{selectedStandingsMetricLabel}</span>
               </span>
             </h2>
-            <span className="standings-metric-shell">
+            <span className={`standings-metric-shell ${standingsMetric !== 'points' ? 'is-filtered' : ''}`.trim()}>
               <select
                 className="standings-metric-select"
                 aria-label="Řazení pořadí"
@@ -1808,7 +1947,9 @@ function App() {
           </div>
 
           <div className="standings-list">
-            {displayedStandings.map((player, index) => (
+            {displayedStandings.map((player, index) => {
+              const winningsBreakdown = getStandingsWinningsBreakdown(player)
+              return (
               <article className="stand-card" key={player.id}>
                 <div className="stand-top">
                   <p className="stand-rank">{index + 1}.</p>
@@ -1825,29 +1966,54 @@ function App() {
                   <strong className="stand-points">{formatStandingsMetricValue(player, standingsMetric)}</strong>
                 </div>
 
+                {standingsMetric !== 'winnings' ? (
                 <div className="stand-bottom">
                   <div className="stand-stats">
-                    <span className="stat-pill is-exact">
+                    <span className={`stat-pill is-exact ${standingsMetric === 'exact' ? 'is-active' : ''}`.trim()}>
                       <span className="stat-label">10b</span>
                       <strong className="stat-count">{player.stats.exact}×</strong>
                     </span>
-                    <span className="stat-pill is-near">
+                    <span className={`stat-pill is-near ${standingsMetric === 'near' ? 'is-active' : ''}`.trim()}>
                       <span className="stat-label">5b</span>
                       <strong className="stat-count">{player.stats.near}×</strong>
                     </span>
-                    <span className="stat-pill is-win">
+                    <span className={`stat-pill is-win ${standingsMetric === 'win' ? 'is-active' : ''}`.trim()}>
                       <span className="stat-label">3b</span>
                       <strong className="stat-count">{player.stats.win}×</strong>
                     </span>
-                    <span className="stat-pill is-miss">
-                      <span className="stat-label">N/N</span>
+                    <span className={`stat-pill is-miss ${standingsMetric === 'noBet' ? 'is-active' : ''}`.trim()}>
+                      <span className="stat-label">N</span>
                       <strong className="stat-count">{player.stats.noBet}×</strong>
                     </span>
                   </div>
-                  <span className="stand-winnings">{formatStandingsSecondaryValue(player, standingsMetric)}</span>
+                  {standingsMetric === 'points' ? (
+                    <span
+                      className="stand-winnings"
+                      title={(() => {
+                        if (!winningsBreakdown) return undefined
+                        return `Zápasy: ${winningsBreakdown.matchWinnings} Kč · Dlouhodobý bank: ${winningsBreakdown.longTermPayout} Kč`
+                      })()}
+                    >
+                      {winningsBreakdown ? (
+                        <span className="bank-icon" aria-hidden="true" title="Dlouhodobý bank">💰</span>
+                      ) : null}
+                      <span className="stand-winnings-total">{formatStandingsSecondaryValue(player, standingsMetric)}</span>
+                    </span>
+                  ) : null}
                 </div>
+                ) : null}
+                {standingsMetric === 'winnings' ? (
+                  <p
+                    className={`stand-bank-note ${winningsBreakdown ? '' : 'is-hidden'}`.trim()}
+                    title={winningsBreakdown ? `Dlouhodobý bank: +${winningsBreakdown.longTermPayout} Kč` : undefined}
+                  >
+                    <span className="bank-icon" aria-hidden="true">💰</span>
+                    <span>{winningsBreakdown ? `+${winningsBreakdown.longTermPayout} Kč` : '+'}</span>
+                  </p>
+                ) : null}
               </article>
-            ))}
+              )
+            })}
           </div>
 
           <div className="standings-window-controls" role="group" aria-label="Rozsah pořadí podle formy">
@@ -1892,7 +2058,7 @@ function App() {
                 <span className="player-window-label">Vyber:</span>
                 {[5, 10, 15, 20, 25, 'all'].map((option) => {
                   const isActive = selectedPlayerProfile.formWindow === option || (option === 'all' && selectedPlayerProfile.formWindow === 'all')
-                  const label = option === 'all' ? 'vše' : String(option)
+                  const label = option === 'all' ? 'vše' : `${option} z`
                   return (
                     <button
                       key={String(option)}
@@ -1912,9 +2078,7 @@ function App() {
                   <span className="tip-callout-label">Tip:</span>
                 </span>
                 <span className="tip-callout-text">
-                  {selectedPlayerProfile.formWindow === 'all'
-                    ? 'aktuálně se statistiky počítají ze všech vyhodnocených zápasů.'
-                    : `aktuálně se statistiky počítají z posledních ${selectedPlayerProfile.formWindow} vyhodnocených zápasů.`}
+                  filtrem lze přepínat mezi celkovou statistikou a posledními zápasy, tedy aktuální formou.
                 </span>
               </p>
 
@@ -2081,25 +2245,47 @@ function App() {
                     )
                   })()}
                 </article>
-
-                <article className="player-focus-card is-streak">
-                  <h3>Série tipů s body</h3>
-                  <p className="player-streak-line">
-                    <span>Aktuální</span>
-                    <strong>
-                      {selectedPlayerProfile.currentPositiveStreak}
-                      {selectedPlayerProfile.currentPositiveStreak > 0 &&
-                      selectedPlayerProfile.currentPositiveStreak === selectedPlayerProfile.longestPositiveStreak ? (
-                        <span className="player-streak-badge">REKORD</span>
-                      ) : null}
-                    </strong>
-                  </p>
-                  <p className="player-streak-line">
-                    <span>Historické max</span>
-                    <strong>{selectedPlayerProfile.longestPositiveStreak}</strong>
-                  </p>
-                </article>
               </div>
+
+              <article className="player-focus-card is-streak-wide">
+                <h3>Série tipů</h3>
+                <div className="player-streak-grid">
+                  <div className="player-streak-item">
+                    <span className="player-streak-item-title">S body</span>
+                    <div className="player-streak-metrics">
+                      <span className="player-streak-value is-current">
+                        {selectedPlayerProfile.currentPositiveStreak > 0 &&
+                        selectedPlayerProfile.currentPositiveStreak === selectedPlayerProfile.longestPositiveStreak ? (
+                          <span className="player-streak-badge">REKORD</span>
+                        ) : null}
+                        <span className="player-streak-mini-label">Aktuální</span>
+                        <span className="player-streak-number">{selectedPlayerProfile.currentPositiveStreak}</span>
+                      </span>
+                      <span className="player-streak-value is-historical">
+                        <span className="player-streak-mini-label">Historická</span>
+                        <span className="player-streak-number">{selectedPlayerProfile.longestPositiveStreak}</span>
+                      </span>
+                    </div>
+                  </div>
+                  <div className="player-streak-item is-negative">
+                    <span className="player-streak-item-title">Bez bodu</span>
+                    <div className="player-streak-metrics">
+                      <span className="player-streak-value is-current">
+                        {selectedPlayerProfile.currentNegativeStreak > 0 &&
+                        selectedPlayerProfile.currentNegativeStreak === selectedPlayerProfile.longestNegativeStreak ? (
+                          <span className="player-streak-badge is-negative">REKORD</span>
+                        ) : null}
+                        <span className="player-streak-mini-label">Aktuální</span>
+                        <span className="player-streak-number">{selectedPlayerProfile.currentNegativeStreak}</span>
+                      </span>
+                      <span className="player-streak-value is-historical">
+                        <span className="player-streak-mini-label">Historická</span>
+                        <span className="player-streak-number">{selectedPlayerProfile.longestNegativeStreak}</span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </article>
 
               <div className="player-focus-seq">
                 <span className="player-focus-seq-label">Grafický zisk bodů (od nejstaršího)</span>
@@ -2267,14 +2453,22 @@ function App() {
                     </strong>
                   </article>
                   <article className={`money-stat-box is-now ${selectedPlayerProfile.moneySummary.currentBalance >= 0 ? 'is-up' : 'is-down'}`}>
-                    <span>Aktuální bilance</span>
+                    <span>Čistý zisk</span>
                     <strong className={`money-amount ${moneyAmountClass(selectedPlayerProfile.moneySummary.currentBalance)}`}>
                       {formatMoneyWithSign(selectedPlayerProfile.moneySummary.currentBalance)}
                     </strong>
                   </article>
+                  {selectedPlayerProfile.moneySummary.currentLongTermPayout > 0 ? (
+                    <article className={`money-stat-box is-now ${selectedPlayerProfile.moneySummary.currentBalanceWithBank >= 0 ? 'is-up' : 'is-down'}`}>
+                      <span>Čistý zisk s bankem</span>
+                      <strong className={`money-amount ${moneyAmountClass(selectedPlayerProfile.moneySummary.currentBalanceWithBank)}`}>
+                        {formatMoneyWithSign(selectedPlayerProfile.moneySummary.currentBalanceWithBank)}
+                      </strong>
+                    </article>
+                  ) : null}
                 </div>
-                <article className="money-potential-strip" aria-label="Potenciální výhra při 1. 2. a 3. místě">
-                  <span className="money-potential-label">Potenciální výhra při umístění na 1.  2.  3. místě</span>
+                <article className="money-potential-strip" aria-label="Potenciální zisk při 1. 2. a 3. místě">
+                  <span className="money-potential-label">Potenciální zisk při umístění na 1.  2.  3. místě</span>
                   <div className="money-potential-values">
                     <p className="money-potential-value">
                       <span>1.</span>
@@ -2432,7 +2626,10 @@ function App() {
             aria-expanded={showLongTermBankInfo}
             onClick={() => setShowLongTermBankInfo((prev) => !prev)}
           >
-            <span className="long-term-bank-toggle-label">{longTermBank?.introLabel ?? 'Dlouhodobý bank'}</span>
+            <span className="long-term-bank-toggle-label">
+              <span className="bank-icon" aria-hidden="true">💰</span>
+              <span>{longTermBank?.introLabel ?? 'Dlouhodobý bank'}</span>
+            </span>
             <strong className="long-term-bank-toggle-value">{longTermBank?.totalAmount ?? 0} Kč</strong>
             <span className="long-term-bank-toggle-hint">{showLongTermBankInfo ? 'Skrýt detail' : 'Zobrazit detail'}</span>
           </button>

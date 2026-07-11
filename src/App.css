@@ -218,6 +218,20 @@
   gap: 0.36rem;
 }
 
+.round-tabs.is-multi-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 112px));
+  justify-content: space-between;
+  justify-items: stretch;
+}
+
+.round-tabs.is-multi-row .round-tab {
+  width: 100%;
+  flex: initial;
+  min-width: 92px;
+  max-width: 112px;
+}
+
 .round-tab {
   border: 1px solid #cedfed;
   background: #f4f7fb;
@@ -302,6 +316,7 @@
 }
 
 .info-toggle {
+  appearance: none;
   border: 1px solid #cedfed;
   background: #f4f7fb;
   color: #33506a;
@@ -311,6 +326,15 @@
   font-size: 0.74rem;
   font-weight: 700;
   cursor: pointer;
+}
+
+.info-toggle:focus {
+  outline: none;
+}
+
+.info-toggle:focus-visible {
+  border-color: #8fb7d8;
+  box-shadow: 0 0 0 3px rgb(143 183 216 / 24%);
 }
 
 .info-toggle[aria-expanded='true'] {
@@ -354,6 +378,13 @@
   outline: none;
   border-color: #8fb7d8;
   box-shadow: 0 0 0 3px rgb(143 183 216 / 24%);
+}
+
+.standings-metric-shell.is-filtered .standings-metric-select {
+  border-color: #7aa8cc;
+  box-shadow: inset 0 0 0 1px rgb(122 168 204 / 30%);
+  background: #eaf4ff;
+  color: #1f4f79;
 }
 
 .round-filter-toggle[aria-pressed='true'],
@@ -407,6 +438,9 @@
 }
 
 .long-term-bank-toggle-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.26rem;
   color: #385873;
   font-size: 0.73rem;
   font-weight: 700;
@@ -415,13 +449,19 @@
 }
 
 .long-term-bank-toggle-value {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
   color: #123b5f;
   font-size: 0.92rem;
 }
 
 .long-term-bank-toggle-hint {
+  grid-column: 1;
+  grid-row: 2;
   color: #4e6b84;
   font-size: 0.72rem;
+  padding-left: 1.18rem;
 }
 
 .long-term-bank-info {
@@ -955,6 +995,11 @@
   border: 1px solid transparent;
 }
 
+.stat-pill.is-active {
+  border-color: rgb(15 87 142 / 45%);
+  box-shadow: 0 0 0 1px rgb(15 87 142 / 16%);
+}
+
 .stat-label {
   opacity: 0.9;
 }
@@ -969,12 +1014,49 @@
 }
 
 .stand-winnings {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.24rem;
+  align-self: center;
+  justify-self: end;
   font-size: 0.72rem;
   color: #4f6b82;
   font-weight: 700;
   text-align: right;
   white-space: nowrap;
   margin-left: auto;
+  line-height: 1;
+}
+
+.stand-winnings-total {
+  white-space: nowrap;
+}
+
+.stand-bank-note {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-self: end;
+  gap: 0.22rem;
+  color: #4f6b82;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.stand-bank-note.is-hidden {
+  visibility: hidden;
+}
+
+.bank-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 0.92rem;
+  height: 0.92rem;
+  font-size: 0.72rem;
+  line-height: 1;
 }
 
 .player-focus-wide {
@@ -1129,6 +1211,15 @@
   gap: 0.15rem;
 }
 
+.player-focus-card.is-streak-wide {
+  margin-top: 0.45rem;
+  gap: 0.3rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+}
+
 .player-focus-card.is-trend {
   position: relative;
   overflow: hidden;
@@ -1157,32 +1248,76 @@
   color: #5c758b;
 }
 
-.player-streak-line {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.34rem;
-  font-size: 0.75rem;
-  color: #5d778d;
+.player-streak-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.42rem;
 }
 
-.player-streak-line strong {
+.player-streak-item {
+  display: grid;
+  gap: 0.18rem;
+  padding: 0.34rem 0.42rem;
+  border: 1px solid #d6e4f1;
+  border-radius: 9px;
+  background: #fff;
+}
+
+.player-streak-item.is-negative {
+  border-color: #eadcdf;
+  background: #fffdfd;
+}
+
+.player-streak-item-title {
+  font-size: 0.76rem;
   color: #173a5a;
-  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.player-streak-metrics {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.player-streak-value {
   display: inline-flex;
-  align-items: baseline;
-  gap: 0.28rem;
+  align-items: center;
+  gap: 0.26rem;
+}
+
+.player-streak-number {
+  color: #173a5a;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.player-streak-mini-label {
+  font-size: 0.56rem;
+  font-weight: 800;
+  color: #6a8196;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
 
 .player-streak-badge {
-  font-size: 0.6rem;
+  font-size: 0.53rem;
   font-weight: 800;
   color: #155f37;
   background: #e7f8ee;
   border: 1px solid #bfe7ce;
   border-radius: 999px;
-  padding: 0.03rem 0.32rem;
+  padding: 0.02rem 0.24rem;
   letter-spacing: 0.03em;
+  line-height: 1;
+}
+
+.player-streak-badge.is-negative {
+  color: #8c2f2f;
+  background: #fdeeee;
+  border-color: #efc9cf;
 }
 
 .player-money-wide {
@@ -1219,8 +1354,8 @@
 
 .player-money-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.3rem;
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  gap: 0.24rem;
 }
 
 .money-stat-box {
@@ -1228,11 +1363,11 @@
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
-  gap: 0.14rem;
-  min-height: 62px;
+  gap: 0.12rem;
+  min-height: 56px;
   font-size: 0.72rem;
   color: #557085;
-  padding: 0.38rem 0.44rem;
+  padding: 0.3rem 0.38rem;
   border: 1px solid #d6e4f1;
   border-radius: 10px;
   background: #f7fbff;
@@ -2044,6 +2179,11 @@
 
   .player-money-grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .player-streak-grid {
+    grid-template-columns: 1fr;
+    gap: 0.28rem;
   }
 
   .money-potential-strip {

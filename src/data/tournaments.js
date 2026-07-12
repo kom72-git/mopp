@@ -26,11 +26,15 @@ export const tournaments = [
       { from: '2026-06-11T00:00:00', label: 'Skupinová fáze' },
       { from: '2026-07-01T03:00:00', label: 'Šestnáctifinále' },
       { from: '2026-07-04T19:00:00', label: 'Osmifinále' },
+      { from: '2026-07-10T00:00:00', label: 'Čtvrtfinále' },
+      { from: '2026-07-14T00:00:00', label: 'Semifinále' },
+      { from: '2026-07-18T00:00:00', label: 'O 3. místo' },
+      { from: '2026-07-19T00:00:00', label: 'Finále' },
     ],
     longTermBank: {
       introLabel: 'Dlouhodobý bank',
       totalAmount: 1650,
-      introSuffix: 'se rozdělí:',
+      introSuffix: 'se rozdělí takto:',
       payouts: [
         { place: 1, amount: 900 },
         { place: 2, amount: 500 },

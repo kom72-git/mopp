@@ -2637,7 +2637,7 @@ function App() {
 
           {showLongTermBankInfo ? (
             <div className="long-term-bank-info">
-              <p className="long-term-bank-summary">{longTermBank?.introSuffix ?? 'se rozdělí:'}</p>
+              <p className="long-term-bank-summary">{longTermBank?.introSuffix ?? 'se rozdělí takto:'}</p>
 
               <ol className="long-term-bank-payouts">
                 {(longTermBank?.payouts ?? []).map((item) => (

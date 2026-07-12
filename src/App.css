@@ -2254,7 +2254,7 @@
   .tips-row .total-points-cell::before {
     content: 'Celkem';
     position: absolute;
-    right: calc(100% + 0.18rem);
+    right: calc(100% + -15px);
     top: 50%;
     transform: translateY(-50%);
     width: 2.9rem;
@@ -2313,7 +2313,7 @@
   .tips-row .tip-pill::before {
     content: 'Zápas';
     position: absolute;
-    right: calc(100% + 14px);
+    right: calc(100% + 0px);
     top: 50%;
     transform: translateY(-50%);
     width: 2.9rem;

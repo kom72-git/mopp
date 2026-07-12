@@ -747,7 +747,7 @@
 .tips-head,
 .tips-row {
   display: grid;
-  grid-template-columns: 44px 34px minmax(0, 1fr) 86px 72px 66px;
+  grid-template-columns: 44px 34px minmax(0, 1fr) 76px 88px 84px 58px;
   gap: 0.4rem;
   align-items: center;
   padding: 0.52rem 0.82rem;
@@ -836,6 +836,35 @@
   overflow-wrap: anywhere;
 }
 
+.total-points-cell {
+  justify-self: start;
+  text-align: left;
+  color: #214362;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (min-width: 621px) {
+  .tips-head > span:nth-child(6) {
+    justify-self: stretch;
+    text-align: right;
+    padding-right: 20px;
+  }
+
+  .tips-row .total-points-cell {
+    justify-self: stretch;
+    text-align: right;
+    padding-right: 20px;
+  }
+
+  .tips-row .total-points-cell::after {
+    content: 'b';
+    margin-left: 0.16rem;
+    font-weight: 500;
+    color: #4f6980;
+  }
+}
+
 .payout-cell {
   min-height: 1.2rem;
   display: inline-flex;
@@ -857,6 +886,9 @@
 .tip-value {
   color: #1f3f60;
   font-weight: 800;
+  justify-self: start;
+  text-align: left;
+  padding-right: 0;
 }
 
 .split-tip {
@@ -877,10 +909,10 @@
 
 .tip-pill {
   border-radius: 999px;
-  padding: 0.16rem 0.4rem;
+  padding: 0.14rem 0.34rem;
   font-size: 0.73rem;
   text-align: center;
-  min-width: 2.6rem;
+  min-width: 2.2rem;
 }
 
 .is-exact {
@@ -1181,6 +1213,13 @@
   gap: 0.28rem;
 }
 
+.player-rank-mini-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+
 .player-rank-mini h3 {
   margin: 0;
   font-size: 0.72rem;
@@ -1200,7 +1239,7 @@
 .player-rank-mini-chart {
   display: block;
   width: 100%;
-  height: 104px;
+  height: 116px;
 }
 
 .player-rank-mini-empty {
@@ -1887,6 +1926,47 @@
   gap: 0.55rem;
 }
 
+.rank-view-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  border: 1px solid #cedfed;
+  border-radius: 999px;
+  background: #f4f7fb;
+  padding: 0.14rem;
+}
+
+.rank-view-toggle.is-compact {
+  transform: scale(0.97);
+  transform-origin: right center;
+}
+
+.rank-view-toggle-button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: #42617c;
+  border-radius: 999px;
+  padding: 0.2rem 0.5rem;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.rank-view-toggle-button.is-active {
+  background: #1f4f79;
+  color: #f4f9ff;
+}
+
+.rank-view-toggle-button:focus {
+  outline: none;
+}
+
+.rank-view-toggle-button:focus-visible {
+  box-shadow: 0 0 0 2px rgb(143 183 216 / 35%);
+}
+
 .rank-chart-wrap {
   width: 100%;
   border: 1px solid #d7e5f2;
@@ -2067,17 +2147,50 @@
     grid-template-columns: 1fr;
   }
 
+  .tips-head,
+  .tips-row {
+    grid-template-columns: 34px 28px minmax(0, 1fr) 64px 76px 70px 54px;
+    gap: 0.26rem;
+    padding: 0.46rem 0.58rem;
+  }
+
+  .tips-head {
+    display: grid;
+    font-size: 0.68rem;
+  }
+
+  .tips-row {
+    font-size: 0.94rem;
+  }
+
+  .tip-note {
+    font-size: 0.63rem;
+  }
+
+  .tip-pill {
+    min-width: 2.02rem;
+    padding: 0.14rem 0.3rem;
+    font-size: 0.68rem;
+  }
+
+  .payout-badge {
+    font-size: 0.62rem;
+    padding: 0.08rem 0.28rem;
+  }
+}
+
+@media (max-width: 620px) {
   .tips-head {
     display: none;
   }
 
   .tips-row {
-    grid-template-columns: 30px 24px minmax(0, 1fr) auto 62px;
-    column-gap: 0.12rem;
-    row-gap: 0.22rem;
+    grid-template-columns: 30px 24px fit-content(9.5rem) minmax(0, 1fr) auto;
+    column-gap: 0.16rem;
+    row-gap: 0.14rem;
     grid-template-areas:
-      'rank shift name . points'
-      '. . pick payout points';
+      'rank shift name pick total'
+      '. . note payout points';
   }
 
   .tips-row .rank-cell {
@@ -2096,31 +2209,139 @@
   }
 
   .tips-row .name-cell {
+    display: contents;
+  }
+
+  .tips-row .name-cell .tip-player-button {
     grid-area: name;
     align-self: start;
   }
 
+  .tips-row .name-cell .tip-note {
+    grid-area: note;
+    align-self: end;
+    margin-top: 0;
+  }
+
   .tips-row .payout-cell {
     grid-area: payout;
-    min-height: 1.05rem;
-    justify-self: end;
+    min-height: 0;
+    justify-self: start;
+    align-self: start;
+    padding-left: 1.545rem;
+    display: inline-block;
+    align-items: center;
+    gap: 0;
+  }
+
+  .tips-row .payout-cell:empty {
+    display: none;
+  }
+
+  .tips-row .total-points-cell {
+    grid-area: total;
     align-self: center;
+    justify-self: end;
+    display: inline-flex;
+    position: relative;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0;
+    min-width: 3.15rem;
+    text-align: right;
+  }
+
+  .tips-row .total-points-cell::before {
+    content: 'Celkem';
+    position: absolute;
+    right: calc(100% + 0.18rem);
+    top: 50%;
+    transform: translateY(-50%);
+    width: 2.9rem;
+    text-align: left;
+    color: #607a91;
+    font-size: 0.55rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    text-transform: none;
+    white-space: nowrap;
+  }
+
+  .tips-row .total-points-cell::after {
+    content: 'b';
+    margin-left: 0.16rem;
+    font-weight: 500;
+    color: #4f6980;
   }
 
   .tips-row .tip-value {
     grid-area: pick;
-    min-height: 1.8rem;
+    min-height: 0;
+    justify-self: start;
     align-self: center;
+    padding-left: 1.545rem;
+    display: inline-block;
+    align-items: center;
+    gap: 0;
+  }
+
+  .tips-row .tip-value .split-tip {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.08rem;
+    line-height: 1.1;
+  }
+
+  .tips-row .tip-value .split-tip strong {
+    display: inline;
+  }
+
+  .tips-row .tip-value .split-tip strong:first-child::after {
+    content: ':';
+    margin-left: 0.08rem;
+    color: #1f3f60;
+    font-weight: 800;
   }
 
   .tips-row .tip-pill {
     grid-area: points;
     align-self: start;
     justify-self: end;
+    position: relative;
+  }
+
+  .tips-row .tip-pill::before {
+    content: 'Zápas';
+    position: absolute;
+    right: calc(100% + 14px);
+    top: 50%;
+    transform: translateY(-50%);
+    width: 2.9rem;
+    text-align: left;
+    color: #607a91;
+    font-size: 0.55rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    text-transform: none;
+    white-space: nowrap;
   }
 }
 
 @media (max-width: 520px) {
+  .player-rank-mini-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .rank-chart-panel .panel-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .rank-view-toggle {
+    align-self: flex-end;
+  }
+
   .hero-controls {
     flex-wrap: wrap;
     gap: 0.28rem;

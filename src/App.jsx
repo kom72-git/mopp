@@ -362,6 +362,51 @@ function toTipTimestampMs(value) {
   return Number.isFinite(parsed) ? parsed : Number.NaN
 }
 
+function buildMatchRankSnapshots(matches, players) {
+  const playerIds = players.map((player) => player.id)
+  const fallbackOrder = new Map(playerIds.map((playerId, index) => [playerId, index]))
+  const totals = new Map(playerIds.map((playerId) => [playerId, 0]))
+  const snapshots = new Map()
+
+  for (const match of matches) {
+    const tipTimestampByPlayer = new Map(
+      (match?.tips ?? [])
+        .map((tip) => [tip.playerId, toTipTimestampMs(tip.updatedAt)])
+        .filter(([, timestamp]) => Number.isFinite(timestamp)),
+    )
+
+    for (const tip of match?.tips ?? []) {
+      if (!totals.has(tip.playerId)) continue
+      const gained = Number.isFinite(tip.points) ? tip.points : 0
+      totals.set(tip.playerId, (totals.get(tip.playerId) ?? 0) + gained)
+    }
+
+    const sortedPlayerIds = [...playerIds].sort((a, b) => {
+      const diff = (totals.get(b) ?? 0) - (totals.get(a) ?? 0)
+      if (diff !== 0) return diff
+
+      const aTimestamp = tipTimestampByPlayer.get(a)
+      const bTimestamp = tipTimestampByPlayer.get(b)
+      const aHasTimestamp = Number.isFinite(aTimestamp)
+      const bHasTimestamp = Number.isFinite(bTimestamp)
+
+      if (aHasTimestamp && bHasTimestamp && aTimestamp !== bTimestamp) {
+        return aTimestamp - bTimestamp
+      }
+
+      return (fallbackOrder.get(a) ?? 999) - (fallbackOrder.get(b) ?? 999)
+    })
+
+    const rankByPlayer = new Map()
+    sortedPlayerIds.forEach((playerId, index) => {
+      rankByPlayer.set(playerId, index + 1)
+    })
+    snapshots.set(match?.id, rankByPlayer)
+  }
+
+  return snapshots
+}
+
 function calculateMatchPayouts(match, playerOrder, overridesByMatchId, remainderRecipientsByMatchId) {
   const override = overridesByMatchId?.[match?.id]
   if (override && typeof override === 'object') {
@@ -473,6 +518,24 @@ function buildSparkline(points, width = 120, height = 42, padding = 4) {
   return { path, dots }
 }
 
+function buildXAxisTickIndexes(length, maxLabels = 12) {
+  const safeLength = Number(length) || 0
+  if (safeLength <= 0) return new Set()
+  if (safeLength <= 32) {
+    return new Set(Array.from({ length: safeLength }, (_, index) => index))
+  }
+  if (safeLength <= maxLabels) {
+    return new Set(Array.from({ length: safeLength }, (_, index) => index))
+  }
+
+  const indexes = new Set([0, safeLength - 1])
+  const step = Math.ceil((safeLength - 1) / Math.max(1, maxLabels - 1))
+  for (let index = step; index < safeLength - 1; index += step) {
+    indexes.add(index)
+  }
+  return indexes
+}
+
 function formatMoneyWithSign(value) {
   const amount = Number(value) || 0
   const sign = amount > 0 ? '+' : amount < 0 ? '-' : ''
@@ -501,6 +564,7 @@ function App() {
   )
   const [isLiveLoading, setIsLiveLoading] = useState(true)
   const [isRoundTabsMultiRow, setIsRoundTabsMultiRow] = useState(false)
+  const [viewStateByTournament, setViewStateByTournament] = useState({})
   useEffect(() => {
     try {
       window.localStorage.setItem('mopp-selected-tournament', selectedTournamentId)
@@ -634,60 +698,74 @@ function App() {
     return [...new Set(all)].sort((a, b) => a - b)
   }, [matches])
 
-  const rankTimeline = useMemo(() => {
-    if (rounds.length === 0) return { rounds: [], series: [] }
-
-    const inProgress = matches
-      .filter((match) => !match.score || match.tips.some((tip) => tip.points === null))
-      .map((match) => extractRound(match))
-      .filter((value) => value !== null)
-
-    const derivedCurrentRound = inProgress.length > 0 ? Math.min(...inProgress) : rounds[rounds.length - 1] ?? 1
-
-    const playedRounds = matches
-      .filter((match) => match.score && match.score !== '--:--')
-      .map((match) => extractRound(match))
-      .filter((value) => value !== null)
-
-    const lastPlayedRound = playedRounds.length > 0 ? Math.max(...playedRounds) : derivedCurrentRound
-    const chartEndRound = Math.max(derivedCurrentRound, lastPlayedRound)
-    const chartRounds = rounds.filter((round) => round <= chartEndRound)
-    if (chartRounds.length === 0) return { rounds: [], series: [] }
-
-    const playerOrder = scoreboard.map((player) => player.id)
-    const playerMeta = new Map(scoreboard.map((player) => [player.id, player]))
-    const tieBreak = new Map(playerOrder.map((id, index) => [id, index]))
-    const totals = new Map(playerOrder.map((id) => [id, 0]))
-    const matchesByRound = new Map(chartRounds.map((round) => [round, []]))
-
-    for (const match of matches) {
-      const round = extractRound(match)
-      if (!Number.isFinite(round) || !matchesByRound.has(round)) continue
-      matchesByRound.get(round).push(match)
+  const orderedMatches = useMemo(() => {
+    const toMatchNumber = (matchId) => {
+      const numeric = Number(String(matchId ?? '').replace(/\D+/g, ''))
+      return Number.isFinite(numeric) ? numeric : Number.MAX_SAFE_INTEGER
     }
 
+    return [...matches].sort((a, b) => {
+      const roundA = extractRound(a)
+      const roundB = extractRound(b)
+      if (Number.isFinite(roundA) && Number.isFinite(roundB) && roundA !== roundB) return roundA - roundB
+
+      const dateA = parseMatchDate(a?.startsAt)?.getTime()
+      const dateB = parseMatchDate(b?.startsAt)?.getTime()
+      const hasDateA = Number.isFinite(dateA)
+      const hasDateB = Number.isFinite(dateB)
+      if (hasDateA && hasDateB && dateA !== dateB) return dateA - dateB
+      if (hasDateA !== hasDateB) return hasDateA ? -1 : 1
+
+      return toMatchNumber(a?.id) - toMatchNumber(b?.id)
+    })
+  }, [matches])
+
+  const rankSnapshotByMatchId = useMemo(
+    () => buildMatchRankSnapshots(orderedMatches, players),
+    [orderedMatches, players],
+  )
+
+  const currentViewState = viewStateByTournament[selectedTournamentId] ?? {}
+  const rankChartView = currentViewState.rankChartView ?? 'match'
+
+  const rankTimeline = useMemo(() => {
+    if (orderedMatches.length === 0) return { rounds: [], series: [], axisLabel: 'Zápas turnaje' }
+
+    const isMatchEvaluated = (match) => {
+      if (!match?.score || match.score === '--:--') return false
+      return (match.tips ?? []).every((tip) => Number.isFinite(tip.points))
+    }
+
+    const evaluatedMatches = orderedMatches.filter((match) => isMatchEvaluated(match))
+    if (evaluatedMatches.length === 0) return { rounds: [], series: [], axisLabel: 'Zápas turnaje' }
+
+    const timelineEntries = rankChartView === 'day'
+      ? (() => {
+        const lastMatchByRound = new Map()
+        for (const match of evaluatedMatches) {
+          const round = extractRound(match)
+          if (!Number.isFinite(round)) continue
+          lastMatchByRound.set(round, match)
+        }
+
+        const roundEntries = [...lastMatchByRound.entries()]
+          .sort((a, b) => a[0] - b[0])
+          .map(([round, match]) => ({ label: round, match }))
+
+        if (roundEntries.length > 0) return roundEntries
+        return evaluatedMatches.map((match, index) => ({ label: index + 1, match }))
+      })()
+      : evaluatedMatches.map((match, index) => ({ label: index + 1, match }))
+
+    const playerOrder = players.map((player) => player.id)
+    const playerMeta = new Map(scoreboard.map((player) => [player.id, player]))
     const rankByPlayer = new Map(playerOrder.map((id) => [id, []]))
 
-    for (const round of chartRounds) {
-      const roundMatches = matchesByRound.get(round) ?? []
-
-      for (const match of roundMatches) {
-        for (const tip of match.tips ?? []) {
-          if (!totals.has(tip.playerId)) continue
-          const gained = Number.isFinite(tip.points) ? tip.points : 0
-          totals.set(tip.playerId, totals.get(tip.playerId) + gained)
-        }
+    for (const entry of timelineEntries) {
+      const rankSnapshot = rankSnapshotByMatchId.get(entry.match.id)
+      for (const playerId of playerOrder) {
+        rankByPlayer.get(playerId).push(rankSnapshot?.get(playerId) ?? null)
       }
-
-      const sorted = [...playerOrder].sort((a, b) => {
-        const diff = (totals.get(b) ?? 0) - (totals.get(a) ?? 0)
-        if (diff !== 0) return diff
-        return (tieBreak.get(a) ?? 0) - (tieBreak.get(b) ?? 0)
-      })
-
-      sorted.forEach((playerId, index) => {
-        rankByPlayer.get(playerId).push(index + 1)
-      })
     }
 
     const series = playerOrder.map((playerId, index) => ({
@@ -697,8 +775,12 @@ function App() {
       ranks: rankByPlayer.get(playerId) ?? [],
     }))
 
-    return { rounds: chartRounds, series }
-  }, [matches, rounds, scoreboard])
+    return {
+      rounds: timelineEntries.map((entry) => entry.label),
+      series,
+      axisLabel: rankChartView === 'day' ? 'Den turnaje' : 'Zápas turnaje',
+    }
+  }, [orderedMatches, players, scoreboard, rankSnapshotByMatchId, rankChartView])
 
   const currentRound = useMemo(() => {
     const inProgress = matches
@@ -710,8 +792,6 @@ function App() {
     return rounds[rounds.length - 1] ?? 1
   }, [matches, rounds])
 
-  const [viewStateByTournament, setViewStateByTournament] = useState({})
-  const currentViewState = viewStateByTournament[selectedTournamentId] ?? {}
   const selectedRound = currentViewState.selectedRound ?? currentRound
   const hidePlayedRounds = currentViewState.hidePlayedRounds ?? false
   const visiblePlayerIds = currentViewState.visiblePlayerIds ?? scoreboard.map((player) => player.id)
@@ -797,6 +877,13 @@ function App() {
     updateCurrentTournamentState((current) => ({
       standingsMetric:
         typeof value === 'function' ? value(current.standingsMetric ?? 'points') : value,
+    }))
+  }
+
+  const setRankChartView = (value) => {
+    updateCurrentTournamentState((current) => ({
+      rankChartView:
+        typeof value === 'function' ? value(current.rankChartView ?? 'match') : value,
     }))
   }
 
@@ -889,8 +976,8 @@ function App() {
   }, [visibleRounds])
 
   const roundMatches = useMemo(
-    () => matches.filter((match) => extractRound(match) === effectiveSelectedRound),
-    [matches, effectiveSelectedRound],
+    () => orderedMatches.filter((match) => extractRound(match) === effectiveSelectedRound),
+    [orderedMatches, effectiveSelectedRound],
   )
 
   const roundDateLabel = useMemo(() => {
@@ -1342,31 +1429,13 @@ function App() {
     const series = rankTimeline.series.find((player) => player.id === effectiveSelectedPlayerId)
     if (!series || series.ranks.length === 0) return null
 
-    const preferredRounds = selectedPlayerProfile?.recentRounds ?? []
-    const windowRounds = preferredRounds.length > 0
-      ? rankTimeline.rounds.filter((round) => preferredRounds.includes(round))
-      : rankTimeline.rounds
-    const roundIndexByValue = new Map(rankTimeline.rounds.map((round, index) => [round, index]))
-    const ranks = windowRounds
-      .map((round) => series.ranks[roundIndexByValue.get(round)])
-      .filter((rank) => Number.isFinite(rank))
-
-    if (windowRounds.length === 0 || ranks.length === 0) {
-      return {
-        ...series,
-        rounds: rankTimeline.rounds,
-        ranks: series.ranks,
-        maxRank: rankTimeline.series.length,
-      }
-    }
-
     return {
       ...series,
-      rounds: windowRounds,
-      ranks,
+      rounds: rankTimeline.rounds,
+      ranks: series.ranks,
       maxRank: rankTimeline.series.length,
     }
-  }, [effectiveSelectedPlayerId, rankTimeline, selectedPlayerProfile])
+  }, [effectiveSelectedPlayerId, rankTimeline])
 
   const selectedPlayerPlacement = useMemo(() => {
     if (!effectiveSelectedPlayerId) return null
@@ -1413,40 +1482,30 @@ function App() {
     [selectedMatch, selectedTournament],
   )
 
-  const rankByPlayerForSelectedRound = useMemo(() => {
-    const fallback = new Map(scoreboard.map((player, index) => [player.id, index + 1]))
-    const roundIndex = rankTimeline.rounds.indexOf(effectiveSelectedRound)
-    if (roundIndex < 0) return fallback
-
-    const byRound = new Map()
-    for (const series of rankTimeline.series) {
-      const rank = series.ranks[roundIndex]
-      if (Number.isFinite(rank)) {
-        byRound.set(series.id, rank)
-      }
-    }
-
-    return byRound.size > 0 ? byRound : fallback
-  }, [rankTimeline, scoreboard, effectiveSelectedRound])
-
-  const rankByPlayerForPreviousRound = useMemo(() => {
-    const roundIndex = rankTimeline.rounds.indexOf(effectiveSelectedRound)
-    if (roundIndex <= 0) return new Map()
-
-    const byRound = new Map()
-    for (const series of rankTimeline.series) {
-      const rank = series.ranks[roundIndex - 1]
-      if (Number.isFinite(rank)) {
-        byRound.set(series.id, rank)
-      }
-    }
-
-    return byRound
-  }, [rankTimeline, effectiveSelectedRound])
-
   const selectedMatchTips = useMemo(() => {
     if (!selectedMatch) return []
     const isMatchEvaluated = Boolean(selectedMatch.score && selectedMatch.score !== '--:--')
+    const selectedMatchIndex = orderedMatches.findIndex((match) => match.id === selectedMatch.id)
+    const rankByPlayerForSelectedMatch = rankSnapshotByMatchId.get(selectedMatch.id) ?? new Map()
+    const previousMatchId = selectedMatchIndex > 0 ? orderedMatches[selectedMatchIndex - 1]?.id : ''
+    const rankByPlayerForPreviousMatch = previousMatchId
+      ? rankSnapshotByMatchId.get(previousMatchId) ?? new Map()
+      : new Map()
+
+    const cumulativePointsByPlayer = new Map(players.map((player) => [player.id, 0]))
+    if (selectedMatchIndex >= 0) {
+      for (let index = 0; index <= selectedMatchIndex; index += 1) {
+        const match = orderedMatches[index]
+        for (const tip of match?.tips ?? []) {
+          if (!cumulativePointsByPlayer.has(tip.playerId)) continue
+          if (!Number.isFinite(tip.points)) continue
+          cumulativePointsByPlayer.set(
+            tip.playerId,
+            (cumulativePointsByPlayer.get(tip.playerId) ?? 0) + tip.points,
+          )
+        }
+      }
+    }
 
     const playerOrder = new Map(players.map((player, index) => [player.id, index]))
     const payoutsByPlayer = calculateMatchPayouts(
@@ -1460,9 +1519,9 @@ function App() {
       .map((tip) => {
         const player = players.find((item) => item.id === tip.playerId)
         const rank =
-          rankByPlayerForSelectedRound.get(tip.playerId) ??
+          rankByPlayerForSelectedMatch.get(tip.playerId) ??
           scoreboard.findIndex((item) => item.id === tip.playerId) + 1
-        const previousRank = rankByPlayerForPreviousRound.get(tip.playerId)
+        const previousRank = rankByPlayerForPreviousMatch.get(tip.playerId)
         const canShowRankDelta = isMatchEvaluated && Number.isFinite(tip.points)
         const rankDelta = canShowRankDelta && Number.isFinite(previousRank) ? previousRank - rank : 0
         const payout = payoutsByPlayer.get(tip.playerId) ?? 0
@@ -1472,11 +1531,12 @@ function App() {
           tipNote: formatTipNote(tip.updatedAt, tip.updatedState),
           rank,
           rankDelta,
+          totalPoints: cumulativePointsByPlayer.get(tip.playerId) ?? 0,
           payout,
         }
       })
       .sort((a, b) => a.rank - b.rank)
-  }, [players, rankByPlayerForPreviousRound, rankByPlayerForSelectedRound, scoreboard, selectedMatch, remainderRecipientByMatchId])
+  }, [orderedMatches, players, rankSnapshotByMatchId, scoreboard, selectedMatch, remainderRecipientByMatchId])
 
   const [syncMessage, setSyncMessage] = useState('')
   const [showSyncTooltip, setShowSyncTooltip] = useState(false)
@@ -2105,18 +2165,32 @@ function App() {
               */}
 
               <section className="player-rank-mini" aria-label="Vývoj pořadí hráče">
-                <h3>Vývoj pořadí hráče</h3>
+                <div className="player-rank-mini-head">
+                  <h3>Vývoj pořadí hráče ({rankChartView === 'day' ? 'po dnech' : 'po zápasech'})</h3>
+                  <span className="standings-metric-shell">
+                    <select
+                      className="standings-metric-select"
+                      aria-label="Zobrazení vývoje pořadí"
+                      value={rankChartView}
+                      onChange={(event) => setRankChartView(event.target.value)}
+                    >
+                      <option value="day">Po dnech</option>
+                      <option value="match">Po zápasech</option>
+                    </select>
+                  </span>
+                </div>
                 {selectedPlayerRankSeries ? (
                   <div className="player-rank-mini-wrap" role="img" aria-label={`Vývoj pořadí hráče ${selectedPlayerProfile.name}`}>
                     {(() => {
                       const width = 940
-                      const height = 104
-                      const margin = { top: 12, right: 20, bottom: 24, left: 36 }
+                      const height = 116
+                      const margin = { top: 12, right: 20, bottom: 32, left: 36 }
                       const innerWidth = width - margin.left - margin.right
                       const innerHeight = height - margin.top - margin.bottom
                       const rounds = selectedPlayerRankSeries.rounds
                       const ranks = selectedPlayerRankSeries.ranks
                       const maxRank = selectedPlayerRankSeries.maxRank
+                      const tickIndexes = buildXAxisTickIndexes(rounds.length, 20)
                       const stepX = rounds.length > 1 ? innerWidth / (rounds.length - 1) : 0
                       const rankToY = (rank) => margin.top + ((rank - 1) / Math.max(1, maxRank - 1)) * innerHeight
                       const indexToX = (index) => margin.left + index * stepX
@@ -2150,15 +2224,17 @@ function App() {
                           ))}
 
                           {rounds.map((round, index) => (
-                            <text
-                              key={`mini-x-${round}`}
-                              x={indexToX(index)}
-                              y={height - 8}
-                              textAnchor="middle"
-                              className="rank-axis-label"
-                            >
-                              {round}
-                            </text>
+                            tickIndexes.has(index) ? (
+                              <text
+                                key={`mini-x-${round}`}
+                                x={indexToX(index)}
+                                y={height - 18}
+                                textAnchor="middle"
+                                className="rank-axis-label"
+                              >
+                                {round}
+                              </text>
+                            ) : null
                           ))}
 
                           <path d={path} stroke={selectedPlayerRankSeries.color} className="rank-line" />
@@ -2566,9 +2642,10 @@ function App() {
                   <span>Poř.</span>
                   <span className="tips-head-shift" aria-hidden="true" />
                   <span>Hráč</span>
-                  <span>Výhra</span>
                   <span>Tip</span>
-                  <span>Body</span>
+                  <span>Výhra</span>
+                  <span>Celkem</span>
+                  <span>Zápas</span>
                 </div>
 
                 {selectedMatchTips.map((tip) => (
@@ -2599,13 +2676,16 @@ function App() {
                       {tip.tipNote ? <span className="tip-note">{tip.tipNote}</span> : null}
                     </span>
 
+                    <span className="tip-value">
+                      <SplitTip value={tip.pick} />
+                    </span>
+
                     <span className="payout-cell">
                       {tip.payout > 0 ? <span className="payout-badge">+{tip.payout} Kč</span> : null}
                     </span>
 
-                    <span className="tip-value">
-                      <SplitTip value={tip.pick} />
-                    </span>
+                    <span className="total-points-cell">{tip.totalPoints}</span>
+
                     <span className={pointsClass(tip.points)}>
                       {tip.points === null ? '-' : `${tip.points} b`}
                     </span>
@@ -2668,8 +2748,18 @@ function App() {
 
       <section className="panel rank-chart-panel">
         <div className="panel-head">
-          <h2>Vývoj pořadí hráčů</h2>
-          <span className="tag">od 1. dne</span>
+          <h2>Vývoj pořadí hráčů ({rankChartView === 'day' ? 'po dnech' : 'po zápasech'})</h2>
+          <span className="standings-metric-shell">
+            <select
+              className="standings-metric-select"
+              aria-label="Zobrazení vývoje pořadí"
+              value={rankChartView}
+              onChange={(event) => setRankChartView(event.target.value)}
+            >
+              <option value="day">Po dnech</option>
+              <option value="match">Po zápasech</option>
+            </select>
+          </span>
         </div>
 
         {rankTimeline.rounds.length > 0 ? (
@@ -2683,6 +2773,7 @@ function App() {
                 const innerHeight = height - margin.top - margin.bottom
                 const maxRank = rankTimeline.series.length
                 const stepX = rankTimeline.rounds.length > 1 ? innerWidth / (rankTimeline.rounds.length - 1) : 0
+                const tickIndexes = buildXAxisTickIndexes(rankTimeline.rounds.length, 24)
                 const rankToY = (rank) => margin.top + ((rank - 1) / Math.max(1, maxRank - 1)) * innerHeight
                 const indexToX = (index) => margin.left + index * stepX
                 const visibleSeries = rankTimeline.series.filter((player) => normalizedVisiblePlayerIds.includes(player.id))
@@ -2700,28 +2791,28 @@ function App() {
                           y2={rankToY(rank)}
                           className="rank-grid-line"
                         />
-                        {rank <= 5 || rank === maxRank ? (
-                          <text x={8} y={rankToY(rank) + 4} className="rank-axis-label">
-                            {rank}.
-                          </text>
-                        ) : null}
+                        <text x={8} y={rankToY(rank) + 4} className="rank-axis-label">
+                          {rank}.
+                        </text>
                       </g>
                     ))}
 
                     {rankTimeline.rounds.map((round, index) => (
-                      <text
-                        key={`x-${round}`}
-                        x={indexToX(index)}
-                        y={height - 20}
-                        textAnchor="middle"
-                        className="rank-axis-label"
-                      >
-                        {round}
-                      </text>
+                      tickIndexes.has(index) ? (
+                        <text
+                          key={`x-${round}`}
+                          x={indexToX(index)}
+                          y={height - 20}
+                          textAnchor="middle"
+                          className="rank-axis-label"
+                        >
+                          {round}
+                        </text>
+                      ) : null
                     ))}
 
                     <text x={width / 2} y={height - 4} textAnchor="middle" className="rank-axis-title">
-                      Den turnaje
+                      {rankTimeline.axisLabel}
                     </text>
 
                     {visibleSeries.map((player) => {

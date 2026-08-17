@@ -362,40 +362,54 @@ function toTipTimestampMs(value) {
   return Number.isFinite(parsed) ? parsed : Number.NaN
 }
 
-function buildMatchRankSnapshots(matches, players) {
+function comparePlayersByTieBreak(a, b, statsByPlayer, fallbackOrder, tieBreakOrder = []) {
+  const pointsDiff = (Number(b.points) || 0) - (Number(a.points) || 0)
+  if (pointsDiff !== 0) return pointsDiff
+
+  const aStats = statsByPlayer.get(a.id) ?? {}
+  const bStats = statsByPlayer.get(b.id) ?? {}
+  for (const criterion of tieBreakOrder) {
+    if (criterion === 'exact') {
+      const diff = (Number(bStats.exact) || 0) - (Number(aStats.exact) || 0)
+      if (diff !== 0) return diff
+    }
+    if (criterion === 'scored') {
+      const diff = (Number(bStats.scored) || 0) - (Number(aStats.scored) || 0)
+      if (diff !== 0) return diff
+    }
+    if (criterion === 'noBet') {
+      const diff = (Number(aStats.noBet) || 0) - (Number(bStats.noBet) || 0)
+      if (diff !== 0) return diff
+    }
+  }
+
+  return (fallbackOrder.get(a.id) ?? 999) - (fallbackOrder.get(b.id) ?? 999)
+}
+
+function rankPlayersByLongTermBank(players, statsByPlayer, tieBreakOrder) {
+  const fallbackOrder = new Map(players.map((player, index) => [player.id, index]))
+  return [...players].sort((a, b) => comparePlayersByTieBreak(a, b, statsByPlayer, fallbackOrder, tieBreakOrder))
+}
+
+function buildMatchRankSnapshots(matches, players, tieBreakOrder) {
   const playerIds = players.map((player) => player.id)
-  const fallbackOrder = new Map(playerIds.map((playerId, index) => [playerId, index]))
   const totals = new Map(playerIds.map((playerId) => [playerId, 0]))
+  const statsByPlayer = new Map(playerIds.map((playerId) => [playerId, { exact: 0, scored: 0, noBet: 0 }]))
   const snapshots = new Map()
 
   for (const match of matches) {
-    const tipTimestampByPlayer = new Map(
-      (match?.tips ?? [])
-        .map((tip) => [tip.playerId, toTipTimestampMs(tip.updatedAt)])
-        .filter(([, timestamp]) => Number.isFinite(timestamp)),
-    )
-
     for (const tip of match?.tips ?? []) {
       if (!totals.has(tip.playerId)) continue
       const gained = Number.isFinite(tip.points) ? tip.points : 0
       totals.set(tip.playerId, (totals.get(tip.playerId) ?? 0) + gained)
+      const stats = statsByPlayer.get(tip.playerId)
+      if (tip.points === 10) stats.exact += 1
+      if (tip.points === 10 || tip.points === 5 || tip.points === 3) stats.scored += 1
+      if (isNoBetPick(tip.pick)) stats.noBet += 1
     }
 
-    const sortedPlayerIds = [...playerIds].sort((a, b) => {
-      const diff = (totals.get(b) ?? 0) - (totals.get(a) ?? 0)
-      if (diff !== 0) return diff
-
-      const aTimestamp = tipTimestampByPlayer.get(a)
-      const bTimestamp = tipTimestampByPlayer.get(b)
-      const aHasTimestamp = Number.isFinite(aTimestamp)
-      const bHasTimestamp = Number.isFinite(bTimestamp)
-
-      if (aHasTimestamp && bHasTimestamp && aTimestamp !== bTimestamp) {
-        return aTimestamp - bTimestamp
-      }
-
-      return (fallbackOrder.get(a) ?? 999) - (fallbackOrder.get(b) ?? 999)
-    })
+    const rankingPlayers = players.map((player) => ({ ...player, points: totals.get(player.id) ?? 0 }))
+    const sortedPlayerIds = rankPlayersByLongTermBank(rankingPlayers, statsByPlayer, tieBreakOrder).map((player) => player.id)
 
     const rankByPlayer = new Map()
     sortedPlayerIds.forEach((playerId, index) => {
@@ -642,6 +656,18 @@ function App() {
 
   const longTermPayoutByPlayer = useMemo(() => {
     const payouts = new Map(players.map((player) => [player.id, 0]))
+    const statsByPlayer = new Map(players.map((player) => [player.id, { exact: 0, near: 0, win: 0, scored: 0, noBet: 0 }]))
+    for (const match of matches) {
+      for (const tip of match.tips ?? []) {
+        const stats = statsByPlayer.get(tip.playerId)
+        if (!stats) continue
+        if (tip.points === 10) stats.exact += 1
+        if (tip.points === 5) stats.near += 1
+        if (tip.points === 3) stats.win += 1
+        if (tip.points === 10 || tip.points === 5 || tip.points === 3) stats.scored += 1
+        if (isNoBetPick(tip.pick)) stats.noBet += 1
+      }
+    }
     const payoutConfig = (selectedTournament?.longTermBank?.payouts ?? [])
       .map((item) => ({
         place: Number(item?.place),
@@ -649,14 +675,15 @@ function App() {
       }))
       .filter((item) => Number.isFinite(item.place) && item.place >= 1 && item.amount > 0)
 
+    const bankRankedPlayers = rankPlayersByLongTermBank(players, statsByPlayer, selectedTournament?.tieBreakOrder)
     for (const payout of payoutConfig) {
-      const playerAtPlace = scoreboard[payout.place - 1]
+      const playerAtPlace = bankRankedPlayers[payout.place - 1]
       if (!playerAtPlace) continue
       payouts.set(playerAtPlace.id, (payouts.get(playerAtPlace.id) ?? 0) + payout.amount)
     }
 
     return payouts
-  }, [players, scoreboard, selectedTournament])
+  }, [matches, players, selectedTournament])
 
   const standings = useMemo(
     () =>
@@ -721,8 +748,8 @@ function App() {
   }, [matches])
 
   const rankSnapshotByMatchId = useMemo(
-    () => buildMatchRankSnapshots(orderedMatches, players),
-    [orderedMatches, players],
+    () => buildMatchRankSnapshots(orderedMatches, players, selectedTournament?.tieBreakOrder),
+    [orderedMatches, players, selectedTournament?.tieBreakOrder],
   )
 
   const currentViewState = viewStateByTournament[selectedTournamentId] ?? {}
@@ -1544,7 +1571,8 @@ function App() {
 
   const standingsMetricOptions = [
     { value: 'points', label: 'Vše' },
-    { value: 'winnings', label: 'Peníze' },
+    { value: 'totalWinnings', label: `Pen${String.fromCharCode(237)}ze` },
+    { value: 'winnings', label: 'Tipy' },
     { value: 'exact', label: '10 bodů' },
     { value: 'near', label: '5 bodů' },
     { value: 'win', label: '3 body' },
@@ -1556,6 +1584,7 @@ function App() {
     standingsMetricOptions.find((option) => option.value === standingsMetric)?.label ?? 'Vše'
 
   const getStandingsMetricValue = (player, metric) => {
+    if (metric === 'totalWinnings') return Number(player.winnings) || 0
     if (metric === 'winnings') return Number(player.matchWinnings) || 0
     if (metric === 'exact') return Number(player.stats?.exact) || 0
     if (metric === 'near') return Number(player.stats?.near) || 0
@@ -1566,6 +1595,7 @@ function App() {
   }
 
   const formatStandingsMetricValue = (player, metric) => {
+    if (metric === 'totalWinnings') return `${Number(player.winnings) || 0} Kč`
     if (metric === 'winnings') return `${Number(player.matchWinnings) || 0} Kč`
     if (metric === 'exact') return `${Number(player.stats?.exact) || 0}×`
     if (metric === 'near') return `${Number(player.stats?.near) || 0}×`
@@ -1601,11 +1631,11 @@ function App() {
 
     const applyLongTermPayout = (baseRows) => {
       const longTermByPlayer = new Map(baseRows.map((player) => [player.id, 0]))
-      const pointsRankedRows = [...baseRows].sort((a, b) => {
-        const diff = (Number(b.points) || 0) - (Number(a.points) || 0)
-        if (diff !== 0) return diff
-        return (playerOrder.get(a.id) ?? 999) - (playerOrder.get(b.id) ?? 999)
-      })
+      const fullStandingByPlayer = new Map(standings.map((player) => [player.id, player]))
+      const bankStatsByPlayer = new Map(
+        scoreboard.map((player) => [player.id, fullStandingByPlayer.get(player.id)?.stats ?? {}]),
+      )
+      const pointsRankedRows = rankPlayersByLongTermBank(scoreboard, bankStatsByPlayer, selectedTournament?.tieBreakOrder)
 
       for (const payout of payoutConfig) {
         const playerAtPlace = pointsRankedRows[payout.place - 1]
@@ -2009,6 +2039,8 @@ function App() {
           <div className="standings-list">
             {displayedStandings.map((player, index) => {
               const winningsBreakdown = getStandingsWinningsBreakdown(player)
+              const isMoneyMetric = standingsMetric === 'winnings' || standingsMetric === 'totalWinnings'
+              const isTipsMetric = standingsMetric === 'winnings'
               return (
               <article className="stand-card" key={player.id}>
                 <div className="stand-top">
@@ -2026,7 +2058,7 @@ function App() {
                   <strong className="stand-points">{formatStandingsMetricValue(player, standingsMetric)}</strong>
                 </div>
 
-                {standingsMetric !== 'winnings' ? (
+                {!isMoneyMetric ? (
                 <div className="stand-bottom">
                   <div className="stand-stats">
                     <span className={`stat-pill is-exact ${standingsMetric === 'exact' ? 'is-active' : ''}`.trim()}>
@@ -2062,13 +2094,27 @@ function App() {
                   ) : null}
                 </div>
                 ) : null}
-                {standingsMetric === 'winnings' ? (
+                {isMoneyMetric ? (
                   <p
                     className={`stand-bank-note ${winningsBreakdown ? '' : 'is-hidden'}`.trim()}
                     title={winningsBreakdown ? `Dlouhodobý bank: +${winningsBreakdown.longTermPayout} Kč` : undefined}
                   >
-                    <span className="bank-icon" aria-hidden="true">💰</span>
-                    <span>{winningsBreakdown ? `+${winningsBreakdown.longTermPayout} Kč` : '+'}</span>
+                    {winningsBreakdown ? (
+                      isTipsMetric ? (
+                        <>
+                          <span className="bank-icon" aria-hidden="true">💰</span>
+                          <span>{`+${winningsBreakdown.longTermPayout} Kč`}</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>{`${winningsBreakdown.matchWinnings} Kč +`}</span>
+                          <span className="bank-icon" aria-hidden="true">💰</span>
+                          <span>{`${winningsBreakdown.longTermPayout} Kč`}</span>
+                        </>
+                      )
+                    ) : (
+                      '+'
+                    )}
                   </p>
                 ) : null}
               </article>
@@ -2828,7 +2874,13 @@ function App() {
                             d={path}
                             stroke={player.color}
                             className={`rank-line ${hasHover && !isHovered ? 'is-dim' : ''} ${isHovered ? 'is-highlight' : ''}`.trim()}
-                          />
+                            aria-label={`Hráč ${player.name}`}
+                            onMouseEnter={() => setHoveredPlayerId(player.id)}
+                            onMouseLeave={() => setHoveredPlayerId('')}
+                            onClick={() => setHoveredPlayerId(player.id)}
+                          >
+                            <title>{player.name}</title>
+                          </path>
                           {player.ranks.map((rank, index) => (
                             <circle
                               key={`${player.id}-pt-${index}`}
@@ -2837,7 +2889,13 @@ function App() {
                               r="2.6"
                               fill={player.color}
                               className={`rank-line-end ${hasHover && !isHovered ? 'is-dim' : ''} ${isHovered ? 'is-highlight' : ''}`.trim()}
-                            />
+                              aria-label={`Hráč ${player.name}`}
+                              onMouseEnter={() => setHoveredPlayerId(player.id)}
+                              onMouseLeave={() => setHoveredPlayerId('')}
+                              onClick={() => setHoveredPlayerId(player.id)}
+                            >
+                              <title>{player.name}</title>
+                            </circle>
                           ))}
                         </g>
                       )
@@ -2851,7 +2909,7 @@ function App() {
               {rankTimeline.series.map((player) => (
                 <button
                   type="button"
-                  className={`rank-legend-item ${normalizedVisiblePlayerIds.includes(player.id) ? '' : 'is-muted'} ${hoveredPlayerId === player.id ? 'is-hover' : ''}`.trim()}
+                  className={`rank-legend-item ${normalizedVisiblePlayerIds.includes(player.id) ? '' : 'is-muted'} ${hoveredPlayerId && hoveredPlayerId !== player.id ? 'is-dim' : ''} ${hoveredPlayerId === player.id ? 'is-hover' : ''}`.trim()}
                   key={`legend-${player.id}`}
                   onClick={() => {
                     if (touchLegendHandledRef.current) {
@@ -2887,7 +2945,7 @@ function App() {
                 <span className="tip-callout-icon" aria-hidden="true">i</span>
                 <span className="tip-callout-label">Tip:</span>
               </span>
-              <span className="tip-callout-text">přejetím přes jméno hráče v legendě grafu čáru zvýrazníš, kliknutím na jméno hráče čáru skryješ/zobrazíš.</span>
+              <span className="tip-callout-text">přejetím přes jméno v legendě nebo přes čáru či bod grafu zobrazíš hráče v tooltipu a zvýrazníš jeho jméno; kliknutím na jméno hráče čáru skryješ/zobrazíš.</span>
             </p>
           </>
         ) : (

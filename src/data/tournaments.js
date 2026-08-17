@@ -47,6 +47,7 @@ export const tournaments = [
         'Pokud je i zde rovnost, rozhoduje menší počet netipovaných výsledků.',
         'V případě i této rovnosti následuje los :-)',
       ],
+      tieBreakOrder: ['exact', 'scored', 'noBet'],
     },
     // Nouzova zaloha: kdyby nebyl dostupny tip-stamp list, docasne odkomentuj
     // manualTipTimestampEntries: [
@@ -81,6 +82,7 @@ export const tournaments = [
         'Pokud je i zde rovnost, rozhoduje menší počet netipovaných výsledků.',
         'V případě i této rovnosti následuje los :-)',
       ],
+      tieBreakOrder: ['exact', 'scored', 'noBet'],
     },
     // Nouzova zaloha: kdyby nebyl dostupny tip-stamp list, docasne odkomentuj 3 řádky níže
     // manualTipTimestampEntries: [

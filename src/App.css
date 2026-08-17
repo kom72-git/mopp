@@ -2111,6 +2111,7 @@
   border: 1px solid #d4e4f2;
   border-radius: 999px;
   padding: 0.1rem 0.42rem;
+  transition: opacity 140ms ease, filter 140ms ease, color 140ms ease, background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
 }
 
 .rank-legend-item.is-muted {
@@ -2118,9 +2119,16 @@
   filter: grayscale(0.15);
 }
 
+.rank-legend-item.is-dim {
+  opacity: 0.28;
+  filter: grayscale(0.75);
+}
+
 .rank-legend-item.is-hover {
-  border-color: #8fb7da;
-  background: #e7f2fc;
+  color: #0b3f6b;
+  border-color: #4e93c7;
+  background: #d7edff;
+  box-shadow: 0 0 0 2px rgb(78 147 199 / 24%), 0 2px 7px rgb(27 78 117 / 18%);
 }
 
 .rank-legend-dot {

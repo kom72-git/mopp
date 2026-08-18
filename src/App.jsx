@@ -4,6 +4,8 @@ import { matches as fallbackMatches, players as fallbackPlayers } from './data/m
 import { defaultTournamentId, getTournamentById, tournaments } from './data/tournaments'
 import { getFlagUrl } from './data/countryFlags'
 import { getTeamLogoUrl } from './data/teamLogos'
+import AdminPanel from './components/AdminPanel'
+import PlayerTipsPanel from './components/PlayerTipsPanel'
 
 // Volitelny rucni bonus navic mimo vyhry ze zapasu.
 // Tady pridej extra castky, ktere chces pricist k automatickemu souctu vyher.
@@ -195,6 +197,138 @@ function StartsAtLabel({ startsAt, matchId }) {
       <span>{parts.dayName}</span>
       <span className="starts-at-date">{parts.rest}</span>
     </span>
+  )
+}
+
+function AuthPanel() {
+  const [user, setUser] = useState(null)
+  const [mode, setMode] = useState('login')
+  const [isOpen, setIsOpen] = useState(false)
+  const [activePanel, setActivePanel] = useState('tips')
+  const [form, setForm] = useState({ usernameOrEmail: '', username: '', email: '', password: '', resetToken: '' })
+  const [message, setMessage] = useState('')
+  const [isBusy, setIsBusy] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/auth/me', { credentials: 'include' })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((payload) => setUser(payload?.user ?? null))
+      .catch(() => setUser(null))
+  }, [])
+
+  const updateField = (event) => {
+    setForm((current) => ({ ...current, [event.target.name]: event.target.value }))
+  }
+
+  const submit = async (event) => {
+    event.preventDefault()
+    setIsBusy(true)
+    setMessage('')
+
+    try {
+      const endpoint = mode === 'login'
+        ? '/api/auth/login'
+        : mode === 'register'
+          ? '/api/auth/register'
+          : mode === 'forgot'
+            ? '/api/auth/forgot-password'
+            : '/api/auth/reset-password'
+      const body = mode === 'login'
+        ? { usernameOrEmail: form.usernameOrEmail, password: form.password }
+        : mode === 'register'
+          ? { ...form, displayName: form.username, username: form.username }
+          : mode === 'forgot'
+            ? { email: form.email }
+            : { token: form.resetToken, password: form.password }
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(body),
+      })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(payload.message || 'Požadavek se nepodařil')
+      if (mode === 'forgot') {
+        if (payload.devResetToken) {
+          setForm((current) => ({ ...current, resetToken: payload.devResetToken, password: '' }))
+          setMode('reset')
+          setMessage('Lokální resetovací odkaz je připravený. Nastav nové heslo.')
+        } else {
+          setMessage(payload.message)
+        }
+        return
+      }
+      if (mode === 'reset') {
+        setMode('login')
+        setMessage('Heslo bylo změněno. Nyní se můžeš přihlásit.')
+        setForm({ usernameOrEmail: '', username: '', email: '', password: '', resetToken: '' })
+        return
+      }
+      setUser(payload.user)
+      setIsOpen(false)
+      setForm({ usernameOrEmail: '', username: '', email: '', password: '', resetToken: '' })
+    } catch (error) {
+      setMessage(error.message)
+    } finally {
+      setIsBusy(false)
+    }
+  }
+
+  const logout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
+    setUser(null)
+  }
+
+  return (
+    <div className="auth-panel">
+      {user ? (
+        <>
+          <span className="auth-user">{user.displayName || user.username}</span>
+          <button type="button" className="auth-button" onClick={logout}>Odhlásit</button>
+          <div className="auth-panel-tabs">
+            <button type="button" className={`auth-button ${activePanel === 'tips' ? 'is-active' : ''}`} onClick={() => setActivePanel('tips')}>Moje tipy</button>
+            {user.role === 'admin' ? <button type="button" className={`auth-button ${activePanel === 'admin' ? 'is-active' : ''}`} onClick={() => setActivePanel('admin')}>Admin</button> : null}
+          </div>
+          {activePanel === 'admin' && user.role === 'admin' ? <AdminPanel /> : <PlayerTipsPanel />}
+        </>
+      ) : (
+        <>
+          <button type="button" className="auth-button" onClick={() => { setIsOpen((current) => !current); setMessage('') }}>
+            {isOpen ? 'Zavřít' : 'Přihlásit se'}
+          </button>
+          {isOpen ? (
+            <form className="auth-form" onSubmit={submit}>
+              {mode !== 'reset' ? (
+                <div className="auth-mode-tabs">
+                  <button type="button" className={mode === 'login' ? 'is-active' : ''} onClick={() => { setMode('login'); setMessage('') }}>Přihlášení</button>
+                  <button type="button" className={mode === 'register' ? 'is-active' : ''} onClick={() => { setMode('register'); setMessage('') }}>Registrace</button>
+                </div>
+              ) : null}
+              {mode === 'register' ? (
+                <>
+                  <input name="username" value={form.username} onChange={updateField} placeholder="Jméno hráče" aria-label="Jméno hráče" title="Toto jméno se použije pro přihlášení i zobrazení v aplikaci" autoComplete="username" required />
+                  <input name="email" type="email" value={form.email} onChange={updateField} placeholder="E-mail" autoComplete="email" required />
+                </>
+              ) : mode === 'forgot' ? (
+                <input name="email" type="email" value={form.email} onChange={updateField} placeholder="E-mail pro obnovu hesla" autoComplete="email" required />
+              ) : mode === 'reset' ? (
+                <input name="password" type="password" value={form.password} onChange={updateField} placeholder="Nové heslo" autoComplete="new-password" required />
+              ) : (
+                <input name="usernameOrEmail" value={form.usernameOrEmail} onChange={updateField} placeholder="Uživatelské jméno nebo e-mail" autoComplete="username" required />
+              )}
+              {mode === 'login' || mode === 'register' ? (
+                <input name="password" type="password" value={form.password} onChange={updateField} placeholder="Heslo" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} required />
+              ) : null}
+              {message ? <p className="auth-message" role="alert">{message}</p> : null}
+              <button type="submit" className="auth-submit" disabled={isBusy}>{isBusy ? 'Pracuji…' : mode === 'login' ? 'Přihlásit' : mode === 'register' ? 'Vytvořit účet' : mode === 'forgot' ? 'Obnovit heslo' : 'Nastavit nové heslo'}</button>
+              {mode === 'login' ? (
+                <button type="button" className="auth-link" onClick={() => { setMode('forgot'); setMessage('') }}>Zapomenuté heslo?</button>
+              ) : null}
+            </form>
+          ) : null}
+        </>
+      )}
+    </div>
   )
 }
 
@@ -1879,6 +2013,7 @@ function App() {
             </span>
             {isLiveLoading ? <span className="tournament-loading">Načítám data…</span> : null}
           </div>
+          <AuthPanel />
         </div>
 
         <figure className="hero-logo-wrap">

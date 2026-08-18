@@ -2,14 +2,28 @@ const express = require("express");
 const cors = require("cors");
 const path = require("path");
 const fs = require("fs/promises");
+require("dotenv").config({ path: path.resolve(__dirname, ".env") });
 const { spawn } = require("child_process");
 const { pathToFileURL } = require("url");
+const { MongoClient } = require("mongodb");
+const { createAuthRoutes } = require("./auth");
 
 const app = express();
 const port = process.env.PORT || 4000;
+const mongoClient = new MongoClient(process.env.MONGODB_URI, {
+  serverSelectionTimeoutMS: 8000,
+});
+let database;
 
-app.use(cors());
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
+
+function getDb() {
+  if (!database) throw new Error("MongoDB není připojená");
+  return database;
+}
+
+createAuthRoutes({ app, getDb });
 
 app.get("/health", (req, res) => {
   res.json({ ok: true, service: "mopp-api" });
@@ -84,6 +98,23 @@ app.post("/api/sync-sheet", (req, res) => {
   });
 });
 
-app.listen(port, () => {
-  console.log(`MOPP API listening on http://localhost:${port}`);
+async function start() {
+  if (!process.env.MONGODB_URI || !process.env.MONGODB_DB_NAME || !process.env.JWT_SECRET) {
+    throw new Error("MONGODB_URI, MONGODB_DB_NAME a JWT_SECRET musí být nastavené");
+  }
+
+  await mongoClient.connect();
+  database = mongoClient.db(process.env.MONGODB_DB_NAME);
+  await database.collection("users").createIndex({ username: 1 }, { unique: true });
+  await database.collection("users").createIndex({ email: 1 }, { unique: true });
+  await database.collection("passwordResetTokens").createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+
+  app.listen(port, () => {
+    console.log(`MOPP API listening on http://localhost:${port}`);
+  });
+}
+
+start().catch((error) => {
+  console.error(`MOPP API start failed: ${error.message}`);
+  process.exit(1);
 });

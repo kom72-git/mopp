@@ -1,0 +1,501 @@
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
+const { ObjectId } = require("mongodb");
+
+const COOKIE_NAME = "mopp_session";
+const SESSION_TTL = "7d";
+
+function publicUser(user) {
+  return {
+    id: user._id.toString(),
+    username: user.username,
+    email: user.email,
+    displayName: user.displayName,
+    role: user.role,
+    status: user.status,
+  };
+}
+
+function signSession(user) {
+  return jwt.sign(
+    { sub: user._id.toString(), role: user.role },
+    process.env.JWT_SECRET,
+    { expiresIn: SESSION_TTL },
+  );
+}
+
+function sessionCookieOptions() {
+  return {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    path: "/",
+  };
+}
+
+function setSessionCookie(res, user) {
+  res.cookie(COOKIE_NAME, signSession(user), sessionCookieOptions());
+}
+
+function clearSessionCookie(res) {
+  res.clearCookie(COOKIE_NAME, { httpOnly: true, sameSite: "lax", path: "/" });
+}
+
+function readSessionToken(req) {
+  const header = req.headers.authorization;
+  if (header?.startsWith("Bearer ")) return header.slice(7);
+
+  const cookies = String(req.headers.cookie ?? "")
+    .split(";")
+    .map((item) => item.trim())
+    .map((item) => {
+      const separator = item.indexOf("=");
+      return separator < 0 ? [item, ""] : [item.slice(0, separator), item.slice(separator + 1)];
+    })
+    .filter(([name]) => name);
+  const value = cookies.find(([name]) => name === COOKIE_NAME)?.[1] ?? "";
+  return decodeURIComponent(value);
+}
+
+function requireJwt(req, res, next) {
+  try {
+    if (!process.env.JWT_SECRET) throw new Error("JWT_SECRET is not configured");
+    req.session = jwt.verify(readSessionToken(req), process.env.JWT_SECRET);
+    return next();
+  } catch {
+    return res.status(401).json({ ok: false, message: "Přihlášení je nutné" });
+  }
+}
+
+function requireRole(role) {
+  return (req, res, next) => {
+    if (req.session?.role !== role) {
+      return res.status(403).json({ ok: false, message: "Nemáš potřebné oprávnění" });
+    }
+    return next();
+  };
+}
+
+function validateRegistration(body) {
+  const username = String(body?.username ?? "").trim().toLowerCase();
+  const email = String(body?.email ?? "").trim().toLowerCase();
+  const password = String(body?.password ?? "");
+  const displayName = String(body?.displayName ?? username).trim();
+
+  if (!/^[a-z0-9_.-]{3,30}$/.test(username)) {
+    return { error: "Uživatelské jméno musí mít 3 až 30 znaků." };
+  }
+  if (!/^\S+@\S+\.\S+$/.test(email)) {
+    return { error: "Zadej platný e-mail." };
+  }
+  if (password.length < 8) {
+    return { error: "Heslo musí mít alespoň 8 znaků." };
+  }
+  if (displayName.length < 1 || displayName.length > 60) {
+    return { error: "Jméno musí mít 1 až 60 znaků." };
+  }
+
+  return { value: { username, email, password, displayName } };
+}
+
+function hashResetToken(token) {
+  return crypto.createHash("sha256").update(token).digest("hex");
+}
+
+function validateNewPassword(password) {
+  if (String(password ?? "").length < 8) return "Heslo musí mít alespoň 8 znaků.";
+  return "";
+}
+
+async function recalculateAutomaticBanks(db, tournamentId) {
+  const matches = await db.collection("matches")
+    .find({ tournamentId })
+    .sort({ startsAt: 1, round: 1 })
+    .toArray();
+  let carriedBank = 0;
+  const playerCount = await db.collection("users").countDocuments({ status: "active" });
+
+  for (const match of matches) {
+    if (match.bankSource === "manual") {
+      carriedBank = match.score || match.status === "evaluated" ? 0 : Number(match.bank) || 0;
+      continue;
+    }
+
+    const entryFee = Number(match.entryFee) || 10;
+    const baseBank = playerCount * entryFee;
+    const bank = baseBank + carriedBank;
+    await db.collection("matches").updateOne(
+      { _id: match._id },
+      { $set: { bank, baseBank, carriedBank, playerCount, entryFee, updatedAt: new Date() } },
+    );
+    carriedBank = match.score || match.status === "evaluated" ? 0 : bank;
+  }
+}
+
+function createAuthRoutes({ app, getDb }) {
+  app.post("/api/auth/register", async (req, res) => {
+    try {
+      const validated = validateRegistration(req.body);
+      if (validated.error) return res.status(400).json({ ok: false, message: validated.error });
+
+      const { username, email, password, displayName } = validated.value;
+      const users = getDb().collection("users");
+      const existing = await users.findOne({ $or: [{ username }, { email }] });
+      if (existing) {
+        return res.status(409).json({ ok: false, message: "Uživatelské jméno nebo e-mail už existuje" });
+      }
+
+      const now = new Date();
+      const user = {
+        username,
+        email,
+        displayName,
+        passwordHash: await bcrypt.hash(password, 12),
+        role: "player",
+        status: "active",
+        createdAt: now,
+        updatedAt: now,
+      };
+      const result = await users.insertOne(user);
+      user._id = result.insertedId;
+      const tournamentIds = await getDb().collection("matches").distinct("tournamentId");
+      await Promise.all(tournamentIds.map((tournamentId) => recalculateAutomaticBanks(getDb(), tournamentId)));
+      setSessionCookie(res, user);
+      return res.status(201).json({ ok: true, user: publicUser(user) });
+    } catch (error) {
+      if (error?.code === 11000) {
+        return res.status(409).json({ ok: false, message: "Uživatelské jméno nebo e-mail už existuje" });
+      }
+      return res.status(500).json({ ok: false, message: "Registrace se nepodařila" });
+    }
+  });
+
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const usernameOrEmail = String(req.body?.usernameOrEmail ?? "").trim().toLowerCase();
+      const password = String(req.body?.password ?? "");
+      const user = await getDb().collection("users").findOne({
+        $or: [{ username: usernameOrEmail }, { email: usernameOrEmail }],
+      });
+
+      if (!user || user.status !== "active" || !(await bcrypt.compare(password, user.passwordHash))) {
+        return res.status(401).json({ ok: false, message: "Neplatné přihlašovací údaje" });
+      }
+
+      setSessionCookie(res, user);
+      return res.json({ ok: true, user: publicUser(user) });
+    } catch {
+      return res.status(500).json({ ok: false, message: "Přihlášení se nepodařilo" });
+    }
+  });
+
+  app.post("/api/auth/logout", (req, res) => {
+    clearSessionCookie(res);
+    return res.json({ ok: true });
+  });
+
+  app.post("/api/auth/forgot-password", async (req, res) => {
+    const response = { ok: true, message: "Pokud účet existuje, pošleme instrukce k obnovení hesla." };
+
+    try {
+      const email = String(req.body?.email ?? "").trim().toLowerCase();
+      if (!/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({ ok: false, message: "Zadej platný e-mail." });
+
+      const user = await getDb().collection("users").findOne({ email, status: "active" });
+      if (!user) return res.json(response);
+
+      const token = crypto.randomBytes(32).toString("hex");
+      await getDb().collection("passwordResetTokens").deleteMany({ userId: user._id });
+      await getDb().collection("passwordResetTokens").insertOne({
+        userId: user._id,
+        tokenHash: hashResetToken(token),
+        expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+        createdAt: new Date(),
+      });
+
+      if (process.env.NODE_ENV !== "production") {
+        return res.json({ ...response, devResetToken: token });
+      }
+      return res.json(response);
+    } catch {
+      return res.json(response);
+    }
+  });
+
+  app.post("/api/auth/reset-password", async (req, res) => {
+    try {
+      const token = String(req.body?.token ?? "").trim();
+      const password = String(req.body?.password ?? "");
+      const passwordError = validateNewPassword(password);
+      if (!token) return res.status(400).json({ ok: false, message: "Resetovací odkaz není platný." });
+      if (passwordError) return res.status(400).json({ ok: false, message: passwordError });
+
+      const tokens = getDb().collection("passwordResetTokens");
+      const reset = await tokens.findOne({ tokenHash: hashResetToken(token), expiresAt: { $gt: new Date() } });
+      if (!reset) return res.status(400).json({ ok: false, message: "Resetovací odkaz není platný nebo vypršel." });
+
+      const passwordHash = await bcrypt.hash(password, 12);
+      const result = await getDb().collection("users").updateOne(
+        { _id: new ObjectId(reset.userId) },
+        { $set: { passwordHash, updatedAt: new Date() } },
+      );
+      await tokens.deleteOne({ _id: reset._id });
+      if (result.matchedCount !== 1) return res.status(400).json({ ok: false, message: "Účet nebyl nalezen." });
+      return res.json({ ok: true, message: "Heslo bylo změněno." });
+    } catch {
+      return res.status(400).json({ ok: false, message: "Resetovací odkaz není platný." });
+    }
+  });
+
+  app.get("/api/auth/me", requireJwt, async (req, res) => {
+    try {
+      const user = await getDb().collection("users").findOne({ _id: new ObjectId(req.session.sub) });
+      if (!user || user.status !== "active") return res.status(401).json({ ok: false, message: "Účet není aktivní" });
+      return res.json({ ok: true, user: publicUser(user) });
+    } catch {
+      return res.status(401).json({ ok: false, message: "Přihlášení je neplatné" });
+    }
+  });
+
+  app.get("/api/auth/admin-check", requireJwt, requireRole("admin"), (req, res) => {
+    res.json({ ok: true, message: "Admin přihlášen" });
+  });
+
+  app.get("/api/player/matches", requireJwt, async (req, res) => {
+    try {
+      const matches = await getDb().collection("matches")
+        .find({ status: "open", startsAt: { $gt: new Date().toISOString() } }, { projection: { tournamentId: 1, round: 1, startsAt: 1, home: 1, away: 1, bank: 1, status: 1 } })
+        .sort({ startsAt: 1 })
+        .toArray();
+      const tips = await getDb().collection("tips")
+        .find({ userId: new ObjectId(req.session.sub) })
+        .toArray();
+      const tipsByMatchId = new Map(tips.map((tip) => [tip.matchId.toString(), tip]));
+      return res.json({
+        ok: true,
+        matches: matches.map((match) => ({
+          ...match,
+          _id: match._id.toString(),
+          tournamentId: match.tournamentId.toString(),
+          tip: tipsByMatchId.get(match._id.toString()) ? {
+            homeScore: tipsByMatchId.get(match._id.toString()).homeScore,
+            awayScore: tipsByMatchId.get(match._id.toString()).awayScore,
+          } : null,
+          canEdit: new Date(match.startsAt).getTime() > Date.now(),
+        })),
+      });
+    } catch {
+      return res.status(500).json({ ok: false, message: "Zápasy se nepodařilo načíst" });
+    }
+  });
+
+  app.put("/api/player/tips/:matchId", requireJwt, async (req, res) => {
+    try {
+      const matchId = String(req.params.matchId ?? "").trim();
+      const homeScore = Number(req.body?.homeScore);
+      const awayScore = Number(req.body?.awayScore);
+      if (!ObjectId.isValid(matchId) || !Number.isInteger(homeScore) || !Number.isInteger(awayScore) || homeScore < 0 || awayScore < 0) {
+        return res.status(400).json({ ok: false, message: "Zadej platné skóre." });
+      }
+
+      const db = getDb();
+      const match = await db.collection("matches").findOne({ _id: new ObjectId(matchId), status: "open" });
+      if (!match || new Date(match.startsAt).getTime() <= Date.now()) {
+        return res.status(409).json({ ok: false, message: "Tento zápas už nelze tipovat." });
+      }
+
+      const now = new Date();
+      await db.collection("tips").updateOne(
+        { matchId: match._id, userId: new ObjectId(req.session.sub) },
+        { $set: { homeScore, awayScore, updatedAt: now }, $setOnInsert: { createdAt: now } },
+        { upsert: true },
+      );
+      return res.json({ ok: true, tip: { homeScore, awayScore } });
+    } catch {
+      return res.status(500).json({ ok: false, message: "Tip se nepodařilo uložit" });
+    }
+  });
+
+  app.get("/api/admin/overview", requireJwt, requireRole("admin"), async (req, res) => {
+    try {
+      const db = getDb();
+      const [users, tournaments, matches, tips] = await Promise.all([
+        db.collection("users").countDocuments(),
+        db.collection("tournaments").countDocuments(),
+        db.collection("matches").countDocuments(),
+        db.collection("tips").countDocuments(),
+      ]);
+      return res.json({ ok: true, counts: { users, tournaments, matches, tips } });
+    } catch {
+      return res.status(500).json({ ok: false, message: "Admin přehled se nepodařilo načíst" });
+    }
+  });
+
+  app.get("/api/admin/tournaments", requireJwt, requireRole("admin"), async (req, res) => {
+    try {
+      const tournaments = await getDb().collection("tournaments")
+        .find({}, { projection: { name: 1, season: 1, status: 1, roundLabel: 1, longTermBank: 1, createdAt: 1 } })
+        .sort({ createdAt: -1 })
+        .toArray();
+      return res.json({ ok: true, tournaments });
+    } catch {
+      return res.status(500).json({ ok: false, message: "Turnaje se nepodařilo načíst" });
+    }
+  });
+
+  app.post("/api/admin/tournaments", requireJwt, requireRole("admin"), async (req, res) => {
+    try {
+      const name = String(req.body?.name ?? "").trim();
+      const season = String(req.body?.season ?? "").trim();
+      const status = String(req.body?.status ?? "draft").trim();
+      const roundLabel = String(req.body?.roundLabel ?? "den").trim();
+      const longTermBank = Number(req.body?.longTermBank) || 0;
+
+      if (name.length < 2 || name.length > 100) {
+        return res.status(400).json({ ok: false, message: "Název turnaje musí mít 2 až 100 znaků." });
+      }
+      if (season.length > 30) {
+        return res.status(400).json({ ok: false, message: "Sezóna je příliš dlouhá." });
+      }
+      if (!["draft", "active", "finished"].includes(status)) {
+        return res.status(400).json({ ok: false, message: "Neplatný stav turnaje." });
+      }
+      if (longTermBank < 0) {
+        return res.status(400).json({ ok: false, message: "Bank nemůže být záporný." });
+      }
+
+      const now = new Date();
+      const tournament = { name, season, status, roundLabel: roundLabel || "den", longTermBank, createdAt: now, updatedAt: now };
+      const result = await getDb().collection("tournaments").insertOne(tournament);
+      return res.status(201).json({ ok: true, tournament: { ...tournament, _id: result.insertedId } });
+    } catch {
+      return res.status(500).json({ ok: false, message: "Turnaj se nepodařilo založit" });
+    }
+  });
+
+  app.get("/api/admin/matches", requireJwt, requireRole("admin"), async (req, res) => {
+    try {
+      const tournamentId = String(req.query?.tournamentId ?? "").trim();
+      const query = tournamentId ? { tournamentId: new ObjectId(tournamentId) } : {};
+      const db = getDb();
+      if (tournamentId && ObjectId.isValid(tournamentId)) await recalculateAutomaticBanks(db, new ObjectId(tournamentId));
+      const matches = await db.collection("matches")
+        .find(query, { projection: { tournamentId: 1, round: 1, startsAt: 1, home: 1, away: 1, bank: 1, bankSource: 1, baseBank: 1, carriedBank: 1, status: 1, createdAt: 1 } })
+        .sort({ startsAt: 1, round: 1 })
+        .toArray();
+      return res.json({ ok: true, matches });
+    } catch {
+      return res.status(500).json({ ok: false, message: "Zápasy se nepodařilo načíst" });
+    }
+  });
+
+  app.post("/api/admin/matches", requireJwt, requireRole("admin"), async (req, res) => {
+    try {
+      const tournamentId = String(req.body?.tournamentId ?? "").trim();
+      const round = Number(req.body?.round);
+      const startsAt = String(req.body?.startsAt ?? "").trim();
+      const home = String(req.body?.home ?? "").trim();
+      const away = String(req.body?.away ?? "").trim();
+      const status = String(req.body?.status ?? "draft").trim();
+      const manualBank = String(req.body?.manualBank ?? "").trim();
+
+      if (!ObjectId.isValid(tournamentId)) return res.status(400).json({ ok: false, message: "Vyber platný turnaj." });
+      if (!Number.isInteger(round) || round < 1) return res.status(400).json({ ok: false, message: "Číslo kola musí být kladné celé číslo." });
+      if (!startsAt || !home || !away || home.length > 80 || away.length > 80) return res.status(400).json({ ok: false, message: "Vyplň datum, čas a oba týmy." });
+      if (home === away) return res.status(400).json({ ok: false, message: "Domácí a hostující tým musí být rozdílné." });
+      if (!["draft", "open", "locked", "evaluated"].includes(status)) return res.status(400).json({ ok: false, message: "Neplatný stav zápasu." });
+
+      const db = getDb();
+      const tournament = await db.collection("tournaments").findOne({ _id: new ObjectId(tournamentId) });
+      if (!tournament) return res.status(404).json({ ok: false, message: "Turnaj nebyl nalezen." });
+
+      const playerCount = await db.collection("users").countDocuments({ status: "active" });
+      const entryFee = Number(tournament.entryFee) || 10;
+      const baseBank = playerCount * entryFee;
+      const previousMatch = await db.collection("matches").findOne(
+        { tournamentId: new ObjectId(tournamentId), startsAt: { $lt: startsAt } },
+        { sort: { startsAt: -1 } },
+      );
+      const carriedBank = previousMatch && previousMatch.status !== "evaluated" && !previousMatch.score
+        ? Number(previousMatch.bank) || 0
+        : 0;
+      const automaticBank = baseBank + carriedBank;
+      const bank = manualBank === "" ? automaticBank : Number(manualBank);
+      if (!Number.isFinite(bank) || bank < 0) return res.status(400).json({ ok: false, message: "Bank musí být nezáporné číslo." });
+
+      const now = new Date();
+      const match = {
+        tournamentId: new ObjectId(tournamentId),
+        round,
+        startsAt,
+        home,
+        away,
+        score: null,
+        bank,
+        bankSource: manualBank === "" ? "automatic" : "manual",
+        baseBank,
+        carriedBank,
+        playerCount,
+        entryFee,
+        status,
+        createdAt: now,
+        updatedAt: now,
+      };
+      const result = await db.collection("matches").insertOne(match);
+      await recalculateAutomaticBanks(db, new ObjectId(tournamentId));
+      const savedMatch = await db.collection("matches").findOne({ _id: result.insertedId });
+      return res.status(201).json({ ok: true, match: savedMatch });
+    } catch {
+      return res.status(500).json({ ok: false, message: "Zápas se nepodařilo založit" });
+    }
+  });
+
+  app.patch("/api/admin/matches/:id", requireJwt, requireRole("admin"), async (req, res) => {
+    try {
+      const matchId = String(req.params.id ?? "").trim();
+      const round = Number(req.body?.round);
+      const startsAt = String(req.body?.startsAt ?? "").trim();
+      const home = String(req.body?.home ?? "").trim();
+      const away = String(req.body?.away ?? "").trim();
+      const status = String(req.body?.status ?? "draft").trim();
+
+      if (!ObjectId.isValid(matchId)) return res.status(400).json({ ok: false, message: "Zápas není platný." });
+      if (!Number.isInteger(round) || round < 1) return res.status(400).json({ ok: false, message: "Číslo kola musí být kladné celé číslo." });
+      if (!startsAt || !home || !away || home.length > 80 || away.length > 80) return res.status(400).json({ ok: false, message: "Vyplň datum, čas a oba týmy." });
+      if (home === away) return res.status(400).json({ ok: false, message: "Domácí a hostující tým musí být rozdílné." });
+      if (!["draft", "open", "locked", "evaluated"].includes(status)) return res.status(400).json({ ok: false, message: "Neplatný stav zápasu." });
+
+      const result = await getDb().collection("matches").findOneAndUpdate(
+        { _id: new ObjectId(matchId) },
+        { $set: { round, startsAt, home, away, status, updatedAt: new Date() } },
+        { returnDocument: "after", projection: { tournamentId: 1, round: 1, startsAt: 1, home: 1, away: 1, bank: 1, bankSource: 1, baseBank: 1, carriedBank: 1, status: 1, createdAt: 1 } },
+      );
+      if (!result) return res.status(404).json({ ok: false, message: "Zápas nebyl nalezen." });
+      await recalculateAutomaticBanks(getDb(), result.tournamentId);
+      const savedMatch = await getDb().collection("matches").findOne({ _id: result._id });
+      return res.json({ ok: true, match: savedMatch });
+    } catch {
+      return res.status(500).json({ ok: false, message: "Zápas se nepodařilo upravit" });
+    }
+  });
+
+  app.delete("/api/admin/matches/:id", requireJwt, requireRole("admin"), async (req, res) => {
+    try {
+      const matchId = String(req.params.id ?? "").trim();
+      if (!ObjectId.isValid(matchId)) return res.status(400).json({ ok: false, message: "Zápas není platný." });
+      const db = getDb();
+      const match = await db.collection("matches").findOne({ _id: new ObjectId(matchId) });
+      if (!match) return res.status(404).json({ ok: false, message: "Zápas nebyl nalezen." });
+      const result = await db.collection("matches").deleteOne({ _id: new ObjectId(matchId) });
+      if (result.deletedCount !== 1) return res.status(404).json({ ok: false, message: "Zápas nebyl nalezen." });
+      await recalculateAutomaticBanks(db, match.tournamentId);
+      return res.json({ ok: true });
+    } catch {
+      return res.status(500).json({ ok: false, message: "Zápas se nepodařilo smazat" });
+    }
+  });
+}
+
+module.exports = { createAuthRoutes, requireJwt, requireRole };

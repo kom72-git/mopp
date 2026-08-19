@@ -56,15 +56,35 @@ async function loadMongoTournamentData(getDb, tournamentId, session) {
   const tipsByMatch = new Map();
   const pointsByUser = new Map(users.map((user) => [user._id.toString(), 0]));
   const now = Date.now();
-  const canSeeAllTipRows = session?.role === "admin";
   for (const tip of tips) {
     const match = matches.find((item) => item._id.equals(tip.matchId));
     const hasStarted = match && new Date(match.startsAt).getTime() <= now;
-    if (!canSeeAllTipRows && !hasStarted && tip.userId.toString() !== session?.sub) continue;
+    const isOwnTip = Boolean(session) && tip.userId.toString() === session.sub;
     if (!tipsByMatch.has(tip.matchId.toString())) tipsByMatch.set(tip.matchId.toString(), []);
     const points = scoreTip(`${tip.homeScore}:${tip.awayScore}`, match?.score, tournament.scoring);
     if (Number.isFinite(points)) pointsByUser.set(tip.userId.toString(), (pointsByUser.get(tip.userId.toString()) || 0) + points);
-    tipsByMatch.get(tip.matchId.toString()).push({ ...tip, points, tipValueHidden: canSeeAllTipRows && !hasStarted && tip.userId.toString() !== session?.sub });
+    tipsByMatch.get(tip.matchId.toString()).push({ ...tip, points, tipValueHidden: !hasStarted && !isOwnTip });
+  }
+
+  // Hraci bez vlastniho tipu u jiz zahajeneho zapasu se zobrazi jako N/N misto uplneho chybeni z tabulky.
+  for (const match of matches) {
+    const hasStarted = new Date(match.startsAt).getTime() <= now;
+    if (!hasStarted) continue;
+    const matchKey = match._id.toString();
+    const existingUserIds = new Set((tipsByMatch.get(matchKey) || []).map((tip) => tip.userId.toString()));
+    for (const user of users) {
+      if (existingUserIds.has(user._id.toString())) continue;
+      if (!tipsByMatch.has(matchKey)) tipsByMatch.set(matchKey, []);
+      tipsByMatch.get(matchKey).push({
+        userId: user._id,
+        homeScore: "N",
+        awayScore: "N",
+        tipValueHidden: false,
+        points: 0,
+        updatedAt: null,
+        updatedState: "noBet",
+      });
+    }
   }
 
   return {
@@ -72,7 +92,7 @@ async function loadMongoTournamentData(getDb, tournamentId, session) {
       id: dbTournamentId(tournament._id),
       label: tournament.name,
       title: tournament.name,
-      tabTitle: tournament.name,
+      tabTitle: tournament.tabTitle || tournament.name,
       roundLabel: tournament.roundLabel || "den",
       stageLabel: tournament.stageLabel || "",
       stages: tournament.stages || [],
@@ -85,6 +105,7 @@ async function loadMongoTournamentData(getDb, tournamentId, session) {
       longTermContribution: tournament.longTermContribution || 0,
       source: "mongodb",
       logoSet: tournament.logoSet || null,
+      favicon: tournament.favicon || "",
       longTermBank: { totalAmount: longTermBankTotal, baseAmount: tournament.longTermBank || 0, contributionAmount: tournament.longTermContribution || 0, contributorCount: users.length, payouts: longTermBankPayouts, tieBreakHeading: "V případě shodného počtu bodů rozhoduje:", tieBreakRules: tournament.tieBreakRules?.length ? tournament.tieBreakRules : tieBreakRulesFor(tournament.tieBreakOrder || []) },
     },
     players: users.map((user) => ({ id: user._id.toString(), name: user.displayName || user.username, points: pointsByUser.get(user._id.toString()) || 0 })),
@@ -95,7 +116,7 @@ async function loadMongoTournamentData(getDb, tournamentId, session) {
       home: match.home,
       away: match.away,
       score: match.score || null,
-      bank: match.bank || 0,
+      bank: match.bank ?? null,
       tipCount: tips.filter((tip) => tip.matchId.equals(match._id)).length,
       playerCount: users.length,
       tipsVisible: new Date(match.startsAt).getTime() <= now,
@@ -147,7 +168,7 @@ function registerSharedRoutes({ app, getDb, requireJwt, requireRole }) {
         id: dbTournamentId(tournament._id),
         label: tournament.name,
         title: tournament.name,
-        tabTitle: tournament.name,
+        tabTitle: tournament.tabTitle || tournament.name,
         roundLabel: tournament.roundLabel || "den",
         stageLabel: tournament.stageLabel || "",
         stages: tournament.stages || [],
@@ -160,6 +181,7 @@ function registerSharedRoutes({ app, getDb, requireJwt, requireRole }) {
         longTermContribution: tournament.longTermContribution || 0,
         source: "mongodb",
         logoSet: tournament.logoSet || null,
+        favicon: tournament.favicon || "",
         status: tournament.status,
         longTermBank: (() => {
           const participantIds = (tournament.participantUserIds || []).map(String);

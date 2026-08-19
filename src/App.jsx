@@ -2294,7 +2294,7 @@ function App() {
                   </div>
                 </div>
 
-                <p className="match-item-sub">Bank {match.bank} Kč • Tipy {submittedTips}/{match.playerCount ?? players.length}</p>
+                <p className="match-item-sub">Bank {match.bank == null ? '? (čeká na výsledek předchozího zápasu)' : `${match.bank} Kč`} • Tipy {submittedTips}/{match.playerCount ?? players.length}</p>
               </button>
             )
           })}
@@ -2971,7 +2971,7 @@ function App() {
                     })()}
                   </div>
                 </div>
-                <p className="selected-match-bank">Bank {selectedMatch.bank} Kč</p>
+                <p className="selected-match-bank">Bank {selectedMatch.bank == null ? '? (čeká na výsledek předchozího zápasu)' : `${selectedMatch.bank} Kč`}</p>
               </header>
 
               {selectedMatch.tipsVisible === false ? (

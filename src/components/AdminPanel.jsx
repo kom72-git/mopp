@@ -37,7 +37,7 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
   const [editingTournamentId, setEditingTournamentId] = useState('')
   const [editingMatchId, setEditingMatchId] = useState('')
   const [openSection, setOpenSection] = useState('matches')
-  const [form, setForm] = useState({ name: '', season: '', status: 'draft', roundLabel: '', startDate: '', heroLogo: '', logoSet: 'elh', entryFee: '10', longTermContribution: '', longTermBank: '' })
+  const [form, setForm] = useState({ name: '', tabTitle: '', season: '', status: 'draft', roundLabel: '', startDate: '', heroLogo: '', logoSet: 'elh', favicon: '', entryFee: '10', longTermContribution: '', longTermBank: '' })
   const [stages, setStages] = useState([])
   const [scoring, setScoring] = useState({ exact: '10', near: '5', winner: '3' })
   const [tieBreakOrder, setTieBreakOrder] = useState(['exact', 'scored', 'noBet'])
@@ -109,12 +109,14 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
         if (activeTournament) {
           setForm({
             name: activeTournament.name,
+            tabTitle: activeTournament.tabTitle || '',
             season: activeTournament.season || '',
             status: activeTournament.status || 'draft',
             roundLabel: activeTournament.roundLabel || '',
             startDate: activeTournament.startDate || '',
             heroLogo: activeTournament.heroLogo || '',
             logoSet: activeTournament.logoSet || '',
+            favicon: activeTournament.favicon || '',
             entryFee: String(activeTournament.entryFee ?? 10),
             longTermContribution: String(activeTournament.longTermContribution ?? ''),
             longTermBank: String(activeTournament.longTermBank || ''),
@@ -174,11 +176,10 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
       if (editingTournamentId) {
         setTournaments((current) => current.map((tournament) => tournament._id === editingTournamentId ? payload.tournament : tournament))
         onTournamentUpdated?.({ ...payload.tournament, id: `db:${payload.tournament._id}` })
-        setEditingTournamentId('')
         setMessage('Turnaj byl upraven.')
         return
       }
-      setForm({ name: '', season: '', status: 'draft', roundLabel: '', startDate: '', heroLogo: '', logoSet: 'elh', entryFee: '10', longTermContribution: '', longTermBank: '' })
+      setForm({ name: '', tabTitle: '', season: '', status: 'draft', roundLabel: '', startDate: '', heroLogo: '', logoSet: 'elh', favicon: '', entryFee: '10', longTermContribution: '', longTermBank: '' })
       setStages([])
       setPayouts(['', '', '', '', ''])
       setScoring({ exact: '10', near: '5', winner: '3' })
@@ -314,9 +315,34 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
     </button>
   )
 
+  const editTournament = (tournament) => {
+    setEditingTournamentId(tournament._id)
+    setSelectedTournamentId(tournament._id)
+    setForm({
+      name: tournament.name,
+      tabTitle: tournament.tabTitle || '',
+      season: tournament.season || '',
+      status: tournament.status || 'draft',
+      roundLabel: tournament.roundLabel || '',
+      startDate: tournament.startDate || '',
+      heroLogo: tournament.heroLogo || '',
+      logoSet: tournament.logoSet || '',
+      favicon: tournament.favicon || '',
+      entryFee: String(tournament.entryFee ?? 10),
+      longTermContribution: String(tournament.longTermContribution ?? ''),
+      longTermBank: String(tournament.longTermBank || ''),
+    })
+    setStages(tournament.stages || [])
+    setScoring({ exact: String(tournament.scoring?.exact ?? 10), near: String(tournament.scoring?.near ?? 5), winner: String(tournament.scoring?.winner ?? 3) })
+    setTieBreakOrder(tournament.tieBreakOrder || ['exact', 'scored', 'noBet'])
+    setTieBreakRules(tournament.tieBreakRules || [])
+    setPayouts(Array.from({ length: 5 }, (_, index) => String(tournament.payouts?.find((item) => item.place === index + 1)?.amount ?? '')))
+    setMessage('')
+  }
+
   const startNewTournament = () => {
     setEditingTournamentId('')
-    setForm({ name: '', season: '', status: 'draft', roundLabel: '', startDate: '', heroLogo: '', logoSet: 'elh', entryFee: '10', longTermContribution: '', longTermBank: '' })
+    setForm({ name: '', tabTitle: '', season: '', status: 'draft', roundLabel: '', startDate: '', heroLogo: '', logoSet: 'elh', favicon: '', entryFee: '10', longTermContribution: '', longTermBank: '' })
     setScoring({ exact: '10', near: '5', winner: '3' })
     setTieBreakOrder(['exact', 'scored', 'noBet'])
     setTieBreakRules([])
@@ -355,6 +381,11 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
               <small>Oficiální název, který se zobrazí v archivu a v hlavičce.</small>
             </label>
             <label className="admin-field">
+              <span className="admin-field-label">Titulek v záložce prohlížeče</span>
+              <input name="tabTitle" value={form.tabTitle} onChange={updateField} placeholder="Např. ELH play-off 2027" maxLength={60} />
+              <small>Když necháš prázdné, použije se název turnaje.</small>
+            </label>
+            <label className="admin-field">
               <span className="admin-field-label">Sezóna</span>
               <input name="season" value={form.season} onChange={updateField} placeholder="Např. 2026/27" />
               <small>Pomocné označení sezóny; může zůstat prázdné.</small>
@@ -367,6 +398,7 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
             {form.heroLogo ? <img className="admin-tournament-logo-preview" src={form.heroLogo} alt="Náhled loga turnaje" /> : null}
             <div className="admin-tournament-form-row">
               <label className="admin-field"><span className="admin-field-label">Sada týmových log</span><select name="logoSet" value={form.logoSet} onChange={updateField} title="Určuje, odkud se načtou loga týmů v zápasech."><option value="">Bez sady log</option><option value="elh">ELH loga</option></select><small>Pro ELH zvol ELH loga; u mezinárodního turnaje použijeme vlajky.</small></label>
+              <label className="admin-field"><span className="admin-field-label">Favicon (ikona v záložce)</span><select name="favicon" value={form.favicon} onChange={updateField} title="Ikona zobrazená v záložce prohlížeče."><option value="">Výchozí</option><option value="/icons/ball.svg">Fotbalový míč</option><option value="/icons/puck.svg">Hokejový puk</option></select><small>Změní se ikona v záložce, když je tenhle turnaj vybraný.</small></label>
             </div>
             <div className="admin-tournament-form-row">
               <label className="admin-field"><span className="admin-field-label">Stav turnaje</span><select name="status" value={form.status} onChange={updateField}><option value="draft">Připravovaný</option><option value="active">Aktivní</option><option value="finished">Ukončený</option></select><small>Aktivní turnaj je určený pro běžné používání.</small></label>
@@ -383,6 +415,9 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
               <div className="admin-tournament-row" key={tournament._id}>
                 <strong>{tournament.name}</strong>
                 <span>{tournament.season || 'Bez sezóny'} · {tournament.status}</span>
+                <div className="admin-row-actions">
+                  <button type="button" className="auth-button" onClick={() => editTournament(tournament)}>Upravit</button>
+                </div>
               </div>
             )) : <p className="admin-panel-note">Zatím nejsou založené žádné turnaje.</p>}
           </div>
@@ -498,7 +533,7 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
                 <strong>{match.round}. kolo · {formatMatchDateTime(match.startsAt)} · {match.home} – {match.away}</strong>
                 <span>
                   {match.status === 'open' ? 'otevřený' : match.status === 'locked' ? 'uzamčený' : match.status === 'evaluated' ? 'vyhodnocený' : 'připravovaný'}
-                  {' · '}Bank {match.bank} Kč · {match.bankSource === 'automatic' ? 'automaticky' : 'ručně'}
+                  {' · '}Bank {match.bank == null ? 'čeká na výsledek předchozího zápasu' : `${match.bank} Kč`} · {match.bankSource === 'automatic' ? 'automaticky' : 'ručně'}
                   {match.carriedBank > 0 ? ` (převod ${match.carriedBank} Kč)` : ''}
                 </span>
                 <div className="admin-row-actions">

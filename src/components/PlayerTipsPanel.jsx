@@ -161,7 +161,7 @@ export default function PlayerTipsPanel({ onTipUpdated }) {
                 <div className="player-tip-row" key={match._id}>
                   <div>
                     <strong>{formatMatchDateTime(match.startsAt)}</strong>
-                    <span>{match.home} – {match.away} · Bank {match.bank} Kč</span>
+                    <span>{match.home} – {match.away} · Bank {match.bank == null ? 'čeká na výsledek předchozího zápasu' : `${match.bank} Kč`}</span>
                   </div>
                   <div className="player-tip-score">
                     <input type="number" min="0" max="99" value={values[match._id]?.homeScore ?? ''} onChange={(event) => updateScore(match._id, 'homeScore', event.target.value)} aria-label={`Tip domácího týmu ${match.home}`} />

@@ -2,7 +2,7 @@ const fs = require("fs/promises");
 const path = require("path");
 const { pathToFileURL } = require("url");
 const { ObjectId } = require("mongodb");
-const { getOptionalSession } = require("./auth");
+const { getOptionalSession } = require("./_auth");
 
 function dbTournamentId(id) {
   return `db:${id.toString()}`;

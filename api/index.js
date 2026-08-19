@@ -4,7 +4,7 @@ const path = require("path");
 require("dotenv").config({ path: path.resolve(__dirname, ".env") });
 const { spawn } = require("child_process");
 const { MongoClient } = require("mongodb");
-const { createAuthRoutes, requireJwt, requireRole } = require("./auth");
+const { createAuthRoutes, requireJwt, requireRole } = require("./_auth");
 const { registerSharedRoutes } = require("./_shared-routes");
 
 const app = express();

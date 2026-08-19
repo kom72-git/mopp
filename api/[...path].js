@@ -1,7 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const { MongoClient } = require("mongodb");
-const { createAuthRoutes, requireJwt, requireRole } = require("./auth");
+const { createAuthRoutes, requireJwt, requireRole } = require("./_auth");
 const { registerSharedRoutes } = require("./_shared-routes");
 
 // Mongo pripojeni se cachuje mezi volanimi v ramci stejne "teple" serverless instance.

@@ -37,6 +37,7 @@ function getStoredTournamentId() {
 
   try {
     const storedTournamentId = window.localStorage.getItem('mopp-selected-tournament')
+    if (/^db:[a-f0-9]{24}$/i.test(String(storedTournamentId ?? ''))) return storedTournamentId
     return getTournamentById(storedTournamentId)?.id ?? defaultTournamentId
   } catch {
     return defaultTournamentId
@@ -136,7 +137,20 @@ function parseMatchDate(startsAt) {
   return new Date(2026, month, day, hour, minute)
 }
 
-function parseStartsAtDisplay(startsAt, matchId) {
+function parseStartsAtDisplay(startsAt, matchId, round, tournamentYear) {
+  const isoDate = String(startsAt ?? '').match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/)
+  if (isoDate) {
+    const [, year, month, day, hour, minute] = isoDate
+    const date = new Date(`${year}-${month}-${day}T${hour}:${minute}:00`)
+    const weekday = ['neděle', 'pondělí', 'úterý', 'středa', 'čtvrtek', 'pátek', 'sobota'][date.getDay()]
+    return {
+      roundLabel: Number.isFinite(Number(round)) ? `${round}.` : '',
+      matchNo: '',
+      dayName: weekday,
+      rest: `${Number(day)}.${Number(month)}.${year} ${hour}:${minute}`,
+    }
+  }
+
   const matched = startsAt?.match(/^(\d+\.)\s*\(([^)]+)\)\s*(.+)$/)
   if (!matched) {
     return {
@@ -176,8 +190,11 @@ function parseStartsAtDisplay(startsAt, matchId) {
   }
 
   const dayName = dayNames[dayToken] ?? dayRaw
-  const rest = restRaw.trimStart()
-  const matchNo = String(matchId ?? '').replace(/^m/i, '')
+  const restDate = restRaw.trimStart().match(/^(\d{1,2}\.\d{1,2}\.)(.*)$/)
+  const rest = restDate && tournamentYear
+    ? `${Number(restDate[1].split('.')[0])}.${Number(restDate[1].split('.')[1])}.${tournamentYear}${restDate[2]}`
+    : restRaw.trimStart()
+  const matchNo = ''
   return {
     roundLabel,
     matchNo,
@@ -186,30 +203,49 @@ function parseStartsAtDisplay(startsAt, matchId) {
   }
 }
 
-function StartsAtLabel({ startsAt, matchId }) {
-  const parts = parseStartsAtDisplay(startsAt, matchId)
+function StartsAtLabel({ startsAt, matchId, round, tournamentYear }) {
+  const parts = parseStartsAtDisplay(startsAt, matchId, round, tournamentYear)
   if (!parts.dayName) return <>{parts.roundLabel}</>
 
   return (
     <span className="starts-at-label">
       <span>{parts.roundLabel}</span>
-      {parts.matchNo ? <span className="starts-at-match-no">({parts.matchNo})</span> : null}
-      <span>{parts.dayName}</span>
+      {' '}
+      <span className="starts-at-day">({parts.dayName})</span>
       <span className="starts-at-date">{parts.rest}</span>
     </span>
   )
 }
 
-function AuthPanel() {
+function AuthPanel({ selectedTournamentId, onTournamentUpdated, onTipUpdated }) {
   const [user, setUser] = useState(null)
   const [mode, setMode] = useState('login')
   const [isOpen, setIsOpen] = useState(false)
-  const [activePanel, setActivePanel] = useState('tips')
+  const [activePanel, setActivePanel] = useState('')
   const [form, setForm] = useState({ usernameOrEmail: '', username: '', email: '', password: '', resetToken: '' })
   const [message, setMessage] = useState('')
   const [isBusy, setIsBusy] = useState(false)
 
   useEffect(() => {
+    const verificationToken = new URLSearchParams(window.location.search).get('verify')
+    if (verificationToken) {
+      fetch('/api/auth/verify-email', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ token: verificationToken }),
+      })
+        .then((response) => response.json().then((payload) => ({ response, payload })))
+        .then(({ response, payload }) => {
+          if (!response.ok) throw new Error(payload.message || 'Ověření e-mailu se nepodařilo')
+          setUser(payload.user)
+          setMessage(payload.message)
+          window.history.replaceState({}, '', window.location.pathname)
+        })
+        .catch((error) => setMessage(error.message))
+      return undefined
+    }
+
     fetch('/api/auth/me', { credentials: 'include' })
       .then((response) => (response.ok ? response.json() : null))
       .then((payload) => setUser(payload?.user ?? null))
@@ -232,6 +268,8 @@ function AuthPanel() {
           ? '/api/auth/register'
           : mode === 'forgot'
             ? '/api/auth/forgot-password'
+            : mode === 'verify'
+              ? '/api/auth/verify-email'
             : '/api/auth/reset-password'
       const body = mode === 'login'
         ? { usernameOrEmail: form.usernameOrEmail, password: form.password }
@@ -256,6 +294,23 @@ function AuthPanel() {
         } else {
           setMessage(payload.message)
         }
+        return
+      }
+      if (mode === 'register' && payload.devVerificationToken) {
+        setForm((current) => ({ ...current, resetToken: payload.devVerificationToken }))
+        setMode('verify')
+        setMessage('Lokální ověřovací odkaz je připravený. Klikni na ověření níže.')
+        return
+      }
+      if (mode === 'register') {
+        setMessage(payload.message || 'Účet byl založen. Na registrační e-mail jsme odeslali odkaz k ověření.')
+        setMode('login')
+        setForm((current) => ({ ...current, password: '' }))
+        return
+      }
+      if (mode === 'verify') {
+        setUser(payload.user)
+        setIsOpen(false)
         return
       }
       if (mode === 'reset') {
@@ -286,10 +341,11 @@ function AuthPanel() {
           <span className="auth-user">{user.displayName || user.username}</span>
           <button type="button" className="auth-button" onClick={logout}>Odhlásit</button>
           <div className="auth-panel-tabs">
-            <button type="button" className={`auth-button ${activePanel === 'tips' ? 'is-active' : ''}`} onClick={() => setActivePanel('tips')}>Moje tipy</button>
-            {user.role === 'admin' ? <button type="button" className={`auth-button ${activePanel === 'admin' ? 'is-active' : ''}`} onClick={() => setActivePanel('admin')}>Admin</button> : null}
+            <button type="button" className={`auth-button ${activePanel === 'tips' ? 'is-active' : ''}`} onClick={() => setActivePanel((current) => current === 'tips' ? '' : 'tips')}>Tipovat</button>
+            {user.role === 'admin' ? <button type="button" className={`auth-button ${activePanel === 'admin' ? 'is-active' : ''}`} onClick={() => setActivePanel((current) => current === 'admin' ? '' : 'admin')}>Admin</button> : null}
           </div>
-          {activePanel === 'admin' && user.role === 'admin' ? <AdminPanel /> : <PlayerTipsPanel />}
+          {activePanel === 'admin' && user.role === 'admin' ? <AdminPanel selectedTournamentId={selectedTournamentId} onTournamentUpdated={onTournamentUpdated} /> : null}
+          {activePanel === 'tips' ? <PlayerTipsPanel onTipUpdated={onTipUpdated} /> : null}
         </>
       ) : (
         <>
@@ -298,13 +354,15 @@ function AuthPanel() {
           </button>
           {isOpen ? (
             <form className="auth-form" onSubmit={submit}>
-              {mode !== 'reset' ? (
+              {mode !== 'reset' && mode !== 'verify' ? (
                 <div className="auth-mode-tabs">
                   <button type="button" className={mode === 'login' ? 'is-active' : ''} onClick={() => { setMode('login'); setMessage('') }}>Přihlášení</button>
                   <button type="button" className={mode === 'register' ? 'is-active' : ''} onClick={() => { setMode('register'); setMessage('') }}>Registrace</button>
                 </div>
               ) : null}
-              {mode === 'register' ? (
+              {mode === 'verify' ? (
+                <input name="resetToken" value={form.resetToken} onChange={updateField} placeholder="Ověřovací token" required />
+              ) : mode === 'register' ? (
                 <>
                   <input name="username" value={form.username} onChange={updateField} placeholder="Jméno hráče" aria-label="Jméno hráče" title="Toto jméno se použije pro přihlášení i zobrazení v aplikaci" autoComplete="username" required />
                   <input name="email" type="email" value={form.email} onChange={updateField} placeholder="E-mail" autoComplete="email" required />
@@ -320,7 +378,7 @@ function AuthPanel() {
                 <input name="password" type="password" value={form.password} onChange={updateField} placeholder="Heslo" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} required />
               ) : null}
               {message ? <p className="auth-message" role="alert">{message}</p> : null}
-              <button type="submit" className="auth-submit" disabled={isBusy}>{isBusy ? 'Pracuji…' : mode === 'login' ? 'Přihlásit' : mode === 'register' ? 'Vytvořit účet' : mode === 'forgot' ? 'Obnovit heslo' : 'Nastavit nové heslo'}</button>
+              <button type="submit" className="auth-submit" disabled={isBusy}>{isBusy ? 'Pracuji…' : mode === 'login' ? 'Přihlásit' : mode === 'register' ? 'Vytvořit účet' : mode === 'forgot' ? 'Obnovit heslo' : mode === 'verify' ? 'Ověřit e-mail' : 'Nastavit nové heslo'}</button>
               {mode === 'login' ? (
                 <button type="button" className="auth-link" onClick={() => { setMode('forgot'); setMessage('') }}>Zapomenuté heslo?</button>
               ) : null}
@@ -332,10 +390,25 @@ function AuthPanel() {
   )
 }
 
-function getStageLabel(match, stageRules = [], stageTransitions = []) {
+function getStageLabel(match, stageRules = [], stageTransitions = [], stages = []) {
   const round = extractRound(match)
   const startsAt = match?.startsAt
-  const date = parseMatchDate(startsAt)
+  const date = parseMatchDate(startsAt) ?? new Date(startsAt)
+
+  if (date && !Number.isNaN(date.getTime()) && Array.isArray(stages) && stages.length > 0) {
+    const configuredStages = stages
+      .map((stage) => ({
+        label: stage?.name,
+        fromDate: stage?.from ? new Date(stage.from) : null,
+        toDate: stage?.to ? new Date(stage.to) : null,
+      }))
+      .filter((stage) => stage.label && stage.fromDate && !Number.isNaN(stage.fromDate.getTime()))
+      .sort((a, b) => a.fromDate - b.fromDate)
+    if (configuredStages.length > 0) {
+      const activeStage = configuredStages.find((stage) => date >= stage.fromDate && (!stage.toDate || date <= stage.toDate))
+      return activeStage?.label ?? configuredStages[configuredStages.length - 1].label
+    }
+  }
 
   if (date && Array.isArray(stageTransitions) && stageTransitions.length > 0) {
     const transitions = stageTransitions
@@ -469,9 +542,11 @@ function formatTipUpdatedAt(updatedAt) {
   return `${day}.${month}. ${hour}:${minute}`
 }
 
-function formatTipNote(updatedAt, updatedState) {
+function formatTipNote(updatedAt, updatedState, updatedByUsername) {
   if (!updatedAt) return ''
-  const actionLabel = updatedState === 'updated' ? 'upraveno' : 'vloženo'
+  const actionLabel = updatedState === 'adminUpdated'
+    ? `upraveno adminem${updatedByUsername ? ` (${updatedByUsername})` : ''}`
+    : updatedState === 'updated' ? 'upraveno' : 'vloženo'
   return `${actionLabel}: ${formatTipUpdatedAt(updatedAt)}`
 }
 
@@ -603,7 +678,7 @@ function calculateMatchPayouts(match, playerOrder, overridesByMatchId, remainder
 
 async function fetchLiveData(tournamentId) {
   const query = tournamentId ? `?tournament=${encodeURIComponent(tournamentId)}&` : '?'
-  const response = await fetch(`/api/data${query}t=${Date.now()}`, { cache: 'no-store' })
+  const response = await fetch(`/api/data${query}t=${Date.now()}`, { cache: 'no-store', credentials: 'include' })
   const payload = await response.json()
 
   if (!response.ok || !payload?.ok) {
@@ -627,12 +702,12 @@ function SplitTip({ value }) {
   )
 }
 
-function getMatchTeamLogoUrl(tournamentId, teamName) {
-  return getTeamLogoUrl(tournamentId, teamName) ?? getFlagUrl(teamName)
+function getMatchTeamLogoUrl(tournamentId, teamName, logoSet) {
+  return getTeamLogoUrl(tournamentId, teamName, logoSet) ?? getFlagUrl(teamName)
 }
 
-function getTeamLogoClassName(tournamentId) {
-  return tournamentId === 'PO-2025' ? 'is-round-logo' : 'is-rect-logo'
+function getTeamLogoClassName(tournamentId, logoSet) {
+  return tournamentId === 'PO-2025' || logoSet === 'elh' ? 'is-round-logo' : 'is-rect-logo'
 }
 
 function buildSparkline(points, width = 120, height = 42, padding = 4) {
@@ -705,6 +780,7 @@ function App() {
   const roundTabsRef = useRef(null)
   const initialTournamentId = getStoredTournamentId()
   const [selectedTournamentId, setSelectedTournamentId] = useState(initialTournamentId)
+  const [availableTournaments, setAvailableTournaments] = useState(tournaments)
   const [data, setData] = useState(
     initialTournamentId === defaultTournamentId
       ? { players: fallbackPlayers, matches: fallbackMatches }
@@ -721,8 +797,11 @@ function App() {
     }
   }, [selectedTournamentId])
   const selectedTournament = useMemo(
-    () => getTournamentById(selectedTournamentId) ?? tournaments[0] ?? null,
-    [selectedTournamentId],
+    () => availableTournaments.find((tournament) => tournament.id === selectedTournamentId)
+      ?? getTournamentById(selectedTournamentId)
+      ?? availableTournaments[0]
+      ?? null,
+    [availableTournaments, selectedTournamentId],
   )
   const roundLabel = selectedTournament?.roundLabel ?? 'den'
   const longTermBank = selectedTournament?.longTermBank ?? null
@@ -753,6 +832,20 @@ function App() {
     const suffix = selectedTournament?.tabTitle ?? selectedTournament?.title ?? selectedTournament?.label ?? 'MOPP'
     document.title = `Master of PP | ${suffix}`
   }, [selectedTournament])
+
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/tournaments', { cache: 'no-store' })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((payload) => {
+        if (cancelled || !payload?.tournaments) return
+        setAvailableTournaments([...tournaments, ...payload.tournaments])
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const players = data.players
   const matches = data.matches
@@ -1635,11 +1728,12 @@ function App() {
 
   const selectedMatchStageLabel = useMemo(
     () =>
-      getStageLabel(
-        selectedMatch,
-        selectedTournament?.stageRules ?? [],
-        selectedTournament?.stageTransitions ?? [],
-      ),
+      selectedTournament?.stageLabel || getStageLabel(
+          selectedMatch,
+          selectedTournament?.stageRules ?? [],
+          selectedTournament?.stageTransitions ?? [],
+          selectedTournament?.stages ?? [],
+        ),
     [selectedMatch, selectedTournament],
   )
 
@@ -1689,7 +1783,8 @@ function App() {
         return {
           ...tip,
           playerName: player?.name ?? tip.playerId,
-          tipNote: formatTipNote(tip.updatedAt, tip.updatedState),
+          tipNote: formatTipNote(tip.updatedAt, tip.updatedState, tip.updatedByUsername),
+          tipValueHidden: Boolean(tip.tipValueHidden),
           rank,
           rankDelta,
           totalPoints: cumulativePointsByPlayer.get(tip.playerId) ?? 0,
@@ -1973,6 +2068,27 @@ function App() {
     }
   }
 
+  const handleTournamentUpdated = (tournament) => {
+    const normalized = {
+      ...tournament,
+      id: tournament.id ?? `db:${tournament._id}`,
+      title: tournament.title ?? tournament.name,
+      label: tournament.label ?? tournament.name,
+      tabTitle: tournament.tabTitle ?? tournament.name,
+      source: 'mongodb',
+      logoSet: tournament.logoSet ?? 'elh',
+    }
+    setAvailableTournaments((current) => current.map((item) => item.id === normalized.id ? normalized : item))
+  }
+
+  const handleTipUpdated = async () => {
+    try {
+      setData(await fetchLiveData(selectedTournamentId))
+    } catch {
+      return null
+    }
+  }
+
   return (
     <main className="layout">
       <header className="hero">
@@ -2004,7 +2120,7 @@ function App() {
                   setSelectedTournamentId(nextTournamentId)
                 }}
               >
-                {tournaments.map((tournament) => (
+                {availableTournaments.map((tournament) => (
                   <option key={tournament.id} value={tournament.id}>
                     {tournament.tabTitle ?? tournament.label}
                   </option>
@@ -2013,7 +2129,7 @@ function App() {
             </span>
             {isLiveLoading ? <span className="tournament-loading">Načítám data…</span> : null}
           </div>
-          <AuthPanel />
+          <AuthPanel selectedTournamentId={selectedTournamentId} onTournamentUpdated={handleTournamentUpdated} onTipUpdated={handleTipUpdated} />
         </div>
 
         <figure className="hero-logo-wrap">
@@ -2093,11 +2209,11 @@ function App() {
 
         <div className="day-matches-row">
           {roundMatches.map((match) => {
-            const homeFlag = getMatchTeamLogoUrl(selectedTournamentId, match.home)
-            const awayFlag = getMatchTeamLogoUrl(selectedTournamentId, match.away)
-            const teamLogoClassName = getTeamLogoClassName(selectedTournamentId)
+            const homeFlag = getMatchTeamLogoUrl(selectedTournamentId, match.home, selectedTournament?.logoSet)
+            const awayFlag = getMatchTeamLogoUrl(selectedTournamentId, match.away, selectedTournament?.logoSet)
+            const teamLogoClassName = getTeamLogoClassName(selectedTournamentId, selectedTournament?.logoSet)
             const isActive = match.id === selectedMatch?.id
-            const submittedTips = match.tips.filter((tip) => tip.pick && tip.pick !== '-').length
+            const submittedTips = match.tipCount ?? match.tips.filter((tip) => tip.pick && tip.pick !== '-').length
             const score = parseScore(match.score)
 
             return (
@@ -2108,7 +2224,7 @@ function App() {
                 onClick={() => setSelectedMatchId(match.id)}
               >
                 <p className="match-item-top">
-                  <StartsAtLabel startsAt={match.startsAt} matchId={match.id} />
+                  <StartsAtLabel startsAt={match.startsAt} matchId={match.id} round={match.round} tournamentYear={String(selectedTournament?.startDate ?? '').slice(0, 4)} />
                 </p>
 
                 <div className="match-item-main">
@@ -2138,7 +2254,7 @@ function App() {
                   </div>
                 </div>
 
-                <p className="match-item-sub">Bank {match.bank} Kč • Tipy {submittedTips}/{players.length}</p>
+                <p className="match-item-sub">Bank {match.bank} Kč • Tipy {submittedTips}/{match.playerCount ?? players.length}</p>
               </button>
             )
           })}
@@ -2758,21 +2874,21 @@ function App() {
               <div className="panel-head tips-panel-head">
                 <h2>Tipy hráčů pro zápas</h2>
                 <span className="tag">
-                  Tipy {selectedMatchTips.filter((tip) => tip.pick && tip.pick !== '-').length}/
-                  {players.length}
+                  Tipy {selectedMatch.tipCount ?? selectedMatchTips.filter((tip) => tip.pick && tip.pick !== '-').length}/
+                  {selectedMatch.playerCount ?? players.length}
                 </span>
               </div>
 
               <header className="selected-match-head">
                 <p className="selected-match-time">
-                  <StartsAtLabel startsAt={selectedMatch.startsAt} matchId={selectedMatch.id} />
+                  <StartsAtLabel startsAt={selectedMatch.startsAt} matchId={selectedMatch.id} round={selectedMatch.round} tournamentYear={String(selectedTournament?.startDate ?? '').slice(0, 4)} />
                 </p>
                 <div className="selected-match-main">
                   <div className="selected-teams-stack">
                     {(() => {
-                      const homeFlag = getMatchTeamLogoUrl(selectedTournamentId, selectedMatch.home)
-                      const awayFlag = getMatchTeamLogoUrl(selectedTournamentId, selectedMatch.away)
-                      const teamLogoClassName = getTeamLogoClassName(selectedTournamentId)
+                      const homeFlag = getMatchTeamLogoUrl(selectedTournamentId, selectedMatch.home, selectedTournament?.logoSet)
+                      const awayFlag = getMatchTeamLogoUrl(selectedTournamentId, selectedMatch.away, selectedTournament?.logoSet)
+                      const teamLogoClassName = getTeamLogoClassName(selectedTournamentId, selectedTournament?.logoSet)
                       const score = parseScore(selectedMatch.score)
 
                       return (
@@ -2818,6 +2934,12 @@ function App() {
                 <p className="selected-match-bank">Bank {selectedMatch.bank} Kč</p>
               </header>
 
+              {selectedMatch.tipsVisible === false ? (
+                <>
+                  <p className="tips-hidden-message">Tipy ostatních hráčů se zobrazí po začátku zápasu.</p>
+                </>
+              ) : null}
+
               <div className="tips-table" role="table" aria-label="Tipy hráčů">
                 <div className="tips-head" role="row">
                   <span>Poř.</span>
@@ -2858,7 +2980,7 @@ function App() {
                     </span>
 
                     <span className="tip-value">
-                      <SplitTip value={tip.pick} />
+                      {tip.tipValueHidden ? <span className="hidden-tip-value">skryto</span> : <SplitTip value={tip.pick} />}
                     </span>
 
                     <span className="payout-cell">
@@ -2892,7 +3014,12 @@ function App() {
               <span className="bank-icon" aria-hidden="true">💰</span>
               <span>{longTermBank?.introLabel ?? 'Dlouhodobý bank'}</span>
             </span>
-            <strong className="long-term-bank-toggle-value">{longTermBank?.totalAmount ?? 0} Kč</strong>
+            <span className="long-term-bank-toggle-summary">
+              <strong className="long-term-bank-toggle-value">{longTermBank?.totalAmount ?? 0} Kč</strong>
+              {longTermBank?.contributorCount > 0 && longTermBank?.contributionAmount > 0 ? (
+                <small>Příspěvky hráčů · {longTermBank.contributorCount} × {longTermBank.contributionAmount} Kč</small>
+              ) : null}
+            </span>
             <span className="long-term-bank-toggle-hint">{showLongTermBankInfo ? 'Skrýt detail' : 'Zobrazit detail'}</span>
           </button>
 

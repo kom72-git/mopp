@@ -226,9 +226,10 @@ function AuthPanel({ selectedTournamentId, onTournamentUpdated, onMatchesChanged
   const [mode, setMode] = useState('login')
   const [isOpen, setIsOpen] = useState(false)
   const [activePanel, setActivePanel] = useState('')
-  const [form, setForm] = useState({ usernameOrEmail: '', username: '', email: '', password: '', resetToken: '' })
+  const [form, setForm] = useState({ usernameOrEmail: '', username: '', displayName: '', email: '', password: '', confirmPassword: '', resetToken: '' })
   const [message, setMessage] = useState('')
   const [isBusy, setIsBusy] = useState(false)
+  const [showPasswords, setShowPasswords] = useState(false)
 
   useEffect(() => {
     const verificationToken = new URLSearchParams(window.location.search).get('verify')
@@ -278,10 +279,13 @@ function AuthPanel({ selectedTournamentId, onTournamentUpdated, onMatchesChanged
       const body = mode === 'login'
         ? { usernameOrEmail: form.usernameOrEmail, password: form.password }
         : mode === 'register'
-          ? { ...form, displayName: form.username, username: form.username }
+          ? { ...form, displayName: form.displayName, username: form.username }
           : mode === 'forgot'
             ? { email: form.email }
             : { token: form.resetToken, password: form.password }
+          if (mode === 'register' && form.password !== form.confirmPassword) {
+            throw new Error('Hesla se neshodují.')
+          }
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -320,12 +324,12 @@ function AuthPanel({ selectedTournamentId, onTournamentUpdated, onMatchesChanged
       if (mode === 'reset') {
         setMode('login')
         setMessage('Heslo bylo změněno. Nyní se můžeš přihlásit.')
-        setForm({ usernameOrEmail: '', username: '', email: '', password: '', resetToken: '' })
+        setForm({ usernameOrEmail: '', username: '', displayName: '', email: '', password: '', confirmPassword: '', resetToken: '' })
         return
       }
       setUser(payload.user)
       setIsOpen(false)
-      setForm({ usernameOrEmail: '', username: '', email: '', password: '', resetToken: '' })
+      setForm({ usernameOrEmail: '', username: '', displayName: '', email: '', password: '', confirmPassword: '', resetToken: '' })
     } catch (error) {
       setMessage(error.message)
     } finally {
@@ -368,7 +372,8 @@ function AuthPanel({ selectedTournamentId, onTournamentUpdated, onMatchesChanged
                 <input name="resetToken" value={form.resetToken} onChange={updateField} placeholder="Ověřovací token" required />
               ) : mode === 'register' ? (
                 <>
-                  <input name="username" value={form.username} onChange={updateField} placeholder="Jméno hráče" aria-label="Jméno hráče" title="Toto jméno se použije pro přihlášení i zobrazení v aplikaci" autoComplete="username" required />
+                  <input name="displayName" value={form.displayName} onChange={updateField} placeholder="Zobrazované jméno" aria-label="Zobrazované jméno" title="Jméno, které se zobrazí u tvých tipů a v pořadí hráčů." autoComplete="name" required />
+                  <input name="username" value={form.username} onChange={updateField} placeholder="Registrační jméno (bez mezer)" aria-label="Registrační jméno" title="Tímto jménem nebo e-mailem se budeš přihlašovat." autoComplete="username" required />
                   <input name="email" type="email" value={form.email} onChange={updateField} placeholder="E-mail" autoComplete="email" required />
                 </>
               ) : mode === 'forgot' ? (
@@ -379,7 +384,15 @@ function AuthPanel({ selectedTournamentId, onTournamentUpdated, onMatchesChanged
                 <input name="usernameOrEmail" value={form.usernameOrEmail} onChange={updateField} placeholder="Uživatelské jméno nebo e-mail" autoComplete="username" required />
               )}
               {mode === 'login' || mode === 'register' ? (
-                <input name="password" type="password" value={form.password} onChange={updateField} placeholder="Heslo" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} required />
+                <>
+                  <input name="password" type={mode === 'register' && showPasswords ? 'text' : 'password'} value={form.password} onChange={updateField} placeholder="Heslo" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} required />
+                  {mode === 'register' ? (
+                    <>
+                      <input name="confirmPassword" type={showPasswords ? 'text' : 'password'} value={form.confirmPassword} onChange={updateField} placeholder="Heslo znovu" autoComplete="new-password" required />
+                      <label className="auth-password-toggle"><input type="checkbox" checked={showPasswords} onChange={(event) => setShowPasswords(event.target.checked)} aria-label="Zobrazit hesla" /> Zobrazit hesla</label>
+                    </>
+                  ) : null}
+                </>
               ) : null}
               {message ? <p className="auth-message" role="alert">{message}</p> : null}
               <button type="submit" className="auth-submit" disabled={isBusy}>{isBusy ? 'Pracuji…' : mode === 'login' ? 'Přihlásit' : mode === 'register' ? 'Vytvořit účet' : mode === 'forgot' ? 'Obnovit heslo' : mode === 'verify' ? 'Ověřit e-mail' : 'Nastavit nové heslo'}</button>

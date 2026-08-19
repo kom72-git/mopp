@@ -92,6 +92,7 @@ function validateRegistration(body) {
   const username = String(body?.username ?? "").trim().toLowerCase();
   const email = String(body?.email ?? "").trim().toLowerCase();
   const password = String(body?.password ?? "");
+  const confirmPassword = String(body?.confirmPassword ?? "");
   const displayName = String(body?.displayName ?? username).trim();
 
   if (!/^[a-z0-9_.-]{3,30}$/.test(username)) {
@@ -102,6 +103,9 @@ function validateRegistration(body) {
   }
   if (password.length < 8) {
     return { error: "Heslo musí mít alespoň 8 znaků." };
+  }
+  if (password !== confirmPassword) {
+    return { error: "Hesla se neshodují." };
   }
   if (displayName.length < 1 || displayName.length > 60) {
     return { error: "Jméno musí mít 1 až 60 znaků." };

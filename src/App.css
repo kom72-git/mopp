@@ -2070,6 +2070,20 @@
   font-size: 0.8rem;
 }
 
+.auth-password-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #315d7c;
+  font-size: 0.74rem;
+  cursor: pointer;
+}
+
+.auth-form .auth-password-toggle input {
+  width: auto;
+  margin: 0;
+}
+
 .auth-mode-tabs {
   display: flex;
   gap: 0.35rem;

@@ -2070,6 +2070,12 @@
   font-size: 0.8rem;
 }
 
+.auth-form-help {
+  color: #5e7890;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
 .auth-password-toggle {
   display: flex;
   align-items: center;

@@ -279,7 +279,7 @@ function AuthPanel({ selectedTournamentId, onTournamentUpdated, onMatchesChanged
       const body = mode === 'login'
         ? { usernameOrEmail: form.usernameOrEmail, password: form.password }
         : mode === 'register'
-          ? { ...form, displayName: form.displayName, username: form.username }
+          ? { ...form, displayName: form.displayName, username: form.email.split('@')[0] }
           : mode === 'forgot'
             ? { email: form.email }
             : { token: form.resetToken, password: form.password }
@@ -373,7 +373,7 @@ function AuthPanel({ selectedTournamentId, onTournamentUpdated, onMatchesChanged
               ) : mode === 'register' ? (
                 <>
                   <input name="displayName" value={form.displayName} onChange={updateField} placeholder="Zobrazované jméno" aria-label="Zobrazované jméno" title="Jméno, které se zobrazí u tvých tipů a v pořadí hráčů." autoComplete="name" required />
-                  <input name="username" value={form.username} onChange={updateField} placeholder="Registrační jméno (bez mezer)" aria-label="Registrační jméno" title="Tímto jménem nebo e-mailem se budeš přihlašovat." autoComplete="username" required />
+                  <small className="auth-form-help">Toto jméno uvidí ostatní hráči. Přihlašovat se budeš e-mailem.</small>
                   <input name="email" type="email" value={form.email} onChange={updateField} placeholder="E-mail" autoComplete="email" required />
                 </>
               ) : mode === 'forgot' ? (
@@ -381,7 +381,7 @@ function AuthPanel({ selectedTournamentId, onTournamentUpdated, onMatchesChanged
               ) : mode === 'reset' ? (
                 <input name="password" type="password" value={form.password} onChange={updateField} placeholder="Nové heslo" autoComplete="new-password" required />
               ) : (
-                <input name="usernameOrEmail" value={form.usernameOrEmail} onChange={updateField} placeholder="Uživatelské jméno nebo e-mail" autoComplete="username" required />
+                <input name="usernameOrEmail" value={form.usernameOrEmail} onChange={updateField} placeholder="E-mail" aria-label="E-mail" autoComplete="email" required />
               )}
               {mode === 'login' || mode === 'register' ? (
                 <>

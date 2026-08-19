@@ -89,8 +89,8 @@ function requireRole(role) {
 }
 
 function validateRegistration(body) {
-  const username = String(body?.username ?? "").trim().toLowerCase();
   const email = String(body?.email ?? "").trim().toLowerCase();
+  const username = String(body?.username ?? email.split("@")[0] ?? "").trim().toLowerCase();
   const password = String(body?.password ?? "");
   const confirmPassword = String(body?.confirmPassword ?? "");
   const displayName = String(body?.displayName ?? username).trim();

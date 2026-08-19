@@ -138,16 +138,18 @@ function parseMatchDate(startsAt) {
 }
 
 function parseStartsAtDisplay(startsAt, matchId, round, tournamentYear) {
-  const isoDate = String(startsAt ?? '').match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/)
-  if (isoDate) {
-    const [, year, month, day, hour, minute] = isoDate
-    const date = new Date(`${year}-${month}-${day}T${hour}:${minute}:00`)
-    const weekday = ['neděle', 'pondělí', 'úterý', 'středa', 'čtvrtek', 'pátek', 'sobota'][date.getDay()]
-    return {
-      roundLabel: Number.isFinite(Number(round)) ? `${round}.` : '',
-      matchNo: '',
-      dayName: weekday,
-      rest: `${Number(day)}.${Number(month)}.${year} ${hour}:${minute}`,
+  const isIsoDate = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(String(startsAt ?? ''))
+  if (isIsoDate) {
+    const date = new Date(startsAt)
+    if (!Number.isNaN(date.getTime())) {
+      const weekday = ['neděle', 'pondělí', 'úterý', 'středa', 'čtvrtek', 'pátek', 'sobota'][date.getDay()]
+      const pad = (n) => String(n).padStart(2, '0')
+      return {
+        roundLabel: Number.isFinite(Number(round)) ? `${round}.` : '',
+        matchNo: '',
+        dayName: weekday,
+        rest: `${date.getDate()}.${date.getMonth() + 1}.${date.getFullYear()} ${pad(date.getHours())}:${pad(date.getMinutes())}`,
+      }
     }
   }
 
@@ -217,7 +219,7 @@ function StartsAtLabel({ startsAt, matchId, round, tournamentYear }) {
   )
 }
 
-function AuthPanel({ selectedTournamentId, onTournamentUpdated, onTipUpdated }) {
+function AuthPanel({ selectedTournamentId, onTournamentUpdated, onMatchesChanged, onTipUpdated }) {
   const [user, setUser] = useState(null)
   const [mode, setMode] = useState('login')
   const [isOpen, setIsOpen] = useState(false)
@@ -344,7 +346,7 @@ function AuthPanel({ selectedTournamentId, onTournamentUpdated, onTipUpdated }) 
             <button type="button" className={`auth-button ${activePanel === 'tips' ? 'is-active' : ''}`} onClick={() => setActivePanel((current) => current === 'tips' ? '' : 'tips')}>Tipovat</button>
             {user.role === 'admin' ? <button type="button" className={`auth-button ${activePanel === 'admin' ? 'is-active' : ''}`} onClick={() => setActivePanel((current) => current === 'admin' ? '' : 'admin')}>Admin</button> : null}
           </div>
-          {activePanel === 'admin' && user.role === 'admin' ? <AdminPanel selectedTournamentId={selectedTournamentId} onTournamentUpdated={onTournamentUpdated} /> : null}
+          {activePanel === 'admin' && user.role === 'admin' ? <AdminPanel selectedTournamentId={selectedTournamentId} onTournamentUpdated={onTournamentUpdated} onMatchesChanged={onMatchesChanged} /> : null}
           {activePanel === 'tips' ? <PlayerTipsPanel onTipUpdated={onTipUpdated} /> : null}
         </>
       ) : (
@@ -1996,6 +1998,36 @@ function App() {
   }, [selectedTournamentId])
 
   useEffect(() => {
+    if (typeof window === 'undefined') return undefined
+
+    // Nejblizsi zacatek zapasu, ktery jeste nezacal - v tu chvili se ma odkryt tip ostatnich hracu.
+    const now = Date.now()
+    const nextStartMs = data.matches
+      .map((match) => new Date(match.startsAt).getTime())
+      .filter((timeMs) => Number.isFinite(timeMs) && timeMs > now)
+      .reduce((earliest, timeMs) => (earliest === null || timeMs < earliest ? timeMs : earliest), null)
+
+    if (nextStartMs === null) return undefined
+
+    const maxDelayMs = 6 * 60 * 60 * 1000
+    const delayMs = Math.min(maxDelayMs, Math.max(1000, nextStartMs - now + 1000))
+    let cancelled = false
+
+    const timeoutId = window.setTimeout(() => {
+      fetchLiveData(selectedTournamentId)
+        .then((nextData) => {
+          if (!cancelled) setData(nextData)
+        })
+        .catch(() => {})
+    }, delayMs)
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(timeoutId)
+    }
+  }, [data.matches, selectedTournamentId])
+
+  useEffect(() => {
     return () => {
       if (tooltipTimerRef.current) {
         clearTimeout(tooltipTimerRef.current)
@@ -2089,6 +2121,14 @@ function App() {
     }
   }
 
+  const handleMatchesChanged = async () => {
+    try {
+      setData(await fetchLiveData(selectedTournamentId))
+    } catch {
+      return null
+    }
+  }
+
   return (
     <main className="layout">
       <header className="hero">
@@ -2129,7 +2169,7 @@ function App() {
             </span>
             {isLiveLoading ? <span className="tournament-loading">Načítám data…</span> : null}
           </div>
-          <AuthPanel selectedTournamentId={selectedTournamentId} onTournamentUpdated={handleTournamentUpdated} onTipUpdated={handleTipUpdated} />
+          <AuthPanel selectedTournamentId={selectedTournamentId} onTournamentUpdated={handleTournamentUpdated} onMatchesChanged={handleMatchesChanged} onTipUpdated={handleTipUpdated} />
         </div>
 
         <figure className="hero-logo-wrap">

@@ -2143,6 +2143,22 @@
   margin: 0.65rem 0 0;
 }
 
+.player-tip-row-message {
+  margin: 0.35rem 0 0;
+  font-size: 0.74rem;
+  font-weight: 600;
+  flex: 1 1 100%;
+  text-align: right;
+}
+
+.player-tip-row-message.is-error {
+  color: #dc2626;
+}
+
+.player-tip-row-message.is-success {
+  color: #16a34a;
+}
+
 .player-tips-navigation {
   display: flex;
   align-items: center;
@@ -2186,6 +2202,7 @@
 
 .player-tip-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 0.8rem;

@@ -80,7 +80,7 @@ async function loadMongoTournamentData(tournamentId, session) {
   const longTermBankPayouts = tournament.payouts || [];
   const matches = await database.collection("matches")
     .find({ tournamentId: tournament._id })
-    .sort({ startsAt: 1, round: 1 })
+    .sort({ round: 1, startsAt: 1 })
     .toArray();
   const tips = await database.collection("tips").find({ matchId: { $in: matches.map((match) => match._id) } }).toArray();
   const tipsByMatch = new Map();

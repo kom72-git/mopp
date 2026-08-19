@@ -147,7 +147,7 @@ async function recalculateAutomaticBanks(db, tournamentId) {
   const tournament = await db.collection("tournaments").findOne({ _id: tournamentId }, { projection: { participantUserIds: 1 } });
   const matches = await db.collection("matches")
     .find({ tournamentId })
-    .sort({ startsAt: 1, round: 1 })
+    .sort({ round: 1, startsAt: 1 })
     .toArray();
   let carriedBank = 0;
   const participantUserIds = (tournament?.participantUserIds ?? []).filter((id) => ObjectId.isValid(id));
@@ -335,7 +335,7 @@ function createAuthRoutes({ app, getDb }) {
     try {
       const matches = await getDb().collection("matches")
         .find({ status: "open", startsAt: { $gt: new Date().toISOString() } }, { projection: { tournamentId: 1, round: 1, startsAt: 1, home: 1, away: 1, bank: 1, status: 1 } })
-        .sort({ startsAt: 1 })
+        .sort({ round: 1, startsAt: 1 })
         .toArray();
       const tips = await getDb().collection("tips")
         .find({ userId: new ObjectId(req.session.sub) })
@@ -549,7 +549,7 @@ function createAuthRoutes({ app, getDb }) {
       if (tournamentId && ObjectId.isValid(tournamentId)) await recalculateAutomaticBanks(db, new ObjectId(tournamentId));
       const matches = await db.collection("matches")
         .find(query, { projection: { tournamentId: 1, round: 1, startsAt: 1, home: 1, away: 1, score: 1, bank: 1, bankSource: 1, baseBank: 1, carriedBank: 1, status: 1, createdAt: 1 } })
-        .sort({ startsAt: 1, round: 1 })
+        .sort({ round: 1, startsAt: 1 })
         .toArray();
       return res.json({ ok: true, matches });
     } catch {

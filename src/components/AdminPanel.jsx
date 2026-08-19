@@ -12,7 +12,21 @@ function formatMatchDateTime(value) {
   }).format(date)
 }
 
-export default function AdminPanel({ selectedTournamentId: selectedTournamentKey, onTournamentUpdated }) {
+// Vstup <input type="datetime-local"> nemá časovou zónu, prohlížeč ji ale bere jako místní čas.
+function dateTimeLocalToIso(value) {
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? value : date.toISOString()
+}
+
+// Server ukládá startsAt jako UTC ISO řetězec, input datetime-local ale potřebuje místní čas.
+function isoToDateTimeLocal(value) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value ?? ''
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
+export default function AdminPanel({ selectedTournamentId: selectedTournamentKey, onTournamentUpdated, onMatchesChanged }) {
   const [counts, setCounts] = useState(null)
   const [users, setUsers] = useState([])
   const [tipBreakdown, setTipBreakdown] = useState([])
@@ -196,27 +210,29 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
         method: editingMatchId ? 'PATCH' : 'POST',
         headers: { 'content-type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ ...matchForm, tournamentId: selectedTournamentId }),
+        body: JSON.stringify({ ...matchForm, tournamentId: selectedTournamentId, startsAt: dateTimeLocalToIso(matchForm.startsAt) }),
       })
       const payload = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(payload.message || 'Zápas se nepodařilo založit')
       if (editingMatchId) {
         setMatches((current) => [...current.map((match) => match._id === editingMatchId ? payload.match : match)].sort((a, b) => {
-          const startsAtDiff = String(a.startsAt).localeCompare(String(b.startsAt))
-          if (startsAtDiff !== 0) return startsAtDiff
-          return a.round - b.round
+          const roundDiff = a.round - b.round
+          if (roundDiff !== 0) return roundDiff
+          return String(a.startsAt).localeCompare(String(b.startsAt))
         }))
         setEditingMatchId('')
         setMessage('Zápas byl upraven.')
+        onMatchesChanged?.()
         return
       }
       setMatchForm((current) => ({ ...current, round: String(Number(current.round) + 1), startsAt: '', home: '', away: '', score: '', manualBank: '' }))
       setMatches((current) => [...current, payload.match].sort((a, b) => {
-        const startsAtDiff = String(a.startsAt).localeCompare(String(b.startsAt))
-        if (startsAtDiff !== 0) return startsAtDiff
-        return a.round - b.round
+        const roundDiff = a.round - b.round
+        if (roundDiff !== 0) return roundDiff
+        return String(a.startsAt).localeCompare(String(b.startsAt))
       }))
       setCounts((current) => current ? { ...current, matches: current.matches + 1 } : current)
+      onMatchesChanged?.()
     } catch (error) {
       setMessage(error.message)
     } finally {
@@ -230,7 +246,7 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
     setMatchForm({
       tournamentId: match.tournamentId,
       round: String(match.round),
-      startsAt: match.startsAt,
+      startsAt: isoToDateTimeLocal(match.startsAt),
       home: match.home,
       away: match.away,
       score: match.score || '',
@@ -251,6 +267,7 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
       setMatches((current) => current.filter((item) => item._id !== match._id))
       setCounts((current) => current ? { ...current, matches: Math.max(0, current.matches - 1) } : current)
       if (editingMatchId === match._id) setEditingMatchId('')
+      onMatchesChanged?.()
     } catch (error) {
       setMessage(error.message)
     } finally {
@@ -478,7 +495,7 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
             <h3>Zápasy</h3>
             {matches.length > 0 ? matches.map((match) => (
               <div className="admin-tournament-row" key={match._id}>
-                <strong>{formatMatchDateTime(match.startsAt)} · {match.home} – {match.away}</strong>
+                <strong>{match.round}. kolo · {formatMatchDateTime(match.startsAt)} · {match.home} – {match.away}</strong>
                 <span>
                   {match.status === 'open' ? 'otevřený' : match.status === 'locked' ? 'uzamčený' : match.status === 'evaluated' ? 'vyhodnocený' : 'připravovaný'}
                   {' · '}Bank {match.bank} Kč · {match.bankSource === 'automatic' ? 'automaticky' : 'ručně'}

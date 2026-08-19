@@ -39,7 +39,7 @@ function buildMatchGroups(matches) {
     })
 }
 
-export default function PlayerTipsPanel({ onTipUpdated }) {
+export default function PlayerTipsPanel({ onTipUpdated, onClose }) {
   const [matches, setMatches] = useState([])
   const [values, setValues] = useState({})
   const [message, setMessage] = useState('')
@@ -129,6 +129,7 @@ export default function PlayerTipsPanel({ onTipUpdated }) {
       <div className="player-tips-heading">
         <h2>Moje tipy</h2>
         <span>{tippedMatchCount}/{matches.length} tipů</span>
+        <button type="button" className="panel-close-button" onClick={onClose} aria-label="Zavřít panel" title="Zavřít">×</button>
       </div>
       {message ? <p className="player-tips-message" role="alert">{message}</p> : null}
       {matches.length === 0 ? (

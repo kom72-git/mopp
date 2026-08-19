@@ -227,6 +227,8 @@ function AuthPanel({ selectedTournamentId, onTournamentUpdated, onMatchesChanged
   const [isOpen, setIsOpen] = useState(false)
   const [activePanel, setActivePanel] = useState('')
   const [form, setForm] = useState({ usernameOrEmail: '', username: '', displayName: '', email: '', password: '', confirmPassword: '', resetToken: '' })
+  const [accountForm, setAccountForm] = useState({ displayName: '', currentPassword: '', newPassword: '', confirmPassword: '' })
+  const [profileMessage, setProfileMessage] = useState('')
   const [message, setMessage] = useState('')
   const [isBusy, setIsBusy] = useState(false)
   const [showPasswords, setShowPasswords] = useState(false)
@@ -259,6 +261,54 @@ function AuthPanel({ selectedTournamentId, onTournamentUpdated, onMatchesChanged
 
   const updateField = (event) => {
     setForm((current) => ({ ...current, [event.target.name]: event.target.value }))
+  }
+
+  const updateAccountField = (event) => {
+    setAccountForm((current) => ({ ...current, [event.target.name]: event.target.value }))
+  }
+
+  const saveAccountProfile = async (event) => {
+    event.preventDefault()
+    setIsBusy(true)
+    setProfileMessage('')
+    try {
+      const response = await fetch('/api/auth/profile', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ displayName: accountForm.displayName }),
+      })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(payload.message || 'Profil se nepodařilo uložit')
+      setUser(payload.user)
+      setProfileMessage(payload.message)
+    } catch (error) {
+      setProfileMessage(error.message)
+    } finally {
+      setIsBusy(false)
+    }
+  }
+
+  const changeAccountPassword = async (event) => {
+    event.preventDefault()
+    setIsBusy(true)
+    setMessage('')
+    try {
+      const response = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(accountForm),
+      })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(payload.message || 'Heslo se nepodařilo změnit')
+      setAccountForm((current) => ({ ...current, currentPassword: '', newPassword: '', confirmPassword: '' }))
+      setMessage(payload.message)
+    } catch (error) {
+      setMessage(error.message)
+    } finally {
+      setIsBusy(false)
+    }
   }
 
   const submit = async (event) => {
@@ -343,17 +393,37 @@ function AuthPanel({ selectedTournamentId, onTournamentUpdated, onMatchesChanged
   }
 
   return (
-    <div className="auth-panel">
+    <div className={`auth-panel ${user ? 'is-authenticated' : 'is-guest'}`}>
       {user ? (
         <>
           <span className="auth-user">{user.displayName || user.username}</span>
-          <button type="button" className="auth-button" onClick={logout}>Odhlásit</button>
           <div className="auth-panel-tabs">
             <button type="button" className={`auth-button ${activePanel === 'tips' ? 'is-active' : ''}`} onClick={() => setActivePanel((current) => current === 'tips' ? '' : 'tips')}>Tipovat</button>
+            <button type="button" className={`auth-button ${activePanel === 'account' ? 'is-active' : ''}`} onClick={() => { setActivePanel((current) => current === 'account' ? '' : 'account'); setAccountForm((current) => ({ ...current, displayName: user.displayName || '' })); setMessage('') }}>Účet</button>
             {user.role === 'admin' ? <button type="button" className={`auth-button ${activePanel === 'admin' ? 'is-active' : ''}`} onClick={() => setActivePanel((current) => current === 'admin' ? '' : 'admin')}>Admin</button> : null}
           </div>
-          {activePanel === 'admin' && user.role === 'admin' ? <AdminPanel selectedTournamentId={selectedTournamentId} onTournamentUpdated={onTournamentUpdated} onMatchesChanged={onMatchesChanged} /> : null}
-          {activePanel === 'tips' ? <PlayerTipsPanel onTipUpdated={onTipUpdated} /> : null}
+          <button type="button" className="auth-button auth-logout" onClick={logout}>Odhlásit</button>
+          {activePanel === 'admin' && user.role === 'admin' ? <AdminPanel selectedTournamentId={selectedTournamentId} onTournamentUpdated={onTournamentUpdated} onMatchesChanged={onMatchesChanged} onClose={() => setActivePanel('')} /> : null}
+          {activePanel === 'tips' ? <PlayerTipsPanel onTipUpdated={onTipUpdated} onClose={() => setActivePanel('')} /> : null}
+          {activePanel === 'account' ? (
+            <div className="auth-form auth-account-form">
+              <button type="button" className="panel-close-button" onClick={() => setActivePanel('')} aria-label="Zavřít panel" title="Zavřít">×</button>
+              <form onSubmit={saveAccountProfile}>
+                <h3>Profil</h3>
+                <input name="displayName" value={accountForm.displayName} onChange={updateAccountField} placeholder="Zobrazované jméno" maxLength={60} required />
+                <button type="submit" className="auth-submit" disabled={isBusy}>Uložit jméno</button>
+                {profileMessage ? <p className="auth-message" role="alert">{profileMessage}</p> : null}
+              </form>
+              <form onSubmit={changeAccountPassword}>
+                <h3>Změna hesla</h3>
+                <input name="currentPassword" type="password" value={accountForm.currentPassword} onChange={updateAccountField} placeholder="Současné heslo" autoComplete="current-password" required />
+                <input name="newPassword" type="password" value={accountForm.newPassword} onChange={updateAccountField} placeholder="Nové heslo" autoComplete="new-password" required />
+                <input name="confirmPassword" type="password" value={accountForm.confirmPassword} onChange={updateAccountField} placeholder="Nové heslo znovu" autoComplete="new-password" required />
+                <button type="submit" className="auth-submit" disabled={isBusy}>Změnit heslo</button>
+              </form>
+              {message ? <p className="auth-message" role="alert">{message}</p> : null}
+            </div>
+          ) : null}
         </>
       ) : (
         <>
@@ -820,6 +890,7 @@ function App() {
   const touchLegendHandledRef = useRef(false)
   const playerDetailHeadingRef = useRef(null)
   const roundTabsRef = useRef(null)
+  const tournamentSwitcherRef = useRef(null)
   const initialTournamentId = getStoredTournamentId()
   const [selectedTournamentId, setSelectedTournamentId] = useState(initialTournamentId)
   const [availableTournaments, setAvailableTournaments] = useState(() => sortTournamentsBySchedule(tournaments))
@@ -830,6 +901,7 @@ function App() {
   )
   const [isLiveLoading, setIsLiveLoading] = useState(true)
   const [isRoundTabsMultiRow, setIsRoundTabsMultiRow] = useState(false)
+  const [isTournamentMenuOpen, setIsTournamentMenuOpen] = useState(false)
   const [viewStateByTournament, setViewStateByTournament] = useState({})
   useEffect(() => {
     try {
@@ -873,6 +945,14 @@ function App() {
     const suffix = selectedTournament?.shortLabel ?? selectedTournament?.title ?? selectedTournament?.label ?? 'MOPP'
     document.title = `Master of PP | ${suffix}`
   }, [selectedTournament])
+
+  useEffect(() => {
+    const closeTournamentMenu = (event) => {
+      if (!tournamentSwitcherRef.current?.contains(event.target)) setIsTournamentMenuOpen(false)
+    }
+    document.addEventListener('pointerdown', closeTournamentMenu)
+    return () => document.removeEventListener('pointerdown', closeTournamentMenu)
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -2181,38 +2261,45 @@ function App() {
             </span>
             <span>Master of PP</span>
           </p>
-          <div className="hero-controls">
-            <span className="tournament-picker-label">Archiv</span>
-            <span className="tournament-select-shell">
-              <select
-                className="tournament-select"
-                aria-label="Výběr turnaje"
-                title={selectedTournament?.title ?? selectedTournament?.label ?? 'Turnaj'}
-                value={selectedTournamentId}
-                onChange={(event) => {
-                  const nextTournamentId = event.target.value
-                  setIsLiveLoading(true)
-                  setData(
-                    nextTournamentId === defaultTournamentId
-                      ? { players: fallbackPlayers, matches: fallbackMatches }
-                      : emptyData,
-                  )
-                  setSelectedTournamentId(nextTournamentId)
-                  const url = new URL(window.location.href)
-                  url.searchParams.set('tournament', nextTournamentId)
-                  window.history.replaceState({}, '', url)
-                }}
-              >
+          <div className={`tournament-switcher${isTournamentMenuOpen ? ' is-open' : ''}`} ref={tournamentSwitcherRef}>
+            <button
+              type="button"
+              className="tournament-menu-trigger"
+              aria-haspopup="listbox"
+              aria-expanded={isTournamentMenuOpen}
+              onClick={() => setIsTournamentMenuOpen((current) => !current)}
+            >
+              <span className="tournament-picker-label">Historie</span>
+              <span className="tournament-current-label">{selectedTournament?.shortLabel ?? selectedTournament?.title ?? selectedTournament?.label ?? 'Vyber turnaj'}</span>
+              <span className="tournament-menu-chevron" aria-hidden="true" />
+            </button>
+            {isTournamentMenuOpen ? (
+              <div className="tournament-menu" role="listbox" aria-label="Výběr turnaje">
                 {availableTournaments.map((tournament) => (
-                  <option key={tournament.id} value={tournament.id}>
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={tournament.id === selectedTournamentId}
+                    className={`tournament-menu-option${tournament.id === selectedTournamentId ? ' is-selected' : ''}`}
+                    key={tournament.id}
+                    onClick={() => {
+                      const nextTournamentId = tournament.id
+                      setIsLiveLoading(true)
+                      setData(nextTournamentId === defaultTournamentId ? { players: fallbackPlayers, matches: fallbackMatches } : emptyData)
+                      setSelectedTournamentId(nextTournamentId)
+                      setIsTournamentMenuOpen(false)
+                      const url = new URL(window.location.href)
+                      url.searchParams.set('tournament', nextTournamentId)
+                      window.history.replaceState({}, '', url)
+                    }}
+                  >
                     {tournament.shortLabel ?? tournament.title ?? tournament.label}
-                  </option>
+                  </button>
                 ))}
-              </select>
-            </span>
+              </div>
+            ) : null}
             {isLiveLoading ? <span className="tournament-loading">Načítám data…</span> : null}
           </div>
-          <AuthPanel selectedTournamentId={selectedTournamentId} onTournamentUpdated={handleTournamentUpdated} onMatchesChanged={handleMatchesChanged} onTipUpdated={handleTipUpdated} />
         </div>
 
         <figure className="hero-logo-wrap">
@@ -2229,6 +2316,10 @@ function App() {
           ) : null}
         </figure>
       </header>
+
+      <nav className="account-nav" aria-label="Navigace účtu">
+        <AuthPanel selectedTournamentId={selectedTournamentId} onTournamentUpdated={handleTournamentUpdated} onMatchesChanged={handleMatchesChanged} onTipUpdated={handleTipUpdated} />
+      </nav>
 
       <section className="panel controls-panel">
         <div className="panel-head">

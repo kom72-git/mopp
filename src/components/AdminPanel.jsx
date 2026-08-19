@@ -26,7 +26,7 @@ function isoToDateTimeLocal(value) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 
-export default function AdminPanel({ selectedTournamentId: selectedTournamentKey, onTournamentUpdated, onMatchesChanged }) {
+export default function AdminPanel({ selectedTournamentId: selectedTournamentKey, onTournamentUpdated, onMatchesChanged, onClose }) {
   const [counts, setCounts] = useState(null)
   const [users, setUsers] = useState([])
   const [tipBreakdown, setTipBreakdown] = useState([])
@@ -352,13 +352,14 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
     setMessage('')
   }
 
-  if (!counts) return <p className="admin-panel-message">{message || 'Načítám admin přehled…'}</p>
+  if (!counts) return <p className="admin-panel-message admin-panel-loading">{message || 'Načítám admin přehled…'}</p>
 
   return (
     <section className="admin-panel" aria-label="Admin prostředí">
       <div className="admin-panel-heading">
         <h2>Admin prostředí</h2>
         <span>Přístup ověřen</span>
+        <button type="button" className="panel-close-button" onClick={onClose} aria-label="Zavřít panel" title="Zavřít">×</button>
       </div>
       {message ? <p className="admin-panel-message">{message}</p> : null}
       <div className="admin-panel-stats">

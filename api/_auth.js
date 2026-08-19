@@ -292,6 +292,47 @@ function createAuthRoutes({ app, getDb }) {
     return res.json({ ok: true });
   });
 
+  app.patch("/api/auth/profile", requireJwt, async (req, res) => {
+    try {
+      const displayName = String(req.body?.displayName ?? "").trim();
+      if (displayName.length < 1 || displayName.length > 60) {
+        return res.status(400).json({ ok: false, message: "Zobrazované jméno musí mít 1 až 60 znaků." });
+      }
+      const result = await getDb().collection("users").findOneAndUpdate(
+        { _id: new ObjectId(req.session.sub), status: "active" },
+        { $set: { displayName, updatedAt: new Date() } },
+        { returnDocument: "after" },
+      );
+      if (!result) return res.status(404).json({ ok: false, message: "Účet nebyl nalezen." });
+      return res.json({ ok: true, user: publicUser(result), message: "Zobrazované jméno bylo změněno." });
+    } catch {
+      return res.status(500).json({ ok: false, message: "Zobrazované jméno se nepodařilo změnit" });
+    }
+  });
+
+  app.post("/api/auth/change-password", requireJwt, async (req, res) => {
+    try {
+      const currentPassword = String(req.body?.currentPassword ?? "");
+      const newPassword = String(req.body?.newPassword ?? "");
+      const confirmPassword = String(req.body?.confirmPassword ?? "");
+      const user = await getDb().collection("users").findOne({ _id: new ObjectId(req.session.sub), status: "active" });
+      if (!user || !(await bcrypt.compare(currentPassword, user.passwordHash))) {
+        return res.status(400).json({ ok: false, message: "Současné heslo není správné." });
+      }
+      const passwordError = validateNewPassword(newPassword);
+      if (passwordError) return res.status(400).json({ ok: false, message: passwordError });
+      if (newPassword !== confirmPassword) return res.status(400).json({ ok: false, message: "Hesla se neshodují." });
+      const passwordHash = await bcrypt.hash(newPassword, 12);
+      await getDb().collection("users").updateOne(
+        { _id: user._id },
+        { $set: { passwordHash, updatedAt: new Date() } },
+      );
+      return res.json({ ok: true, message: "Heslo bylo změněno." });
+    } catch {
+      return res.status(500).json({ ok: false, message: "Heslo se nepodařilo změnit" });
+    }
+  });
+
   app.post("/api/auth/forgot-password", async (req, res) => {
     const response = { ok: true, message: "Pokud účet existuje, pošleme instrukce k obnovení hesla." };
 

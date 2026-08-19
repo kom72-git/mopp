@@ -36,6 +36,8 @@ function getStoredTournamentId() {
   if (typeof window === 'undefined') return defaultTournamentId
 
   try {
+    const queryTournamentId = new URLSearchParams(window.location.search).get('tournament')
+    if (queryTournamentId) return queryTournamentId
     const storedTournamentId = window.localStorage.getItem('mopp-selected-tournament')
     if (/^db:[a-f0-9]{24}$/i.test(String(storedTournamentId ?? ''))) return storedTournamentId
     return getTournamentById(storedTournamentId)?.id ?? defaultTournamentId
@@ -693,6 +695,31 @@ async function fetchLiveData(tournamentId) {
   }
 }
 
+function sortTournamentsBySchedule(items) {
+  const now = Date.now()
+  const getStart = (tournament) => {
+    const time = new Date(tournament?.startDate ?? '').getTime()
+    return Number.isFinite(time) ? time : 0
+  }
+  const getEnd = (tournament) => {
+    const time = new Date(tournament?.endDate ?? '').getTime()
+    return Number.isFinite(time) ? time : getStart(tournament)
+  }
+  const getStatusRank = (tournament) => {
+    if (tournament?.status === 'active') return 0
+    if (tournament?.status === 'draft' || getStart(tournament) > now) return 1
+    return 2
+  }
+
+  return [...items].sort((a, b) => {
+    const statusDiff = getStatusRank(a) - getStatusRank(b)
+    if (statusDiff !== 0) return statusDiff
+
+    if (getStatusRank(a) === 1) return getStart(a) - getStart(b)
+    return getEnd(b) - getEnd(a)
+  })
+}
+
 function SplitTip({ value }) {
   const { home, away } = parseTipValue(value)
 
@@ -782,7 +809,7 @@ function App() {
   const roundTabsRef = useRef(null)
   const initialTournamentId = getStoredTournamentId()
   const [selectedTournamentId, setSelectedTournamentId] = useState(initialTournamentId)
-  const [availableTournaments, setAvailableTournaments] = useState(tournaments)
+  const [availableTournaments, setAvailableTournaments] = useState(() => sortTournamentsBySchedule(tournaments))
   const [data, setData] = useState(
     initialTournamentId === defaultTournamentId
       ? { players: fallbackPlayers, matches: fallbackMatches }
@@ -801,7 +828,6 @@ function App() {
   const selectedTournament = useMemo(
     () => availableTournaments.find((tournament) => tournament.id === selectedTournamentId)
       ?? getTournamentById(selectedTournamentId)
-      ?? availableTournaments[0]
       ?? null,
     [availableTournaments, selectedTournamentId],
   )
@@ -841,7 +867,7 @@ function App() {
       .then((response) => (response.ok ? response.json() : null))
       .then((payload) => {
         if (cancelled || !payload?.tournaments) return
-        setAvailableTournaments([...tournaments, ...payload.tournaments])
+        setAvailableTournaments(sortTournamentsBySchedule([...tournaments, ...payload.tournaments]))
       })
       .catch(() => {})
     return () => {
@@ -2158,11 +2184,14 @@ function App() {
                       : emptyData,
                   )
                   setSelectedTournamentId(nextTournamentId)
+                  const url = new URL(window.location.href)
+                  url.searchParams.set('tournament', nextTournamentId)
+                  window.history.replaceState({}, '', url)
                 }}
               >
                 {availableTournaments.map((tournament) => (
                   <option key={tournament.id} value={tournament.id}>
-                    {tournament.tabTitle ?? tournament.label}
+                    {tournament.title ?? tournament.label}
                   </option>
                 ))}
               </select>

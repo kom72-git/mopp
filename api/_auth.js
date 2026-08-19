@@ -472,7 +472,7 @@ function createAuthRoutes({ app, getDb }) {
   app.get("/api/admin/tournaments", requireJwt, requireRole("admin"), async (req, res) => {
     try {
       const tournaments = await getDb().collection("tournaments")
-        .find({}, { projection: { name: 1, tabTitle: 1, season: 1, status: 1, roundLabel: 1, startDate: 1, endDate: 1, stageLabel: 1, stages: 1, scoring: 1, tieBreakOrder: 1, tieBreakRules: 1, heroLogo: 1, logoSet: 1, favicon: 1, entryFee: 1, longTermContribution: 1, longTermBank: 1, payouts: 1, createdAt: 1 } })
+        .find({}, { projection: { name: 1, subtitle: 1, shortLabel: 1, tabTitle: 1, season: 1, status: 1, roundLabel: 1, startDate: 1, endDate: 1, stageLabel: 1, stages: 1, scoring: 1, tieBreakOrder: 1, tieBreakRules: 1, heroLogo: 1, logoSet: 1, favicon: 1, entryFee: 1, longTermContribution: 1, longTermBank: 1, payouts: 1, createdAt: 1 } })
         .sort({ createdAt: -1 })
         .toArray();
       return res.json({ ok: true, tournaments });
@@ -484,7 +484,9 @@ function createAuthRoutes({ app, getDb }) {
   app.post("/api/admin/tournaments", requireJwt, requireRole("admin"), async (req, res) => {
     try {
       const name = String(req.body?.name ?? "").trim();
-      const tabTitle = String(req.body?.tabTitle ?? "").trim();
+      const subtitle = String(req.body?.subtitle ?? "").trim();
+      const shortLabel = String(req.body?.shortLabel ?? "").trim();
+      const tabTitle = String(req.body?.shortLabel ?? req.body?.tabTitle ?? "").trim();
       const season = String(req.body?.season ?? "").trim();
       const status = String(req.body?.status ?? "draft").trim();
       const roundLabel = String(req.body?.roundLabel ?? "den").trim();
@@ -522,7 +524,7 @@ function createAuthRoutes({ app, getDb }) {
       if (duplicate) return res.status(409).json({ ok: false, message: "Turnaj se stejným názvem a sezónou už existuje." });
 
       const now = new Date();
-      const tournament = { name, tabTitle, season, status, roundLabel: roundLabel || "den", startDate, endDate, stageLabel, stages, scoring, tieBreakOrder, tieBreakRules, heroLogo, logoSet, favicon, entryFee, longTermContribution, longTermBank, payouts, createdAt: now, updatedAt: now };
+      const tournament = { name, subtitle, shortLabel, tabTitle, season, status, roundLabel: roundLabel || "den", startDate, endDate, stageLabel, stages, scoring, tieBreakOrder, tieBreakRules, heroLogo, logoSet, favicon, entryFee, longTermContribution, longTermBank, payouts, createdAt: now, updatedAt: now };
       const result = await getDb().collection("tournaments").insertOne(tournament);
       return res.status(201).json({ ok: true, tournament: { ...tournament, _id: result.insertedId } });
     } catch {
@@ -534,7 +536,9 @@ function createAuthRoutes({ app, getDb }) {
     try {
       const tournamentId = String(req.params.id ?? "").trim();
       const name = String(req.body?.name ?? "").trim();
-      const tabTitle = String(req.body?.tabTitle ?? "").trim();
+      const subtitle = String(req.body?.subtitle ?? "").trim();
+      const shortLabel = String(req.body?.shortLabel ?? "").trim();
+      const tabTitle = String(req.body?.shortLabel ?? req.body?.tabTitle ?? "").trim();
       const season = String(req.body?.season ?? "").trim();
       const status = String(req.body?.status ?? "draft").trim();
       const roundLabel = String(req.body?.roundLabel ?? "").trim();
@@ -563,8 +567,8 @@ function createAuthRoutes({ app, getDb }) {
 
       const result = await getDb().collection("tournaments").findOneAndUpdate(
         { _id: new ObjectId(tournamentId) },
-        { $set: { name, tabTitle, season, status, roundLabel, startDate, endDate, stageLabel, stages, scoring, tieBreakOrder, tieBreakRules, heroLogo, logoSet, favicon, entryFee, longTermContribution, longTermBank, payouts, updatedAt: new Date() } },
-        { returnDocument: "after", projection: { name: 1, tabTitle: 1, season: 1, status: 1, roundLabel: 1, startDate: 1, endDate: 1, stageLabel: 1, stages: 1, scoring: 1, tieBreakOrder: 1, tieBreakRules: 1, heroLogo: 1, logoSet: 1, favicon: 1, entryFee: 1, longTermContribution: 1, longTermBank: 1, payouts: 1, createdAt: 1 } },
+        { $set: { name, subtitle, shortLabel, tabTitle, season, status, roundLabel, startDate, endDate, stageLabel, stages, scoring, tieBreakOrder, tieBreakRules, heroLogo, logoSet, favicon, entryFee, longTermContribution, longTermBank, payouts, updatedAt: new Date() } },
+        { returnDocument: "after", projection: { name: 1, subtitle: 1, shortLabel: 1, tabTitle: 1, season: 1, status: 1, roundLabel: 1, startDate: 1, endDate: 1, stageLabel: 1, stages: 1, scoring: 1, tieBreakOrder: 1, tieBreakRules: 1, heroLogo: 1, logoSet: 1, favicon: 1, entryFee: 1, longTermContribution: 1, longTermBank: 1, payouts: 1, createdAt: 1 } },
       );
       if (!result) return res.status(404).json({ ok: false, message: "Turnaj nebyl nalezen." });
       return res.json({ ok: true, tournament: result });

@@ -857,7 +857,7 @@ function App() {
 
   useEffect(() => {
     if (typeof document === 'undefined') return
-    const suffix = selectedTournament?.tabTitle ?? selectedTournament?.title ?? selectedTournament?.label ?? 'MOPP'
+    const suffix = selectedTournament?.shortLabel ?? selectedTournament?.title ?? selectedTournament?.label ?? 'MOPP'
     document.title = `Master of PP | ${suffix}`
   }, [selectedTournament])
 
@@ -2160,6 +2160,7 @@ function App() {
       <header className="hero">
         <div className="hero-content">
           <h1>{selectedTournament?.title ?? selectedTournament?.label ?? 'MOPP turnaj'}</h1>
+          {selectedTournament?.subtitle ? <p className="tournament-subtitle">{selectedTournament.subtitle}</p> : null}
           <p className="intro">
             <span>tipovací soutěž</span>
             <span className="intro-sep" aria-hidden="true">
@@ -2191,7 +2192,7 @@ function App() {
               >
                 {availableTournaments.map((tournament) => (
                   <option key={tournament.id} value={tournament.id}>
-                    {tournament.title ?? tournament.label}
+                    {tournament.shortLabel ?? tournament.title ?? tournament.label}
                   </option>
                 ))}
               </select>

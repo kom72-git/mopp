@@ -37,7 +37,7 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
   const [editingTournamentId, setEditingTournamentId] = useState('')
   const [editingMatchId, setEditingMatchId] = useState('')
   const [openSection, setOpenSection] = useState('matches')
-  const [form, setForm] = useState({ name: '', tabTitle: '', season: '', status: 'draft', roundLabel: '', startDate: '', heroLogo: '', logoSet: 'elh', favicon: '', entryFee: '10', longTermContribution: '', longTermBank: '' })
+  const [form, setForm] = useState({ name: '', subtitle: '', shortLabel: '', season: '', status: 'draft', roundLabel: '', startDate: '', heroLogo: '', logoSet: 'elh', favicon: '', entryFee: '10', longTermContribution: '', longTermBank: '' })
   const [stages, setStages] = useState([])
   const [scoring, setScoring] = useState({ exact: '10', near: '5', winner: '3' })
   const [tieBreakOrder, setTieBreakOrder] = useState(['exact', 'scored', 'noBet'])
@@ -109,7 +109,8 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
         if (activeTournament) {
           setForm({
             name: activeTournament.name,
-            tabTitle: activeTournament.tabTitle || '',
+            subtitle: activeTournament.subtitle || '',
+            shortLabel: activeTournament.shortLabel || '',
             season: activeTournament.season || '',
             status: activeTournament.status || 'draft',
             roundLabel: activeTournament.roundLabel || '',
@@ -179,7 +180,8 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
         setMessage('Turnaj byl upraven.')
         return
       }
-      setForm({ name: '', tabTitle: '', season: '', status: 'draft', roundLabel: '', startDate: '', heroLogo: '', logoSet: 'elh', favicon: '', entryFee: '10', longTermContribution: '', longTermBank: '' })
+      setForm({ name: '', subtitle: '', shortLabel: '', season: '', status: 'draft', roundLabel: '', startDate: '', heroLogo: '', logoSet: 'elh', favicon: '', entryFee: '10', longTermContribution: '', longTermBank: '' })
+        setForm({ name: '', subtitle: '', shortLabel: '', season: '', status: 'draft', roundLabel: '', startDate: '', heroLogo: '', logoSet: 'elh', favicon: '', entryFee: '10', longTermContribution: '', longTermBank: '' })
       setStages([])
       setPayouts(['', '', '', '', ''])
       setScoring({ exact: '10', near: '5', winner: '3' })
@@ -320,7 +322,6 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
     setSelectedTournamentId(tournament._id)
     setForm({
       name: tournament.name,
-      tabTitle: tournament.tabTitle || '',
       season: tournament.season || '',
       status: tournament.status || 'draft',
       roundLabel: tournament.roundLabel || '',
@@ -342,7 +343,7 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
 
   const startNewTournament = () => {
     setEditingTournamentId('')
-    setForm({ name: '', tabTitle: '', season: '', status: 'draft', roundLabel: '', startDate: '', heroLogo: '', logoSet: 'elh', favicon: '', entryFee: '10', longTermContribution: '', longTermBank: '' })
+    setForm({ name: '', subtitle: '', shortLabel: '', season: '', status: 'draft', roundLabel: '', startDate: '', heroLogo: '', logoSet: 'elh', favicon: '', entryFee: '10', longTermContribution: '', longTermBank: '' })
     setScoring({ exact: '10', near: '5', winner: '3' })
     setTieBreakOrder(['exact', 'scored', 'noBet'])
     setTieBreakRules([])
@@ -381,9 +382,13 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
               <small>Oficiální název, který se zobrazí v archivu a v hlavičce.</small>
             </label>
             <label className="admin-field">
-              <span className="admin-field-label">Titulek v záložce prohlížeče</span>
-              <input name="tabTitle" value={form.tabTitle} onChange={updateField} placeholder="Např. ELH play-off 2027" maxLength={60} />
-              <small>Když necháš prázdné, použije se název turnaje.</small>
+              <span className="admin-field-label">Podnadpis na webu</span>
+              <input name="subtitle" value={form.subtitle} onChange={updateField} placeholder="Např. Extraliga v ledním hokeji" maxLength={100} />
+            </label>
+            <label className="admin-field">
+              <span className="admin-field-label">Krátké označení turnaje</span>
+              <input name="shortLabel" value={form.shortLabel} onChange={updateField} placeholder="Např. ELH 2026/27" maxLength={60} />
+              <small>Použije se v rozevíracím seznamu turnajů a v titulku záložky prohlížeče. Když zůstane prázdné, použije se název turnaje.</small>
             </label>
             <label className="admin-field">
               <span className="admin-field-label">Sezóna</span>

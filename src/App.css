@@ -179,6 +179,12 @@
   font-size: clamp(1.15rem, 2.4vw, 1.9rem);
 }
 
+.tournament-subtitle {
+  margin: 0.18rem 0 0;
+  color: #5e7890;
+  font-size: 0.9rem;
+}
+
 .intro {
   margin: 0.48rem 0 0;
 }

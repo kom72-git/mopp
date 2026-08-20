@@ -553,13 +553,16 @@ function createAuthRoutes({ app, getDb }) {
       const allRounds = [...new Set(scheduleMatches.map((match) => Number(match.round)))].sort((a, b) => a - b);
       const requiredSelectionCount = Math.max(1, Number(tournament.selectionMatchCount) || 1);
       const rounds = allRounds.map((round) => {
-        const matches = scheduleMatches.filter((match) => Number(match.round) === round).map((match) => ({
+        const roundMatches = scheduleMatches.filter((match) => Number(match.round) === round);
+        const selection = selections.find((item) => Number(item.round) === round);
+        const matches = roundMatches
+          .filter((match) => !selection || selection.matchIds?.includes(match._id.toString()))
+          .map((match) => ({
           id: match._id.toString(),
           home: match.home,
           away: match.away,
           startsAt: match.startsAt,
-        }));
-        const selection = selections.find((item) => Number(item.round) === round);
+          }));
         const previousSelection = round > 1
           ? selections.find((item) => Number(item.round) === round - 1)
           : true;
@@ -575,7 +578,17 @@ function createAuthRoutes({ app, getDb }) {
         };
       });
       const visibleRounds = rounds.filter((round) => round.canSelect || round.selection?.userId === req.session.sub);
-      return res.json({ ok: true, rounds: visibleRounds, participantIndex });
+      const activeRound = rounds.find((round) => round.canSelect)?.round ?? Math.max(...allRounds, 0) + 1;
+      const recentSelectedMatches = selections
+        .filter((item) => Number(item.round) < activeRound)
+        .sort((a, b) => Number(a.round) - Number(b.round))
+        .flatMap((item) => (item.matchIds ?? []).map((matchId) => {
+          const selectedMatch = scheduleMatches.find((match) => match._id.toString() === String(matchId));
+          return selectedMatch ? { round: Number(item.round), home: selectedMatch.home, away: selectedMatch.away, startsAt: selectedMatch.startsAt } : null;
+        }))
+        .filter(Boolean)
+        .slice(-3);
+      return res.json({ ok: true, rounds: visibleRounds, recentSelectedMatches, participantIndex });
     } catch {
       return res.status(500).json({ ok: false, message: "Rozpis se nepodařilo načíst" });
     }
@@ -889,9 +902,24 @@ function createAuthRoutes({ app, getDb }) {
       if (score && !/^\d+:\d+$/.test(score)) return res.status(400).json({ ok: false, message: "Výsledek musí mít formát domácí:hosté." });
       if (!["draft", "open", "locked", "evaluated"].includes(status)) return res.status(400).json({ ok: false, message: "Neplatný stav zápasu." });
 
+      const existingMatch = await getDb().collection("matches").findOne({ _id: new ObjectId(matchId) });
+      if (!existingMatch) return res.status(404).json({ ok: false, message: "Zápas nebyl nalezen." });
+      const matchDetailsChanged = existingMatch.round !== round
+        || existingMatch.startsAt !== startsAt
+        || existingMatch.home !== home
+        || existingMatch.away !== away
+        || existingMatch.status !== status;
+      const update = {
+        $set: { round, startsAt, home, away, score: score || null, status, updatedAt: new Date() },
+      };
+      if (matchDetailsChanged) {
+        update.$set.updatedByUserId = req.session.sub;
+        update.$set.updatedByUsername = req.session.displayName || req.session.username || "admin";
+      }
+
       const result = await getDb().collection("matches").findOneAndUpdate(
         { _id: new ObjectId(matchId) },
-        { $set: { round, startsAt, home, away, score: score || null, status, updatedAt: new Date(), updatedByUserId: req.session.sub, updatedByUsername: req.session.displayName || req.session.username || "admin" } },
+        update,
         { returnDocument: "after", projection: { tournamentId: 1, round: 1, startsAt: 1, home: 1, away: 1, score: 1, bank: 1, bankSource: 1, baseBank: 1, carriedBank: 1, status: 1, createdAt: 1 } },
       );
       if (!result) return res.status(404).json({ ok: false, message: "Zápas nebyl nalezen." });

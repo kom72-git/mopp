@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { getTeamDisplayName } from '../data/teamLogos'
 
 function formatMatchDateTime(value) {
   const date = new Date(value)
@@ -26,6 +27,21 @@ function isoToDateTimeLocal(value) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 
+function ManualDateTimeInput({ value, onChange, dateOnly = false, ...props }) {
+  return (
+    <input
+      {...props}
+      type={dateOnly ? 'date' : 'datetime-local'}
+      value={dateOnly ? String(value || '').slice(0, 10) : isoToDateTimeLocal(value)}
+      onChange={(event) => onChange(event.target.value)}
+    />
+  )
+}
+
+function ManualDateInput({ value, onChange, ...props }) {
+  return <ManualDateTimeInput {...props} dateOnly value={value ? `${value}T00:00` : ''} onChange={(nextValue) => onChange(nextValue ? nextValue.slice(0, 10) : '')} />
+}
+
 export default function AdminPanel({ selectedTournamentId: selectedTournamentKey, onTournamentUpdated, onMatchesChanged, onClose }) {
   const [counts, setCounts] = useState(null)
   const [users, setUsers] = useState([])
@@ -38,7 +54,7 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
   const [selectedTournamentId, setSelectedTournamentId] = useState('')
   const [editingTournamentId, setEditingTournamentId] = useState('')
   const [editingMatchId, setEditingMatchId] = useState('')
-  const [openSection, setOpenSection] = useState('matches')
+  const [openSection, setOpenSection] = useState('')
   const [form, setForm] = useState({ name: '', subtitle: '', shortLabel: '', season: '', plannedMatchCount: '', selectionMatchCount: '1', scheduleUrl: '', status: 'draft', roundLabel: '', startDate: '', heroLogo: '', logoSet: 'elh', favicon: '', entryFee: '10', longTermContribution: '' })
   const [participantUserIds, setParticipantUserIds] = useState([])
   const [matchSelections, setMatchSelections] = useState([])
@@ -205,6 +221,14 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
 
   const updateMatchField = (event) => {
     setMatchForm((current) => ({ ...current, [event.target.name]: event.target.value }))
+  }
+
+  const updateMatchScore = (side, value) => {
+    setMatchForm((current) => {
+      const [homeScore = '', awayScore = ''] = String(current.score || '').split(':')
+      const nextScore = side === 'home' ? `${value}:${awayScore}` : `${homeScore}:${value}`
+      return { ...current, score: nextScore === ':' ? '' : nextScore }
+    })
   }
 
   const saveParticipantIds = async (nextParticipantUserIds, changedUserId = '') => {
@@ -450,6 +474,10 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
     setMessage('')
   }
 
+  const currentAdminRound = [...matches]
+    .filter((match) => new Date(match.startsAt).getTime() >= Date.now())
+    .sort((a, b) => Number(a.round) - Number(b.round) || String(a.startsAt).localeCompare(String(b.startsAt)))[0]?.round
+
   if (!counts) return <p className="admin-panel-message admin-panel-loading">{message || 'Načítám admin přehled…'}</p>
 
   return (
@@ -510,7 +538,7 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
               <small>Zdroj, ze kterého později načteme aktuální rozpis včetně změn termínů.</small>
             </label>
             <div className="admin-tournament-form-row">
-              <label className="admin-field"><span className="admin-field-label">Začátek turnaje</span><input name="startDate" type="date" value={form.startDate} onChange={updateField} title="Datum prvního zápasu turnaje." /></label>
+              <label className="admin-field"><span className="admin-field-label">Začátek turnaje</span><ManualDateInput name="startDate" value={form.startDate} onChange={(value) => setForm((current) => ({ ...current, startDate: value }))} title="Datum prvního zápasu turnaje." /></label>
               <label className="admin-field"><span className="admin-field-label">Logo turnaje</span><select name="heroLogo" value={form.heroLogo} onChange={updateField} title="Vyber obrázek ze složky public/tournaments."><option value="">Bez loga</option>{tournamentLogos.map((logo) => <option key={logo.path} value={logo.path}>{logo.name}</option>)}</select></label>
             </div>
             <p className="admin-field-help">Data slouží pro orientaci a zobrazení turnaje; nezakládají zápasy automaticky.</p>
@@ -551,8 +579,8 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
             {stages.map((stage, index) => (
               <div className="admin-stage-row" key={stage.id || `stage-${index}`}>
                 <input value={stage.name || ''} onChange={(event) => setStages((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, name: event.target.value } : item))} placeholder="Název fáze" aria-label={`Název fáze ${index + 1}`} />
-                <input type="datetime-local" value={stage.from || ''} onChange={(event) => setStages((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, from: event.target.value } : item))} aria-label={`Začátek fáze ${index + 1}`} title="Začátek platnosti fáze." />
-                <input type="datetime-local" value={stage.to || ''} onChange={(event) => setStages((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, to: event.target.value } : item))} aria-label={`Konec fáze ${index + 1}`} title="Konec platnosti fáze." />
+                <ManualDateTimeInput value={stage.from || ''} onChange={(value) => setStages((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, from: value } : item))} aria-label={`Začátek fáze ${index + 1}`} title="Začátek platnosti fáze." />
+                <ManualDateTimeInput value={stage.to || ''} onChange={(value) => setStages((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, to: value } : item))} aria-label={`Konec fáze ${index + 1}`} title="Konec platnosti fáze." />
                 <button type="button" className="auth-button is-danger" onClick={() => setStages((current) => current.filter((_, itemIndex) => itemIndex !== index))}>Smazat</button>
               </div>
             ))}
@@ -626,7 +654,7 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
             <p className="admin-selected-context">Turnaj: {tournaments.find((tournament) => tournament._id === selectedTournamentId)?.name || 'není vybraný'}</p>
             <div className="admin-tournament-form-row">
               <input name="round" type="number" min="1" value={matchForm.round} onChange={updateMatchField} placeholder="Kolo" required />
-              <input name="startsAt" type="datetime-local" value={matchForm.startsAt} onChange={updateMatchField} required />
+              <ManualDateTimeInput name="startsAt" value={matchForm.startsAt} onChange={(value) => setMatchForm((current) => ({ ...current, startsAt: value }))} aria-label="Začátek zápasu" required />
               <select name="status" value={matchForm.status} onChange={updateMatchField}>
                 <option value="draft">Připravovaný</option>
                 <option value="open">Otevřený</option>
@@ -636,7 +664,14 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
             <div className="admin-tournament-form-row">
               <input name="home" value={matchForm.home} onChange={updateMatchField} placeholder="Domácí tým" required />
               <input name="away" value={matchForm.away} onChange={updateMatchField} placeholder="Hostující tým" required />
-              <input name="score" value={matchForm.score} onChange={updateMatchField} placeholder="Výsledek např. 3:1" pattern="^\d+:\d+$" />
+              <label className="admin-score-field">
+                <span className="admin-field-label">Výsledek (domácí : hosté)</span>
+                <div className="player-tip-score admin-match-score" aria-label="Výsledek zápasu">
+                  <input type="number" min="0" max="99" value={matchForm.score.split(':')[0] || ''} onChange={(event) => updateMatchScore('home', event.target.value)} aria-label={`Skóre domácího týmu ${matchForm.home || ''}`} placeholder="0" />
+                  <span>:</span>
+                  <input type="number" min="0" max="99" value={matchForm.score.split(':')[1] || ''} onChange={(event) => updateMatchScore('away', event.target.value)} aria-label={`Skóre hostujícího týmu ${matchForm.away || ''}`} placeholder="0" />
+                </div>
+              </label>
               <input name="manualBank" type="number" min="0" value={matchForm.manualBank} onChange={updateMatchField} placeholder="Bank ručně (volitelné)" />
             </div>
             <div className="admin-form-actions">
@@ -647,8 +682,8 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
           <div className="admin-tournament-list">
             <h3>Zápasy</h3>
             {matches.length > 0 ? matches.map((match) => (
-              <div className="admin-tournament-row" key={match._id}>
-                <strong>{match.round}. kolo · {formatMatchDateTime(match.startsAt)} · {match.home} – {match.away}</strong>
+              <div className={`admin-tournament-row${Number(match.round) === Number(currentAdminRound) ? ' is-current-round' : ''}`} key={match._id}>
+                <strong className="admin-match-summary"><span>{match.round}. kolo · {formatMatchDateTime(match.startsAt)}</span><span>{getTeamDisplayName(match.home)} – {getTeamDisplayName(match.away)}</span></strong>
                 <span>
                   {match.status === 'open' ? 'otevřený' : match.status === 'locked' ? 'uzamčený' : match.status === 'evaluated' ? 'vyhodnocený' : 'připravovaný'}
                   {' · '}Bank {match.bank == null ? 'čeká na výsledek předchozího zápasu' : `${match.bank} Kč`} · {match.bankSource === 'automatic' ? 'automaticky' : 'ručně'}
@@ -683,7 +718,7 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
                     <div>{scheduleMatches.filter((match) => Number(match.round) === round).map((match) => {
                       const [date, time] = String(match.startsAt ?? '').split('T')
                       const [year, month, day] = date.split('-')
-                      return <span className="admin-selection-match" key={match.sourceKey}>{match.home} – {match.away} · {day}-{month}-{year} {time}</span>
+                      return <span className="admin-selection-match" key={match.sourceKey}>{getTeamDisplayName(match.home)} – {getTeamDisplayName(match.away)} · {day}-{month}-{year} {time}</span>
                     })}</div>
                   </div>
                 ))}
@@ -713,7 +748,7 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
                       <span>Na tahu: {selector.displayName || selector.username}</span>
                       <span>{roundMatches.length > 0 ? `Založeno zápasů: ${roundMatches.length}` : 'Čeká na výběr hráče'}</span>
                     </div>
-                    {roundMatches.length > 0 ? <div className="admin-selection-options">{roundMatches.map((match) => <span className="admin-selection-match" key={match._id}>{match.home} – {match.away}</span>)}</div> : null}
+                    {roundMatches.length > 0 ? <div className="admin-selection-options">{roundMatches.map((match) => <span className="admin-selection-match" key={match._id}>{getTeamDisplayName(match.home)} – {getTeamDisplayName(match.away)}</span>)}</div> : null}
                   </div>
                 )
               })

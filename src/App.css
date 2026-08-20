@@ -164,6 +164,32 @@
   border-color: #4e93c7;
 }
 
+.auth-tips-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+}
+
+.notification-bell {
+  position: absolute;
+  right: -0.72rem;
+  bottom: -0.72rem;
+  display: inline-block;
+  width: 1.5rem;
+  height: 1.5rem;
+  object-fit: contain;
+  font-size: 1.35rem;
+  line-height: 1;
+  filter: drop-shadow(0 1px 2px rgba(41, 61, 77, 0.38));
+  transform: scaleX(-1);
+}
+
+.notification-bell-tab {
+  right: -0.62rem;
+  bottom: -0.62rem;
+}
+
 .admin-panel-loading {
   position: absolute;
   z-index: 6;
@@ -803,6 +829,29 @@
   color: #5e7890;
   font-size: 0.66rem;
   font-weight: 700;
+}
+
+.match-item-admin-note,
+.selected-match-admin-note {
+  position: absolute;
+  right: 0.6rem;
+  bottom: 0.45rem;
+  color: #ad3030;
+  font-weight: 400;
+  font-size: 0.66rem;
+}
+
+.selected-match-bottom {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.selected-match-admin-note {
+  position: static;
+  margin: 0.34rem 0 0;
+  text-align: right;
 }
 
 .match-item.is-clickable {
@@ -2562,6 +2611,7 @@
 }
 
 .player-tips-tabs button {
+  position: relative;
   border: 1px solid #b9d3e8;
   border-radius: 7px;
   padding: 0.3rem 0.55rem;
@@ -2587,13 +2637,18 @@
   display: grid;
   gap: 0.45rem;
   margin-top: 0.7rem;
+}
+
+.player-schedule-box {
+  display: grid;
+  gap: 0.45rem;
   padding: 0.65rem;
   border: 1px solid #c7d9e8;
   border-radius: 8px;
   background: #f7fbfe;
 }
 
-.player-schedule-picker h3 {
+.player-schedule-box h3 {
   margin: 0;
   color: #174c73;
   font-size: 0.86rem;
@@ -2627,6 +2682,51 @@
 .player-schedule-match.is-selected {
   font-weight: 800;
   color: #174c73;
+}
+
+.player-schedule-history {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.15rem;
+  color: #5e7890;
+  font-size: 0.7rem;
+}
+
+.player-schedule-history small {
+  padding: 0.18rem 0.35rem;
+  border: 1px solid #d7e5f2;
+  border-radius: 4px;
+  background: #ffffff;
+}
+
+.player-schedule-history span {
+  padding: 0.18rem 0.35rem;
+  border: 1px solid #d7e5f2;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #173e5f;
+  font-size: 0.72rem;
+}
+
+.player-schedule-history-top {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  white-space: nowrap;
+  padding-bottom: 0.1rem;
+}
+
+.player-schedule-closed-match {
+  display: flex;
+  gap: 0.45rem;
+  color: #173e5f;
+  font-size: 0.74rem;
+}
+
+.player-schedule-closed-match span:first-child {
+  min-width: 3.8rem;
+  color: #5e7890;
 }
 
 .player-schedule-round small {
@@ -2744,13 +2844,26 @@
 }
 
 .player-tip-score input {
-  width: 2.5rem;
+  width: 2.8rem;
   box-sizing: border-box;
   border: 1px solid #c7d9e8;
   border-radius: 5px;
-  padding: 0.4rem 0.25rem;
+  padding: 0.34rem 0.18rem;
   text-align: center;
   font: inherit;
+  font-size: 0.86rem;
+}
+
+.admin-score-field {
+  min-width: 0;
+}
+
+.admin-match-score {
+  margin-top: 0.2rem;
+}
+
+.admin-match-score input {
+  width: 3.2rem;
 }
 
 @media (max-width: 560px) {
@@ -3038,6 +3151,22 @@
 .admin-tournament-row span {
   color: #5e7890;
   text-align: right;
+}
+
+.admin-tournament-row.is-current-round {
+  border-color: #e3c96b;
+  background: #fffbea;
+}
+
+.admin-match-summary {
+  display: grid;
+  gap: 0.12rem;
+  min-width: 0;
+}
+
+.admin-match-summary span {
+  color: inherit;
+  text-align: left;
 }
 
 .admin-member-checkbox {

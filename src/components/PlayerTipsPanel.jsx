@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { getTeamDisplayName } from '../data/teamLogos'
 
 function formatMatchDateTime(value) {
   const date = new Date(value)
@@ -39,7 +40,7 @@ function buildMatchGroups(matches) {
     })
 }
 
-export default function PlayerTipsPanel({ selectedTournamentId, onTipUpdated, onClose }) {
+export default function PlayerTipsPanel({ selectedTournamentId, hasSelectionNotification, onSelectionUpdated, onTipUpdated, onClose }) {
   const [matches, setMatches] = useState([])
   const [values, setValues] = useState({})
   const [message, setMessage] = useState('')
@@ -49,6 +50,7 @@ export default function PlayerTipsPanel({ selectedTournamentId, onTipUpdated, on
   const [tipViewMode, setTipViewMode] = useState('group')
   const [scheduleRounds, setScheduleRounds] = useState([])
   const [scheduleSelections, setScheduleSelections] = useState({})
+  const [scheduleHistory, setScheduleHistory] = useState([])
   const [scheduleMessage, setScheduleMessage] = useState('')
   const [tipsMode, setTipsMode] = useState('mine')
 
@@ -94,6 +96,7 @@ export default function PlayerTipsPanel({ selectedTournamentId, onTipUpdated, on
         if (cancelled) return
         setScheduleRounds(payload.rounds ?? [])
         setScheduleSelections(Object.fromEntries((payload.rounds ?? []).map((round) => [round.round, round.selection?.matchIds ?? []])))
+        setScheduleHistory(payload.recentSelectedMatches ?? [])
       })
       .catch((error) => {
         if (!cancelled) setScheduleMessage(error.message)
@@ -149,6 +152,18 @@ export default function PlayerTipsPanel({ selectedTournamentId, onTipUpdated, on
       const payload = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(payload.message || 'Výběr se nepodařilo uložit')
       setScheduleRounds((current) => current.map((item) => item.round === round.round ? { ...item, canSelect: false, selection: payload.selection } : item))
+      onSelectionUpdated?.()
+      await onTipUpdated?.()
+      const matchesResponse = await fetch('/api/player/matches', { credentials: 'include' })
+      const matchesPayload = await matchesResponse.json().catch(() => ({}))
+      if (matchesResponse.ok) {
+        const loadedMatches = matchesPayload.matches ?? []
+        setMatches(loadedMatches)
+        setValues(Object.fromEntries(loadedMatches.map((match) => [match._id, {
+          homeScore: match.tip?.homeScore ?? '',
+          awayScore: match.tip?.awayScore ?? '',
+        }])))
+      }
       setScheduleMessage('Výběr byl uložen a uzamčen.')
     } catch (error) {
       setScheduleMessage(error.message)
@@ -169,37 +184,47 @@ export default function PlayerTipsPanel({ selectedTournamentId, onTipUpdated, on
 
   const scheduleContent = (
     <section className="player-schedule-picker" aria-label="Výběr zápasu">
-      <h3>Výběr zápasu</h3>
       {scheduleMessage ? <p className="player-tips-message" role="alert">{scheduleMessage}</p> : null}
-      {scheduleRounds.length === 0 ? <p className="player-tips-message">Zatím není dostupné kolo pro tvůj výběr.</p> : scheduleRounds.map((round) => (
-        <div className="player-schedule-round" key={round.round}>
-          <strong>{round.round}. kolo · {round.selectorName} · vyber {round.requiredSelectionCount} zápas{round.requiredSelectionCount === 1 ? '' : 'y'}</strong>
-          {round.matches.map((match) => {
-            const checked = (scheduleSelections[round.round] ?? []).includes(match.id)
-            return (
-              <label className={`player-schedule-match${round.selection?.matchIds?.includes(match.id) ? ' is-selected' : ''}`} key={match.id}>
-                <input type="checkbox" checked={checked || Boolean(round.selection)} disabled={!round.canSelect || Boolean(round.selection) || (!checked && (scheduleSelections[round.round] ?? []).length >= round.requiredSelectionCount)} onChange={() => setScheduleSelections((current) => ({ ...current, [round.round]: checked ? (current[round.round] ?? []).filter((id) => id !== match.id) : [...(current[round.round] ?? []), match.id] }))} />
-                <span>{match.home} – {match.away} · {match.startsAt.replace('T', ' ')}</span>
-              </label>
-            )
-          })}
-          {round.canSelect ? <button type="button" className="auth-submit" disabled={(scheduleSelections[round.round] ?? []).length !== round.requiredSelectionCount} onClick={() => saveScheduleSelection(round)}>Potvrdit výběr</button> : null}
-          {round.selection ? <small>Výběr je uzamčený.</small> : null}
+      {scheduleHistory.length > 0 ? (
+        <div className="player-schedule-box player-schedule-history-box">
+          <h3>Poslední výběry</h3>
+          <div className="player-schedule-history player-schedule-history-top">
+                {scheduleHistory.map((match, index) => <span key={`${match.round}-${match.home}-${match.away}-${index}`}>{match.round}. kolo · {match.home} – {match.away}</span>)}
+          </div>
         </div>
-      ))}
+      ) : null}
+      <div className="player-schedule-box player-schedule-selections-box">
+        <h3>Moje výběry</h3>
+        {scheduleRounds.length === 0 ? <p className="player-tips-message">Zatím není dostupné kolo pro tvůj výběr.</p> : scheduleRounds.map((round) => (
+          <div className={`player-schedule-round${round.selection ? ' is-closed' : ''}`} key={round.round}>
+            {!round.selection ? <strong>{round.round}. kolo{round.canSelect ? ` · vyber ${round.requiredSelectionCount} zápas${round.requiredSelectionCount === 1 ? '' : 'y'}` : ''}</strong> : null}
+            {round.matches.map((match) => {
+              const checked = (scheduleSelections[round.round] ?? []).includes(match.id)
+              if (round.selection) return <div className="player-schedule-closed-match" key={match.id}><span>{round.round}. kolo · {getTeamDisplayName(match.home)} – {getTeamDisplayName(match.away)} · {formatMatchDateTime(match.startsAt)}</span></div>
+              return (
+                <label className={`player-schedule-match${round.selection?.matchIds?.includes(match.id) ? ' is-selected' : ''}`} key={match.id}>
+                  <input type="checkbox" checked={checked} disabled={!round.canSelect || (!checked && (scheduleSelections[round.round] ?? []).length >= round.requiredSelectionCount)} onChange={() => setScheduleSelections((current) => ({ ...current, [round.round]: checked ? (current[round.round] ?? []).filter((id) => id !== match.id) : [...(current[round.round] ?? []), match.id] }))} />
+                  <span>{getTeamDisplayName(match.home)} – {getTeamDisplayName(match.away)} · {formatMatchDateTime(match.startsAt)}</span>
+                </label>
+              )
+            })}
+            {round.canSelect ? <button type="button" className="auth-submit" disabled={(scheduleSelections[round.round] ?? []).length !== round.requiredSelectionCount} onClick={() => saveScheduleSelection(round)}>Potvrdit výběr</button> : null}
+          </div>
+        ))}
+      </div>
     </section>
   )
 
   return (
     <section className="player-tips-panel" aria-label="Moje tipy">
       <div className="player-tips-heading">
-        <h2>Moje tipy</h2>
+        <h2>Moje tipy & výběry</h2>
         <span className="tag ratio-help" title="Tvoje uložené tipy / Počet aktivních zápasů" aria-label="Tvoje uložené tipy / Počet aktivních zápasů">Tipy {tippedMatchCount}/{matches.length}</span>
         <button type="button" className="panel-close-button" onClick={onClose} aria-label="Zavřít panel" title="Zavřít">×</button>
       </div>
       <div className="player-tips-tabs" role="tablist" aria-label="Tipování">
         <button type="button" role="tab" aria-selected={tipsMode === 'mine'} className={tipsMode === 'mine' ? 'is-active' : ''} onClick={() => setTipsMode('mine')}>Moje tipy</button>
-        <button type="button" role="tab" aria-selected={tipsMode === 'selection'} className={tipsMode === 'selection' ? 'is-active' : ''} onClick={() => setTipsMode('selection')}>Výběr zápasu</button>
+        <button type="button" role="tab" aria-selected={tipsMode === 'selection'} className={tipsMode === 'selection' ? 'is-active' : ''} onClick={() => setTipsMode('selection')}>Výběr zápasu{hasSelectionNotification ? <img className="notification-bell notification-bell-tab" src="/icons/notifikace.png" alt="Jsi na řadě s výběrem zápasu" title="Jsi na řadě s výběrem zápasu" /> : null}</button>
       </div>
       {message ? <p className="player-tips-message" role="alert">{message}</p> : null}
       {tipsMode === 'selection' ? scheduleContent : matches.length === 0 ? (

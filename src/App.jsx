@@ -3,7 +3,7 @@ import './App.css'
 import { matches as fallbackMatches, players as fallbackPlayers } from './data/moppData'
 import { defaultTournamentId, getTournamentById, tournaments } from './data/tournaments'
 import { getFlagUrl } from './data/countryFlags'
-import { getTeamLogoUrl } from './data/teamLogos'
+import { getTeamDisplayName, getTeamLogoUrl } from './data/teamLogos'
 import AdminPanel from './components/AdminPanel'
 import PlayerTipsPanel from './components/PlayerTipsPanel'
 
@@ -233,6 +233,25 @@ function AuthPanel({ selectedTournamentId, onTournamentUpdated, onMatchesChanged
   const [message, setMessage] = useState('')
   const [isBusy, setIsBusy] = useState(false)
   const [showPasswords, setShowPasswords] = useState(false)
+  const [hasSelectionNotification, setHasSelectionNotification] = useState(false)
+
+  const refreshSelectionNotification = async () => {
+    if (!user || !selectedTournamentId) {
+      setHasSelectionNotification(false)
+      return
+    }
+    try {
+      const response = await fetch(`/api/player/schedule?tournamentId=${encodeURIComponent(selectedTournamentId)}`, { credentials: 'include' })
+      const payload = await response.json().catch(() => ({}))
+      setHasSelectionNotification(response.ok && (payload.rounds ?? []).some((round) => round.canSelect))
+    } catch {
+      setHasSelectionNotification(false)
+    }
+  }
+
+  useEffect(() => {
+    refreshSelectionNotification()
+  }, [user?.id, selectedTournamentId])
 
   useEffect(() => {
     const verificationToken = new URLSearchParams(window.location.search).get('verify')
@@ -399,13 +418,13 @@ function AuthPanel({ selectedTournamentId, onTournamentUpdated, onMatchesChanged
         <>
           <span className="auth-user">{user.displayName || user.username}</span>
           <div className="auth-panel-tabs">
-            <button type="button" className={`auth-button ${activePanel === 'tips' ? 'is-active' : ''}`} onClick={() => setActivePanel((current) => current === 'tips' ? '' : 'tips')}>Tipovat</button>
+            <button type="button" className={`auth-button auth-tips-button ${activePanel === 'tips' ? 'is-active' : ''}`} onClick={() => setActivePanel((current) => current === 'tips' ? '' : 'tips')}>Tipovat{hasSelectionNotification ? <img className="notification-bell" src="/icons/notifikace.png" alt="Jsi na řadě s výběrem zápasu" title="Jsi na řadě s výběrem zápasu" /> : null}</button>
             <button type="button" className={`auth-button ${activePanel === 'account' ? 'is-active' : ''}`} onClick={() => { setActivePanel((current) => current === 'account' ? '' : 'account'); setAccountForm((current) => ({ ...current, displayName: user.displayName || '' })); setMessage('') }}>Účet</button>
             {user.role === 'admin' ? <button type="button" className={`auth-button ${activePanel === 'admin' ? 'is-active' : ''}`} onClick={() => setActivePanel((current) => current === 'admin' ? '' : 'admin')}>Admin</button> : null}
           </div>
           <button type="button" className="auth-button auth-logout" onClick={logout}>Odhlásit</button>
           {activePanel === 'admin' && user.role === 'admin' ? <AdminPanel selectedTournamentId={selectedTournamentId} onTournamentUpdated={onTournamentUpdated} onMatchesChanged={onMatchesChanged} onClose={() => setActivePanel('')} /> : null}
-          {activePanel === 'tips' ? <PlayerTipsPanel selectedTournamentId={selectedTournamentId} onTipUpdated={onTipUpdated} onClose={() => setActivePanel('')} /> : null}
+          {activePanel === 'tips' ? <PlayerTipsPanel selectedTournamentId={selectedTournamentId} hasSelectionNotification={hasSelectionNotification} onSelectionUpdated={() => setHasSelectionNotification(false)} onTipUpdated={onTipUpdated} onClose={() => setActivePanel('')} /> : null}
           {activePanel === 'account' ? (
             <div className="auth-form auth-account-form">
               <button type="button" className="panel-close-button" onClick={() => setActivePanel('')} aria-label="Zavřít panel" title="Zavřít">×</button>
@@ -2401,7 +2420,8 @@ function App() {
                 <p className="match-item-top">
                   <StartsAtLabel startsAt={match.startsAt} matchId={match.id} round={match.round} tournamentYear={String(selectedTournament?.startDate ?? '').slice(0, 4)} />
                 </p>
-                {match.selectedByName || match.updatedByAdminName ? <span className="match-item-meta">{match.updatedByAdminName ? 'Upravil admin' : `Vybral: ${match.selectedByName}`}</span> : null}
+                {match.selectedByName ? <span className="match-item-meta">Vybral: {match.selectedByName}</span> : null}
+                {match.updatedByAdminName ? <span className="match-item-admin-note">(Editoval admin)</span> : null}
 
                 <div className="match-item-main">
                   <div className="teams-stack">
@@ -2410,7 +2430,7 @@ function App() {
                         {homeFlag ? (
                           <img className={`flag ${teamLogoClassName}`} src={homeFlag} alt={`Logo ${match.home}`} loading="lazy" />
                         ) : null}
-                        {match.home}
+                        {getTeamDisplayName(match.home)}
                       </span>
                       <strong className={`team-goals ${score.winner === 'home' ? 'is-winner' : ''}`}>
                         {score.home ?? '-'}
@@ -2421,7 +2441,7 @@ function App() {
                         {awayFlag ? (
                           <img className={`flag ${teamLogoClassName}`} src={awayFlag} alt={`Logo ${match.away}`} loading="lazy" />
                         ) : null}
-                        {match.away}
+                        {getTeamDisplayName(match.away)}
                       </span>
                       <strong className={`team-goals ${score.winner === 'away' ? 'is-winner' : ''}`}>
                         {score.away ?? '-'}
@@ -3056,12 +3076,7 @@ function App() {
                 <p className="selected-match-time">
                   <StartsAtLabel startsAt={selectedMatch.startsAt} matchId={selectedMatch.id} round={selectedMatch.round} tournamentYear={String(selectedTournament?.startDate ?? '').slice(0, 4)} />
                 </p>
-                {selectedMatch.selectedByName || selectedMatch.updatedByAdminName ? (
-                  <p className="selected-match-meta">
-                    {selectedMatch.selectedByName ? `Vybral: ${selectedMatch.selectedByName}` : null}
-                    {selectedMatch.updatedByAdminName ? ` · Upravil admin: ${selectedMatch.updatedByAdminName}` : null}
-                  </p>
-                ) : null}
+                {selectedMatch.selectedByName ? <p className="selected-match-meta">Vybral: {selectedMatch.selectedByName}</p> : null}
                 <div className="selected-match-main">
                   <div className="selected-teams-stack">
                     {(() => {
@@ -3082,7 +3097,7 @@ function App() {
                                   loading="lazy"
                                 />
                               ) : null}
-                              {selectedMatch.home}
+                              {getTeamDisplayName(selectedMatch.home)}
                             </span>
                             <strong className={`team-goals ${score.winner === 'home' ? 'is-winner' : ''}`}>
                               {score.home ?? '-'}
@@ -3099,7 +3114,7 @@ function App() {
                                   loading="lazy"
                                 />
                               ) : null}
-                              {selectedMatch.away}
+                              {getTeamDisplayName(selectedMatch.away)}
                             </span>
                             <strong className={`team-goals ${score.winner === 'away' ? 'is-winner' : ''}`}>
                               {score.away ?? '-'}
@@ -3110,7 +3125,10 @@ function App() {
                     })()}
                   </div>
                 </div>
-                <p className="selected-match-bank">Bank {selectedMatch.bank == null ? '? (čeká na výsledek předchozího zápasu)' : `${selectedMatch.bank} Kč`}</p>
+                <div className="selected-match-bottom">
+                  <p className="selected-match-bank">Bank {selectedMatch.bank == null ? '? (čeká na výsledek předchozího zápasu)' : `${selectedMatch.bank} Kč`}</p>
+                  {selectedMatch.updatedByAdminName ? <p className="selected-match-admin-note">(Editoval admin)</p> : null}
+                </div>
               </header>
 
               {selectedMatch.tipsVisible === false ? (

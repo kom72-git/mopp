@@ -405,7 +405,7 @@ function AuthPanel({ selectedTournamentId, onTournamentUpdated, onMatchesChanged
           </div>
           <button type="button" className="auth-button auth-logout" onClick={logout}>Odhlásit</button>
           {activePanel === 'admin' && user.role === 'admin' ? <AdminPanel selectedTournamentId={selectedTournamentId} onTournamentUpdated={onTournamentUpdated} onMatchesChanged={onMatchesChanged} onClose={() => setActivePanel('')} /> : null}
-          {activePanel === 'tips' ? <PlayerTipsPanel onTipUpdated={onTipUpdated} onClose={() => setActivePanel('')} /> : null}
+          {activePanel === 'tips' ? <PlayerTipsPanel selectedTournamentId={selectedTournamentId} onTipUpdated={onTipUpdated} onClose={() => setActivePanel('')} /> : null}
           {activePanel === 'account' ? (
             <div className="auth-form auth-account-form">
               <button type="button" className="panel-close-button" onClick={() => setActivePanel('')} aria-label="Zavřít panel" title="Zavřít">×</button>
@@ -1546,9 +1546,9 @@ function App() {
     const toPercent = (value, total) => (total > 0 ? Math.round((value / total) * 100) : 0)
 
     const selectedRank = standings.findIndex((item) => item.id === selectedStanding.id) + 1
-    const entryFeePerMatch = Number(selectedTournament?.entryFeePerMatch ?? 10)
-    const seasonMatchesCount = Number(selectedTournament?.seasonMatchesCount ?? 67)
-    const longTermContribution = Number(selectedTournament?.longTermBankContribution ?? 150)
+    const entryFeePerMatch = Number(selectedTournament?.entryFee ?? selectedTournament?.entryFeePerMatch ?? 10)
+    const seasonMatchesCount = Number(selectedTournament?.plannedMatchCount ?? selectedTournament?.seasonMatchesCount ?? 0)
+    const longTermContribution = Number(selectedTournament?.longTermContribution ?? selectedTournament?.longTermBankContribution ?? 0)
     const payoutByPlace = new Map(
       (selectedTournament?.longTermBank?.payouts ?? [])
         .filter((item) => Number.isFinite(item?.place))
@@ -2394,7 +2394,7 @@ function App() {
               <button
                 key={match.id}
                 type="button"
-                className={`match-item ${isActive ? 'is-active' : ''}`}
+                className={`match-item ${isActive ? 'is-active' : ''} ${roundMatches.length > 1 ? 'is-clickable' : ''}`.trim()}
                 onClick={() => setSelectedMatchId(match.id)}
               >
                 <p className="match-item-top">
@@ -2428,7 +2428,7 @@ function App() {
                   </div>
                 </div>
 
-                <p className="match-item-sub">Bank {match.bank == null ? '? (čeká na výsledek předchozího zápasu)' : `${match.bank} Kč`} • Tipy {submittedTips}/{match.playerCount ?? players.length}</p>
+                <p className="match-item-sub">Bank {match.bank == null ? '? (čeká na výsledek předchozího zápasu)' : `${match.bank} Kč`} • <span className="ratio-help" title="Odevzdané tipy / Počet členů vybraného turnaje" aria-label="Odevzdané tipy / Počet členů vybraného turnaje">Tipy {submittedTips}/{match.playerCount ?? players.length}</span></p>
               </button>
             )
           })}
@@ -2503,9 +2503,9 @@ function App() {
                       <strong className="stat-count">{player.stats.noBet}×</strong>
                     </span>
                   </div>
-                  {standingsMetric === 'points' ? (
+                  {standingsMetric === 'points' || winningsBreakdown ? (
                     <span
-                      className="stand-winnings"
+                      className={`stand-winnings${winningsBreakdown ? '' : ' is-placeholder'}`.trim()}
                       title={(() => {
                         if (!winningsBreakdown) return undefined
                         return `Zápasy: ${winningsBreakdown.matchWinnings} Kč · Dlouhodobý bank: ${winningsBreakdown.longTermPayout} Kč`
@@ -3047,10 +3047,7 @@ function App() {
             <>
               <div className="panel-head tips-panel-head">
                 <h2>Tipy hráčů pro zápas</h2>
-                <span className="tag">
-                  Tipy {selectedMatch.tipCount ?? selectedMatchTips.filter((tip) => tip.pick && tip.pick !== '-').length}/
-                  {selectedMatch.playerCount ?? players.length}
-                </span>
+                <span className="tag ratio-help" title="Odevzdané tipy / Počet členů vybraného turnaje" aria-label="Odevzdané tipy / Počet členů vybraného turnaje">Tipy {selectedMatch.tipCount ?? selectedMatchTips.filter((tip) => tip.pick && tip.pick !== '-').length}/{selectedMatch.playerCount ?? players.length}</span>
               </div>
 
               <header className="selected-match-head">

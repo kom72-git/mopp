@@ -39,7 +39,7 @@ function buildMatchGroups(matches) {
     })
 }
 
-export default function PlayerTipsPanel({ onTipUpdated, onClose }) {
+export default function PlayerTipsPanel({ selectedTournamentId, onTipUpdated, onClose }) {
   const [matches, setMatches] = useState([])
   const [values, setValues] = useState({})
   const [message, setMessage] = useState('')
@@ -47,6 +47,10 @@ export default function PlayerTipsPanel({ onTipUpdated, onClose }) {
   const [busyMatchId, setBusyMatchId] = useState('')
   const [activeGroupIndex, setActiveGroupIndex] = useState(null)
   const [tipViewMode, setTipViewMode] = useState('group')
+  const [scheduleRounds, setScheduleRounds] = useState([])
+  const [scheduleSelections, setScheduleSelections] = useState({})
+  const [scheduleMessage, setScheduleMessage] = useState('')
+  const [tipsMode, setTipsMode] = useState('mine')
 
   useEffect(() => {
     let cancelled = false
@@ -76,6 +80,26 @@ export default function PlayerTipsPanel({ onTipUpdated, onClose }) {
       cancelled = true
     }
   }, [])
+
+  useEffect(() => {
+    if (!selectedTournamentId) return undefined
+    let cancelled = false
+    fetch(`/api/player/schedule?tournamentId=${encodeURIComponent(selectedTournamentId)}`, { credentials: 'include' })
+      .then(async (response) => {
+        const payload = await response.json().catch(() => ({}))
+        if (!response.ok) throw new Error(payload.message || 'Rozpis se nepodařilo načíst')
+        return payload
+      })
+      .then((payload) => {
+        if (cancelled) return
+        setScheduleRounds(payload.rounds ?? [])
+        setScheduleSelections(Object.fromEntries((payload.rounds ?? []).map((round) => [round.round, round.selection?.matchIds ?? []])))
+      })
+      .catch((error) => {
+        if (!cancelled) setScheduleMessage(error.message)
+      })
+    return () => { cancelled = true }
+  }, [selectedTournamentId])
 
   const updateScore = (matchId, field, value) => {
     setValues((current) => ({ ...current, [matchId]: { ...current[matchId], [field]: value } }))
@@ -112,6 +136,25 @@ export default function PlayerTipsPanel({ onTipUpdated, onClose }) {
     }
   }
 
+  const saveScheduleSelection = async (round) => {
+    const matchIds = scheduleSelections[round.round] ?? []
+    setScheduleMessage('Ukládám výběr…')
+    try {
+      const response = await fetch(`/api/player/schedule-selections/${round.round}`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ tournamentId: selectedTournamentId, matchIds }),
+      })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(payload.message || 'Výběr se nepodařilo uložit')
+      setScheduleRounds((current) => current.map((item) => item.round === round.round ? { ...item, canSelect: false, selection: payload.selection } : item))
+      setScheduleMessage('Výběr byl uložen a uzamčen.')
+    } catch (error) {
+      setScheduleMessage(error.message)
+    }
+  }
+
   const matchGroups = useMemo(() => buildMatchGroups(matches), [matches])
 
   const resolvedGroupIndex = Math.min(Math.max(0, activeGroupIndex ?? 0), Math.max(0, matchGroups.length - 1))
@@ -124,15 +167,42 @@ export default function PlayerTipsPanel({ onTipUpdated, onClose }) {
       ? [activeGroup]
       : []
 
+  const scheduleContent = (
+    <section className="player-schedule-picker" aria-label="Výběr zápasu">
+      <h3>Výběr zápasu</h3>
+      {scheduleMessage ? <p className="player-tips-message" role="alert">{scheduleMessage}</p> : null}
+      {scheduleRounds.length === 0 ? <p className="player-tips-message">Zatím není dostupné kolo pro tvůj výběr.</p> : scheduleRounds.map((round) => (
+        <div className="player-schedule-round" key={round.round}>
+          <strong>{round.round}. kolo · {round.selectorName}</strong>
+          {round.matches.map((match) => {
+            const checked = (scheduleSelections[round.round] ?? []).includes(match.id)
+            return (
+              <label className="player-schedule-match" key={match.id}>
+                <input type="checkbox" checked={checked || Boolean(round.selection)} disabled={!round.canSelect || Boolean(round.selection)} onChange={() => setScheduleSelections((current) => ({ ...current, [round.round]: checked ? (current[round.round] ?? []).filter((id) => id !== match.id) : [...(current[round.round] ?? []), match.id] }))} />
+                <span>{match.home} – {match.away} · {match.startsAt.replace('T', ' ')}</span>
+              </label>
+            )
+          })}
+          {round.canSelect ? <button type="button" className="auth-submit" disabled={(scheduleSelections[round.round] ?? []).length !== round.matches.length} onClick={() => saveScheduleSelection(round)}>Potvrdit výběr</button> : null}
+          {round.selection ? <small>Výběr je uzamčený.</small> : null}
+        </div>
+      ))}
+    </section>
+  )
+
   return (
     <section className="player-tips-panel" aria-label="Moje tipy">
       <div className="player-tips-heading">
         <h2>Moje tipy</h2>
-        <span>{tippedMatchCount}/{matches.length} tipů</span>
+        <span className="tag ratio-help" title="Tvoje uložené tipy / Počet aktivních zápasů" aria-label="Tvoje uložené tipy / Počet aktivních zápasů">Tipy {tippedMatchCount}/{matches.length}</span>
         <button type="button" className="panel-close-button" onClick={onClose} aria-label="Zavřít panel" title="Zavřít">×</button>
       </div>
+      <div className="player-tips-tabs" role="tablist" aria-label="Tipování">
+        <button type="button" role="tab" aria-selected={tipsMode === 'mine'} className={tipsMode === 'mine' ? 'is-active' : ''} onClick={() => setTipsMode('mine')}>Moje tipy</button>
+        <button type="button" role="tab" aria-selected={tipsMode === 'selection'} className={tipsMode === 'selection' ? 'is-active' : ''} onClick={() => setTipsMode('selection')}>Výběr zápasu</button>
+      </div>
       {message ? <p className="player-tips-message" role="alert">{message}</p> : null}
-      {matches.length === 0 ? (
+      {tipsMode === 'selection' ? scheduleContent : matches.length === 0 ? (
         <p className="player-tips-message">Zatím nejsou otevřené zápasy k tipování.</p>
       ) : (
         <>

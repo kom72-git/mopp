@@ -13,15 +13,16 @@
     "preview": "vite preview --host 0.0.0.0 --port 4174 --strictPort"
   },
   "dependencies": {
-    "react": "^19.2.7",
-    "react-dom": "^19.2.7",
     "bcryptjs": "^3.0.3",
+    "cheerio": "^1.2.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
     "mongodb": "^7.5.0",
-    "nodemailer": "^9.0.5"
+    "nodemailer": "^9.0.5",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

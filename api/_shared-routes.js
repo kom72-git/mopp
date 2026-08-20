@@ -26,7 +26,10 @@ function scoreTip(tipPick, matchResult, scoring) {
   const resultOutcome = Math.sign(resultHome - resultAway);
   const tipOutcome = Math.sign(tipHome - tipAway);
   if (resultOutcome !== tipOutcome) return 0;
-  if (tipHome === resultHome || tipAway === resultAway) return Number(scoring?.near) || 5;
+  if (resultOutcome === 0) return 0;
+  const resultWinnerGoals = resultOutcome > 0 ? resultHome : resultAway;
+  const tipWinnerGoals = tipOutcome > 0 ? tipHome : tipAway;
+  if (tipWinnerGoals === resultWinnerGoals) return Number(scoring?.near) || 5;
   return Number(scoring?.winner) || 3;
 }
 
@@ -45,18 +48,20 @@ async function loadMongoTournamentData(getDb, tournamentId, session) {
     .find(userQuery, { projection: { username: 1, displayName: 1 } })
     .sort({ createdAt: 1 })
     .toArray();
-  const longTermBankTotal = (Number(tournament.longTermBank) || 0)
-    + users.length * (Number(tournament.longTermContribution) || 0);
+  const allowedUserIds = new Set(users.map((user) => user._id.toString()));
+  const longTermBankTotal = users.length * (Number(tournament.longTermContribution) || 0);
   const longTermBankPayouts = tournament.payouts || [];
   const matches = await database.collection("matches")
     .find({ tournamentId: tournament._id })
     .sort({ round: 1, startsAt: 1 })
     .toArray();
   const tips = await database.collection("tips").find({ matchId: { $in: matches.map((match) => match._id) } }).toArray();
+  const eligibleTips = tips.filter((tip) => allowedUserIds.has(tip.userId.toString()));
   const tipsByMatch = new Map();
   const pointsByUser = new Map(users.map((user) => [user._id.toString(), 0]));
   const now = Date.now();
   for (const tip of tips) {
+    if (!allowedUserIds.has(tip.userId.toString())) continue;
     const match = matches.find((item) => item._id.equals(tip.matchId));
     const hasStarted = match && new Date(match.startsAt).getTime() <= now;
     const isOwnTip = Boolean(session) && tip.userId.toString() === session.sub;
@@ -103,12 +108,13 @@ async function loadMongoTournamentData(getDb, tournamentId, session) {
       heroLogo: tournament.heroLogo || "",
       startDate: tournament.startDate || "",
       endDate: tournament.endDate || "",
+      plannedMatchCount: Number(tournament.plannedMatchCount) || 0,
       entryFee: tournament.entryFee || 10,
       longTermContribution: tournament.longTermContribution || 0,
       source: "mongodb",
       logoSet: tournament.logoSet || null,
       favicon: tournament.favicon || "",
-      longTermBank: { totalAmount: longTermBankTotal, baseAmount: tournament.longTermBank || 0, contributionAmount: tournament.longTermContribution || 0, contributorCount: users.length, payouts: longTermBankPayouts, tieBreakHeading: "V případě shodného počtu bodů rozhoduje:", tieBreakRules: tournament.tieBreakRules?.length ? tournament.tieBreakRules : tieBreakRulesFor(tournament.tieBreakOrder || []) },
+      longTermBank: { totalAmount: longTermBankTotal, baseAmount: 0, contributionAmount: tournament.longTermContribution || 0, contributorCount: users.length, payouts: longTermBankPayouts, tieBreakHeading: "V případě shodného počtu bodů rozhoduje:", tieBreakRules: tournament.tieBreakRules?.length ? tournament.tieBreakRules : tieBreakRulesFor(tournament.tieBreakOrder || []) },
     },
     players: users.map((user) => ({ id: user._id.toString(), name: user.displayName || user.username, points: pointsByUser.get(user._id.toString()) || 0 })),
     matches: matches.map((match) => ({
@@ -119,7 +125,7 @@ async function loadMongoTournamentData(getDb, tournamentId, session) {
       away: match.away,
       score: match.score || null,
       bank: match.bank ?? null,
-      tipCount: tips.filter((tip) => tip.matchId.equals(match._id)).length,
+      tipCount: eligibleTips.filter((tip) => tip.matchId.equals(match._id)).length,
       playerCount: users.length,
       tipsVisible: new Date(match.startsAt).getTime() <= now,
       ownTip: session ? (() => {
@@ -181,6 +187,7 @@ function registerSharedRoutes({ app, getDb, requireJwt, requireRole }) {
         heroLogo: tournament.heroLogo || "",
         startDate: tournament.startDate || "",
         endDate: tournament.endDate || "",
+        plannedMatchCount: Number(tournament.plannedMatchCount) || 0,
         entryFee: tournament.entryFee || 10,
         longTermContribution: tournament.longTermContribution || 0,
         source: "mongodb",
@@ -192,7 +199,7 @@ function registerSharedRoutes({ app, getDb, requireJwt, requireRole }) {
           const contributorCount = participantIds.length > 0
             ? activeUsers.filter((user) => participantIds.includes(user._id.toString())).length
             : activeUsers.length;
-          const baseAmount = Number(tournament.longTermBank) || 0;
+          const baseAmount = 0;
           const contributionAmount = Number(tournament.longTermContribution) || 0;
           return { totalAmount: baseAmount + contributorCount * contributionAmount, baseAmount, contributionAmount, contributorCount, payouts: tournament.payouts || [], tieBreakHeading: "V případě shodného počtu bodů rozhoduje:", tieBreakRules: tournament.tieBreakRules?.length ? tournament.tieBreakRules : tieBreakRulesFor(tournament.tieBreakOrder || []) };
         })(),

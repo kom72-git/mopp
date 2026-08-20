@@ -33,11 +33,15 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
   const [tournamentLogos, setTournamentLogos] = useState([])
   const [tournaments, setTournaments] = useState([])
   const [matches, setMatches] = useState([])
+  const [scheduleMatches, setScheduleMatches] = useState([])
+  const [isImportingSchedule, setIsImportingSchedule] = useState(false)
   const [selectedTournamentId, setSelectedTournamentId] = useState('')
   const [editingTournamentId, setEditingTournamentId] = useState('')
   const [editingMatchId, setEditingMatchId] = useState('')
   const [openSection, setOpenSection] = useState('matches')
-  const [form, setForm] = useState({ name: '', subtitle: '', shortLabel: '', season: '', status: 'draft', roundLabel: '', startDate: '', heroLogo: '', logoSet: 'elh', favicon: '', entryFee: '10', longTermContribution: '', longTermBank: '' })
+  const [form, setForm] = useState({ name: '', subtitle: '', shortLabel: '', season: '', plannedMatchCount: '', scheduleUrl: '', status: 'draft', roundLabel: '', startDate: '', heroLogo: '', logoSet: 'elh', favicon: '', entryFee: '10', longTermContribution: '' })
+  const [participantUserIds, setParticipantUserIds] = useState([])
+  const [matchSelections, setMatchSelections] = useState([])
   const [stages, setStages] = useState([])
   const [scoring, setScoring] = useState({ exact: '10', near: '5', winner: '3' })
   const [tieBreakOrder, setTieBreakOrder] = useState(['exact', 'scored', 'noBet'])
@@ -45,6 +49,7 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
   const [payouts, setPayouts] = useState(['', '', '', '', ''])
   const [matchForm, setMatchForm] = useState({ tournamentId: '', round: '1', startsAt: '', home: '', away: '', score: '', status: 'draft', manualBank: '' })
   const [message, setMessage] = useState('')
+  const [participantMessages, setParticipantMessages] = useState({})
   const [isBusy, setIsBusy] = useState(false)
 
   const loadAdminData = async () => {
@@ -73,6 +78,40 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
     const matchData = await matchesResponse.json().catch(() => ({}))
     if (!matchesResponse.ok) throw new Error(matchData.message || 'Zápasy se nepodařilo načíst')
     setMatches(matchData.matches ?? [])
+    await loadScheduleData(activeTournamentId)
+  }
+
+  const loadScheduleData = async (tournamentId) => {
+    if (!tournamentId) {
+      setScheduleMatches([])
+      return
+    }
+    const response = await fetch(`/api/admin/schedule?tournamentId=${encodeURIComponent(tournamentId)}`, { credentials: 'include' })
+    const payload = await response.json().catch(() => ({}))
+    if (!response.ok) throw new Error(payload.message || 'Rozpis se nepodařilo načíst')
+    setScheduleMatches(payload.matches ?? [])
+  }
+
+  const importSchedule = async () => {
+    if (!selectedTournamentId) return
+    setIsImportingSchedule(true)
+    setMessage('')
+    try {
+      const response = await fetch('/api/admin/schedule/import', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ tournamentId: selectedTournamentId }),
+      })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(payload.message || 'Import rozpisu se nepodařil')
+      setScheduleMatches(payload.matches ?? [])
+      setMessage(`Rozpis načten: ${payload.count} zápasů.`)
+    } catch (error) {
+      setMessage(error.message)
+    } finally {
+      setIsImportingSchedule(false)
+    }
   }
 
   useEffect(() => {
@@ -112,6 +151,8 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
             subtitle: activeTournament.subtitle || '',
             shortLabel: activeTournament.shortLabel || '',
             season: activeTournament.season || '',
+            plannedMatchCount: String(activeTournament.plannedMatchCount ?? ''),
+            scheduleUrl: activeTournament.scheduleUrl || '',
             status: activeTournament.status || 'draft',
             roundLabel: activeTournament.roundLabel || '',
             startDate: activeTournament.startDate || '',
@@ -120,8 +161,9 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
             favicon: activeTournament.favicon || '',
             entryFee: String(activeTournament.entryFee ?? 10),
             longTermContribution: String(activeTournament.longTermContribution ?? ''),
-            longTermBank: String(activeTournament.longTermBank || ''),
           })
+          setParticipantUserIds(activeTournament.participantUserIds?.map(String) ?? [])
+          setMatchSelections(activeTournament.matchSelections ?? [])
           setStages(activeTournament.stages || [])
           setScoring({ exact: String(activeTournament.scoring?.exact ?? 10), near: String(activeTournament.scoring?.near ?? 5), winner: String(activeTournament.scoring?.winner ?? 3) })
           setTieBreakOrder(activeTournament.tieBreakOrder || ['exact', 'scored', 'noBet'])
@@ -138,6 +180,10 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
           if (cancelled) return
           const loadedMatches = matchData.matches ?? []
           setMatches(loadedMatches)
+          const scheduleResponse = await fetch(`/api/admin/schedule?tournamentId=${encodeURIComponent(activeTournamentId)}`, { credentials: 'include' })
+          const scheduleData = await scheduleResponse.json().catch(() => ({}))
+          if (!scheduleResponse.ok) throw new Error(scheduleData.message || 'Rozpis se nepodařilo načíst')
+          setScheduleMatches(scheduleData.matches ?? [])
           const nextRound = loadedMatches.reduce((max, match) => Math.max(max, Number(match.round) || 0), 0) + 1
           setMatchForm((current) => ({ ...current, tournamentId: activeTournamentId, round: String(nextRound) }))
         }
@@ -160,6 +206,73 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
     setMatchForm((current) => ({ ...current, [event.target.name]: event.target.value }))
   }
 
+  const saveParticipantIds = async (nextParticipantUserIds, changedUserId = '') => {
+    if (!editingTournamentId) return
+    setParticipantUserIds(nextParticipantUserIds)
+    setIsBusy(true)
+    setMessage('')
+    try {
+      const response = await fetch(`/api/admin/tournaments/${editingTournamentId}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ ...form, participantUserIds: nextParticipantUserIds, matchSelections, stages, scoring, tieBreakOrder, tieBreakRules, payouts }),
+      })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(payload.message || 'Členství se nepodařilo uložit')
+      setTournaments((current) => current.map((tournament) => tournament._id === editingTournamentId ? payload.tournament : tournament))
+      onTournamentUpdated?.({ ...payload.tournament, id: `db:${payload.tournament._id}` })
+      onMatchesChanged?.()
+      if (changedUserId) {
+        setParticipantMessages((current) => ({ ...current, [changedUserId]: { text: 'Uloženo', isError: false } }))
+        window.setTimeout(() => setParticipantMessages((current) => ({ ...current, [changedUserId]: null })), 2500)
+      }
+    } catch (error) {
+      if (changedUserId) setParticipantMessages((current) => ({ ...current, [changedUserId]: { text: error.message, isError: true } }))
+      else setMessage(error.message)
+    } finally {
+      setIsBusy(false)
+    }
+  }
+
+  const toggleParticipant = (userId) => {
+    const activeIds = users.filter((item) => item.status === 'active').map((item) => String(item._id))
+    const selectedIds = participantUserIds.length === 0 ? activeIds : participantUserIds
+    const next = selectedIds.includes(userId)
+      ? selectedIds.filter((id) => id !== userId)
+      : [...selectedIds, userId]
+    const finalIds = next.length === activeIds.length ? [] : next
+    setParticipantMessages((current) => ({ ...current, [userId]: { text: 'Ukládám…', isError: false } }))
+    saveParticipantIds(finalIds, userId)
+  }
+
+  const saveMatchSelection = async (round, matchId) => {
+    if (!editingTournamentId) return
+    const nextSelections = [
+      ...matchSelections.filter((selection) => Number(selection.round) !== Number(round)),
+      { round: Number(round), matchId, selectedAt: new Date().toISOString() },
+    ].sort((a, b) => Number(a.round) - Number(b.round))
+    setMatchSelections(nextSelections)
+    setIsBusy(true)
+    setMessage('')
+    try {
+      const response = await fetch(`/api/admin/tournaments/${editingTournamentId}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ ...form, participantUserIds, matchSelections: nextSelections, stages, scoring, tieBreakOrder, tieBreakRules, payouts }),
+      })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(payload.message || 'Výběr se nepodařilo uložit')
+      setTournaments((current) => current.map((tournament) => tournament._id === editingTournamentId ? payload.tournament : tournament))
+      setMessage('Výběr zápasu uložen.')
+    } catch (error) {
+      setMessage(error.message)
+    } finally {
+      setIsBusy(false)
+    }
+  }
+
   const createTournament = async (event) => {
     event?.preventDefault()
     setIsBusy(true)
@@ -170,7 +283,7 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
         method: editingTournamentId ? 'PATCH' : 'POST',
         headers: { 'content-type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ ...form, stages, scoring, tieBreakOrder, tieBreakRules, payouts }),
+        body: JSON.stringify({ ...form, participantUserIds, stages, scoring, tieBreakOrder, tieBreakRules, payouts }),
       })
       const payload = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(payload.message || 'Turnaj se nepodařilo založit')
@@ -180,8 +293,8 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
         setMessage('Turnaj byl upraven.')
         return
       }
-      setForm({ name: '', subtitle: '', shortLabel: '', season: '', status: 'draft', roundLabel: '', startDate: '', heroLogo: '', logoSet: 'elh', favicon: '', entryFee: '10', longTermContribution: '', longTermBank: '' })
-        setForm({ name: '', subtitle: '', shortLabel: '', season: '', status: 'draft', roundLabel: '', startDate: '', heroLogo: '', logoSet: 'elh', favicon: '', entryFee: '10', longTermContribution: '', longTermBank: '' })
+      setForm({ name: '', subtitle: '', shortLabel: '', season: '', plannedMatchCount: '', scheduleUrl: '', status: 'draft', roundLabel: '', startDate: '', heroLogo: '', logoSet: 'elh', favicon: '', entryFee: '10', longTermContribution: '' })
+      setParticipantUserIds([])
       setStages([])
       setPayouts(['', '', '', '', ''])
       setScoring({ exact: '10', near: '5', winner: '3' })
@@ -278,29 +391,6 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
     }
   }
 
-  const deleteUser = async (user) => {
-    if (!window.confirm(`Opravdu smazat hráče ${user.displayName || user.username}? Smažou se i jeho tipy.`)) return
-    setIsBusy(true)
-    setMessage('')
-    try {
-      const deletedTipCount = tipBreakdown.find((item) => item.username === user.username)?.count ?? 0
-      const response = await fetch(`/api/admin/users/${user._id}`, { method: 'DELETE', credentials: 'include' })
-      const payload = await response.json().catch(() => ({}))
-      if (!response.ok) throw new Error(payload.message || 'Účet se nepodařilo smazat')
-      setUsers((current) => current.filter((item) => item._id !== user._id))
-      setCounts((current) => current ? {
-        ...current,
-        users: Math.max(0, current.users - 1),
-        tips: Math.max(0, current.tips - deletedTipCount),
-      } : current)
-      setTipBreakdown((current) => current.filter((item) => item.username !== user.username))
-    } catch (error) {
-      setMessage(error.message)
-    } finally {
-      setIsBusy(false)
-    }
-  }
-
   const toggleSection = (section) => {
     setOpenSection((current) => current === section ? '' : section)
   }
@@ -322,7 +412,11 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
     setSelectedTournamentId(tournament._id)
     setForm({
       name: tournament.name,
+      subtitle: tournament.subtitle || '',
+      shortLabel: tournament.shortLabel || '',
       season: tournament.season || '',
+      plannedMatchCount: String(tournament.plannedMatchCount ?? ''),
+      scheduleUrl: tournament.scheduleUrl || '',
       status: tournament.status || 'draft',
       roundLabel: tournament.roundLabel || '',
       startDate: tournament.startDate || '',
@@ -331,8 +425,9 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
       favicon: tournament.favicon || '',
       entryFee: String(tournament.entryFee ?? 10),
       longTermContribution: String(tournament.longTermContribution ?? ''),
-      longTermBank: String(tournament.longTermBank || ''),
     })
+    setParticipantUserIds(tournament.participantUserIds?.map(String) ?? [])
+    setMatchSelections(tournament.matchSelections ?? [])
     setStages(tournament.stages || [])
     setScoring({ exact: String(tournament.scoring?.exact ?? 10), near: String(tournament.scoring?.near ?? 5), winner: String(tournament.scoring?.winner ?? 3) })
     setTieBreakOrder(tournament.tieBreakOrder || ['exact', 'scored', 'noBet'])
@@ -343,7 +438,8 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
 
   const startNewTournament = () => {
     setEditingTournamentId('')
-    setForm({ name: '', subtitle: '', shortLabel: '', season: '', status: 'draft', roundLabel: '', startDate: '', heroLogo: '', logoSet: 'elh', favicon: '', entryFee: '10', longTermContribution: '', longTermBank: '' })
+    setParticipantUserIds([])
+    setForm({ name: '', subtitle: '', shortLabel: '', season: '', plannedMatchCount: '', scheduleUrl: '', status: 'draft', roundLabel: '', startDate: '', heroLogo: '', logoSet: 'elh', favicon: '', entryFee: '10', longTermContribution: '' })
     setScoring({ exact: '10', near: '5', winner: '3' })
     setTieBreakOrder(['exact', 'scored', 'noBet'])
     setTieBreakRules([])
@@ -395,6 +491,16 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
               <span className="admin-field-label">Sezóna</span>
               <input name="season" value={form.season} onChange={updateField} placeholder="Např. 2026/27" />
               <small>Pomocné označení sezóny; může zůstat prázdné.</small>
+            </label>
+            <label className="admin-field">
+              <span className="admin-field-label">Plánovaný počet zápasů</span>
+              <input name="plannedMatchCount" type="number" min="0" step="1" value={form.plannedMatchCount} onChange={updateField} placeholder="Např. 52" />
+              <small>Počet zápasů pro výpočet celkového vkladu hráče; lze kdykoli změnit.</small>
+            </label>
+            <label className="admin-field">
+              <span className="admin-field-label">URL zdroje rozpisu zápasů</span>
+              <input name="scheduleUrl" type="url" value={form.scheduleUrl} onChange={updateField} placeholder="https://www.hokej.cz/..." />
+              <small>Zdroj, ze kterého později načteme aktuální rozpis včetně změn termínů.</small>
             </label>
             <div className="admin-tournament-form-row">
               <label className="admin-field"><span className="admin-field-label">Začátek turnaje</span><input name="startDate" type="date" value={form.startDate} onChange={updateField} title="Datum prvního zápasu turnaje." /></label>
@@ -473,7 +579,6 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
             <div className="admin-tournament-form-row">
               <label className="admin-field"><span className="admin-field-label">Vklad za zápas</span><input name="entryFee" type="number" min="0" value={form.entryFee} onChange={updateField} placeholder="10" /><small>Částka přidaná do banku za každého aktivního hráče.</small></label>
               <label className="admin-field"><span className="admin-field-label">Příspěvek do dlouhodobého banku</span><input name="longTermContribution" type="number" min="0" value={form.longTermContribution} onChange={updateField} placeholder="Volitelné" /><small>Jednorázový příspěvek hráče.</small></label>
-              <label className="admin-field"><span className="admin-field-label">Počáteční dlouhodobý bank</span><input name="longTermBank" type="number" min="0" value={form.longTermBank} onChange={updateField} placeholder="0" /><small>Ruční počáteční částka banku.</small></label>
             </div>
             <div className="admin-payout-grid">
               {payouts.map((amount, index) => (
@@ -553,14 +658,82 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
         ) : openSection === 'matches' ? <p className="admin-panel-note">Nejdřív založ turnaj.</p> : null}
       </div>
       <div className="admin-section">
+        {sectionButton('schedule', 'Rozpis turnaje')}
+        {openSection === 'schedule' ? (
+          <div className="admin-tournament-form">
+            <p className="admin-field-help">Rozpis se načte ze zdroje uloženého v Základu turnaje. Import se ukládá odděleně a nepřepisuje soutěžní zápasy ani výběry hráčů.</p>
+            {form.scheduleUrl ? (
+              <div className="admin-form-actions">
+                <button type="button" className="auth-button" onClick={() => window.open(form.scheduleUrl, '_blank', 'noopener,noreferrer')}>Otevřít zdroj</button>
+                <button type="button" className="auth-submit" onClick={importSchedule} disabled={isImportingSchedule}>{isImportingSchedule ? 'Načítám…' : 'Načíst rozpis'}</button>
+              </div>
+            ) : <p className="admin-panel-note">Nejdřív ulož URL zdroje v Základu turnaje.</p>}
+            {scheduleMatches.length > 0 ? (
+              <div className="admin-schedule-list">
+                {[...new Set(scheduleMatches.map((match) => Number(match.round)))].sort((a, b) => a - b).map((round) => (
+                  <div className="admin-schedule-round" key={round}>
+                    <strong>{round}. kolo</strong>
+                    <div>{scheduleMatches.filter((match) => Number(match.round) === round).map((match) => {
+                      const [date, time] = String(match.startsAt ?? '').split('T')
+                      const [year, month, day] = date.split('-')
+                      return <span className="admin-selection-match" key={match.sourceKey}>{match.home} – {match.away} · {day}-{month}-{year} {time}</span>
+                    })}</div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+      <div className="admin-section">
+        {sectionButton('selections', 'Kdo vybírá zápas')}
+        {openSection === 'selections' ? (
+          <div className="admin-tournament-form">
+            <p className="admin-field-help">Pořadí vychází z aktivních členů. Až hráč pošle výběr, založ zápas v sekci Zápasy; tady se pak automaticky zobrazí u příslušného kola.</p>
+            {(() => {
+              const activeUsers = users.filter((user) => user.status === 'active' && (participantUserIds.length === 0 || participantUserIds.includes(String(user._id))))
+              const rounds = [...new Set(matches.map((match) => Number(match.round)).filter(Number.isFinite))].sort((a, b) => a - b)
+              if (activeUsers.length === 0) return <p className="admin-panel-note">Nejdřív vyber členy turnaje.</p>
+              const displayedRounds = rounds.length > 0 ? rounds : [1]
+              const nextRound = rounds.length > 0 ? Math.max(...rounds) + 1 : 1
+              return [...displayedRounds, ...(rounds.length > 0 ? [nextRound] : [])].map((round) => {
+                const roundMatches = matches.filter((match) => Number(match.round) === round)
+                const selector = activeUsers[(round - 1) % activeUsers.length]
+                return (
+                  <div className="admin-selection-row" key={round}>
+                    <div className="admin-selection-meta">
+                      <strong>{round}. kolo</strong>
+                      <span>Na tahu: {selector.displayName || selector.username}</span>
+                      <span>{roundMatches.length > 0 ? `Založeno zápasů: ${roundMatches.length}` : 'Čeká na výběr hráče'}</span>
+                    </div>
+                    {roundMatches.length > 0 ? <div className="admin-selection-options">{roundMatches.map((match) => <span className="admin-selection-match" key={match._id}>{match.home} – {match.away}</span>)}</div> : null}
+                  </div>
+                )
+              })
+            })()}
+          </div>
+        ) : null}
+      </div>
+      <div className="admin-section">
         {sectionButton('users', 'Účty')}
         {openSection === 'users' ? (
           <div className="admin-tournament-list">
+            <p className="admin-panel-note">Zaškrtni hráče, kteří hrají právě vybraný turnaj. Výběr ovlivní počet hráčů a bank.</p>
             {users.map((user) => (
               <div className="admin-tournament-row" key={user._id}>
                 <strong>{user.displayName || user.username}</strong>
+                {participantMessages[String(user._id)] ? <span className={`admin-member-message${participantMessages[String(user._id)].isError ? ' is-error' : ''}`}>{participantMessages[String(user._id)].text}</span> : null}
                 <span>{user.role === 'admin' ? 'admin' : 'hráč'} · {user.status} · {tipBreakdown.find((item) => item.username === user.username)?.count ?? 0} tipů</span>
-                {user.role !== 'admin' ? <button type="button" className="auth-button is-danger" onClick={() => deleteUser(user)} disabled={isBusy}>Smazat</button> : null}
+                {user.status === 'active' ? (
+                  <label className="admin-member-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={participantUserIds.length === 0 || participantUserIds.includes(String(user._id))}
+                      onChange={() => toggleParticipant(String(user._id))}
+                    />
+                    <span>Hraje</span>
+                  </label>
+                ) : null}
               </div>
             ))}
           </div>

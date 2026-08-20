@@ -39,7 +39,7 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
   const [editingTournamentId, setEditingTournamentId] = useState('')
   const [editingMatchId, setEditingMatchId] = useState('')
   const [openSection, setOpenSection] = useState('matches')
-  const [form, setForm] = useState({ name: '', subtitle: '', shortLabel: '', season: '', plannedMatchCount: '', scheduleUrl: '', status: 'draft', roundLabel: '', startDate: '', heroLogo: '', logoSet: 'elh', favicon: '', entryFee: '10', longTermContribution: '' })
+  const [form, setForm] = useState({ name: '', subtitle: '', shortLabel: '', season: '', plannedMatchCount: '', selectionMatchCount: '1', scheduleUrl: '', status: 'draft', roundLabel: '', startDate: '', heroLogo: '', logoSet: 'elh', favicon: '', entryFee: '10', longTermContribution: '' })
   const [participantUserIds, setParticipantUserIds] = useState([])
   const [matchSelections, setMatchSelections] = useState([])
   const [stages, setStages] = useState([])
@@ -152,6 +152,7 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
             shortLabel: activeTournament.shortLabel || '',
             season: activeTournament.season || '',
             plannedMatchCount: String(activeTournament.plannedMatchCount ?? ''),
+            selectionMatchCount: String(activeTournament.selectionMatchCount ?? 1),
             scheduleUrl: activeTournament.scheduleUrl || '',
             status: activeTournament.status || 'draft',
             roundLabel: activeTournament.roundLabel || '',
@@ -293,7 +294,7 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
         setMessage('Turnaj byl upraven.')
         return
       }
-      setForm({ name: '', subtitle: '', shortLabel: '', season: '', plannedMatchCount: '', scheduleUrl: '', status: 'draft', roundLabel: '', startDate: '', heroLogo: '', logoSet: 'elh', favicon: '', entryFee: '10', longTermContribution: '' })
+      setForm({ name: '', subtitle: '', shortLabel: '', season: '', plannedMatchCount: '', selectionMatchCount: '1', scheduleUrl: '', status: 'draft', roundLabel: '', startDate: '', heroLogo: '', logoSet: 'elh', favicon: '', entryFee: '10', longTermContribution: '' })
       setParticipantUserIds([])
       setStages([])
       setPayouts(['', '', '', '', ''])
@@ -416,6 +417,7 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
       shortLabel: tournament.shortLabel || '',
       season: tournament.season || '',
       plannedMatchCount: String(tournament.plannedMatchCount ?? ''),
+      selectionMatchCount: String(tournament.selectionMatchCount ?? 1),
       scheduleUrl: tournament.scheduleUrl || '',
       status: tournament.status || 'draft',
       roundLabel: tournament.roundLabel || '',
@@ -439,7 +441,7 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
   const startNewTournament = () => {
     setEditingTournamentId('')
     setParticipantUserIds([])
-    setForm({ name: '', subtitle: '', shortLabel: '', season: '', plannedMatchCount: '', scheduleUrl: '', status: 'draft', roundLabel: '', startDate: '', heroLogo: '', logoSet: 'elh', favicon: '', entryFee: '10', longTermContribution: '' })
+    setForm({ name: '', subtitle: '', shortLabel: '', season: '', plannedMatchCount: '', selectionMatchCount: '1', scheduleUrl: '', status: 'draft', roundLabel: '', startDate: '', heroLogo: '', logoSet: 'elh', favicon: '', entryFee: '10', longTermContribution: '' })
     setScoring({ exact: '10', near: '5', winner: '3' })
     setTieBreakOrder(['exact', 'scored', 'noBet'])
     setTieBreakRules([])
@@ -496,6 +498,11 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
               <span className="admin-field-label">Plánovaný počet zápasů</span>
               <input name="plannedMatchCount" type="number" min="0" step="1" value={form.plannedMatchCount} onChange={updateField} placeholder="Např. 52" />
               <small>Počet zápasů pro výpočet celkového vkladu hráče; lze kdykoli změnit.</small>
+            </label>
+            <label className="admin-field">
+              <span className="admin-field-label">Počet vybíraných zápasů za kolo</span>
+              <input name="selectionMatchCount" type="number" min="1" step="1" value={form.selectionMatchCount} onChange={updateField} required />
+              <small>Pro ELH nastav 1. Hráč pak vybírá tento počet zápasů z každého kola.</small>
             </label>
             <label className="admin-field">
               <span className="admin-field-label">URL zdroje rozpisu zápasů</span>

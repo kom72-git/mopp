@@ -243,6 +243,40 @@ async function getTournamentParticipants(db, tournament) {
   return db.collection("users").find(query, { projection: { username: 1, displayName: 1, createdAt: 1 } }).sort({ createdAt: 1 }).toArray();
 }
 
+async function createMatchesFromScheduleSelection(db, tournament, selection, participants) {
+  const matchIds = selection.matchIds.map(String);
+  const scheduleMatches = await db.collection("scheduleMatches").find({ tournamentId: String(tournament._id), _id: { $in: matchIds.map((id) => new ObjectId(id)) } }).toArray();
+  const existingMatchIds = new Set((await db.collection("matches").find({ tournamentId: tournament._id, scheduleMatchId: { $in: matchIds.map((id) => new ObjectId(id)) } }, { projection: { scheduleMatchId: 1 } }).toArray()).map((match) => match.scheduleMatchId.toString()));
+  const playerCount = participants.length;
+  const entryFee = Number(tournament.entryFee) || 10;
+  const missingMatches = scheduleMatches.filter((match) => !existingMatchIds.has(match._id.toString()));
+  const selector = participants.find((user) => user._id.toString() === String(selection.userId));
+  if (missingMatches.length > 0) {
+    await db.collection("matches").insertMany(missingMatches.map((match) => ({
+      tournamentId: tournament._id,
+      scheduleMatchId: match._id,
+      selectedByUserId: selection.userId,
+      selectedByUsername: selector?.displayName || selector?.username || "",
+      round: match.round,
+      startsAt: match.startsAt,
+      home: match.home,
+      away: match.away,
+      score: null,
+      bank: playerCount * entryFee,
+      bankSource: "automatic",
+      baseBank: playerCount * entryFee,
+      carriedBank: 0,
+      playerCount,
+      entryFee,
+      status: "open",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })));
+    await recalculateAutomaticBanks(db, tournament._id);
+  }
+  return missingMatches.length;
+}
+
 
 function createAuthRoutes({ app, getDb }) {
   app.post("/api/auth/register", async (req, res) => {
@@ -515,7 +549,9 @@ function createAuthRoutes({ app, getDb }) {
       const participantIndex = participants.findIndex((user) => user._id.toString() === req.session.sub);
       const scheduleMatches = await db.collection("scheduleMatches").find({ tournamentId }).sort({ round: 1, startsAt: 1 }).toArray();
       const selections = await db.collection("scheduleSelections").find({ tournamentId }).toArray();
+      for (const selection of selections) await createMatchesFromScheduleSelection(db, tournament, selection, participants);
       const allRounds = [...new Set(scheduleMatches.map((match) => Number(match.round)))].sort((a, b) => a - b);
+      const requiredSelectionCount = Math.max(1, Number(tournament.selectionMatchCount) || 1);
       const rounds = allRounds.map((round) => {
         const matches = scheduleMatches.filter((match) => Number(match.round) === round).map((match) => ({
           id: match._id.toString(),
@@ -534,6 +570,7 @@ function createAuthRoutes({ app, getDb }) {
           selectorUserId: selector?._id.toString() ?? null,
           selectorName: selector?.displayName || selector?.username || "-",
           canSelect: Boolean(previousSelection && selector && selector._id.toString() === req.session.sub && !selection),
+          requiredSelectionCount,
           selection: selection ? { matchIds: selection.matchIds, userId: selection.userId, selectedAt: selection.selectedAt } : null,
         };
       });
@@ -563,15 +600,20 @@ function createAuthRoutes({ app, getDb }) {
       if (!previousSelection) return res.status(403).json({ ok: false, message: "Nejdřív musí být dokončen výběr předchozího kola." });
       if (!selector || selector._id.toString() !== req.session.sub) return res.status(403).json({ ok: false, message: "V tomto kole nejsi na tahu." });
       const existing = await db.collection("scheduleSelections").findOne({ tournamentId, round });
-      if (existing) return res.status(409).json({ ok: false, message: "Výběr tohoto kola už byl uzamčen." });
+      if (existing) {
+        const createdMatchCount = await createMatchesFromScheduleSelection(db, tournament, existing, participants);
+        return res.status(409).json({ ok: false, message: createdMatchCount > 0 ? "Výběr už byl uzamčen; soutěžní zápas byl doplněn." : "Výběr tohoto kola už byl uzamčen." });
+      }
       const available = await db.collection("scheduleMatches").find({ tournamentId, round }).toArray();
       const availableIds = new Set(available.map((match) => match._id.toString()));
-      if (matchIds.some((id) => !availableIds.has(id)) || new Set(matchIds).size !== available.length) {
-        return res.status(400).json({ ok: false, message: "Vyber všechny zápasy tohoto kola." });
+      const requiredSelectionCount = Math.max(1, Number(tournament.selectionMatchCount) || 1);
+      if (matchIds.some((id) => !availableIds.has(id)) || new Set(matchIds).size !== requiredSelectionCount || requiredSelectionCount > available.length) {
+        return res.status(400).json({ ok: false, message: `Vyber přesně ${requiredSelectionCount} zápas${requiredSelectionCount === 1 ? '' : 'y'} tohoto kola.` });
       }
       const selection = { tournamentId, round, userId: req.session.sub, matchIds, selectedAt: new Date() };
       await db.collection("scheduleSelections").insertOne(selection);
-      return res.status(201).json({ ok: true, selection });
+      const createdMatchCount = await createMatchesFromScheduleSelection(db, tournament, selection, participants);
+      return res.status(201).json({ ok: true, selection, createdMatchCount });
     } catch {
       return res.status(500).json({ ok: false, message: "Výběr se nepodařilo uložit" });
     }
@@ -607,7 +649,7 @@ function createAuthRoutes({ app, getDb }) {
   app.get("/api/admin/tournaments", requireJwt, requireRole("admin"), async (req, res) => {
     try {
       const tournaments = await getDb().collection("tournaments")
-        .find({}, { projection: { name: 1, participantUserIds: 1, matchSelections: 1, subtitle: 1, shortLabel: 1, tabTitle: 1, season: 1, plannedMatchCount: 1, scheduleUrl: 1, status: 1, roundLabel: 1, startDate: 1, endDate: 1, stageLabel: 1, stages: 1, scoring: 1, tieBreakOrder: 1, tieBreakRules: 1, heroLogo: 1, logoSet: 1, favicon: 1, entryFee: 1, longTermContribution: 1, longTermBank: 1, payouts: 1, createdAt: 1 } })
+        .find({}, { projection: { name: 1, participantUserIds: 1, matchSelections: 1, subtitle: 1, shortLabel: 1, tabTitle: 1, season: 1, plannedMatchCount: 1, selectionMatchCount: 1, scheduleUrl: 1, status: 1, roundLabel: 1, startDate: 1, endDate: 1, stageLabel: 1, stages: 1, scoring: 1, tieBreakOrder: 1, tieBreakRules: 1, heroLogo: 1, logoSet: 1, favicon: 1, entryFee: 1, longTermContribution: 1, longTermBank: 1, payouts: 1, createdAt: 1 } })
         .sort({ createdAt: -1 })
         .toArray();
       return res.json({ ok: true, tournaments });
@@ -652,6 +694,7 @@ function createAuthRoutes({ app, getDb }) {
       const tabTitle = String(req.body?.shortLabel ?? req.body?.tabTitle ?? "").trim();
       const season = String(req.body?.season ?? "").trim();
       const plannedMatchCount = Math.max(0, Math.floor(Number(req.body?.plannedMatchCount) || 0));
+      const selectionMatchCount = Math.max(1, Math.floor(Number(req.body?.selectionMatchCount) || 1));
       const scheduleUrl = String(req.body?.scheduleUrl ?? "").trim();
       const status = String(req.body?.status ?? "draft").trim();
       const roundLabel = String(req.body?.roundLabel ?? "den").trim();
@@ -689,7 +732,7 @@ function createAuthRoutes({ app, getDb }) {
       if (duplicate) return res.status(409).json({ ok: false, message: "Turnaj se stejným názvem a sezónou už existuje." });
 
       const now = new Date();
-      const tournament = { name, participantUserIds, matchSelections, subtitle, shortLabel, tabTitle, season, plannedMatchCount, scheduleUrl, status, roundLabel: roundLabel || "den", startDate, endDate, stageLabel, stages, scoring, tieBreakOrder, tieBreakRules, heroLogo, logoSet, favicon, entryFee, longTermContribution, longTermBank, payouts, createdAt: now, updatedAt: now };
+      const tournament = { name, participantUserIds, matchSelections, subtitle, shortLabel, tabTitle, season, plannedMatchCount, selectionMatchCount, scheduleUrl, status, roundLabel: roundLabel || "den", startDate, endDate, stageLabel, stages, scoring, tieBreakOrder, tieBreakRules, heroLogo, logoSet, favicon, entryFee, longTermContribution, longTermBank, payouts, createdAt: now, updatedAt: now };
       const result = await getDb().collection("tournaments").insertOne(tournament);
       return res.status(201).json({ ok: true, tournament: { ...tournament, _id: result.insertedId } });
     } catch {
@@ -710,6 +753,7 @@ function createAuthRoutes({ app, getDb }) {
       const tabTitle = String(req.body?.shortLabel ?? req.body?.tabTitle ?? "").trim();
       const season = String(req.body?.season ?? "").trim();
       const plannedMatchCount = Math.max(0, Math.floor(Number(req.body?.plannedMatchCount) || 0));
+      const selectionMatchCount = Math.max(1, Math.floor(Number(req.body?.selectionMatchCount) || 1));
       const scheduleUrl = String(req.body?.scheduleUrl ?? "").trim();
       const status = String(req.body?.status ?? "draft").trim();
       const roundLabel = String(req.body?.roundLabel ?? "").trim();
@@ -738,8 +782,8 @@ function createAuthRoutes({ app, getDb }) {
 
       const result = await getDb().collection("tournaments").findOneAndUpdate(
         { _id: new ObjectId(tournamentId) },
-        { $set: { name, participantUserIds, matchSelections, subtitle, shortLabel, tabTitle, season, plannedMatchCount, scheduleUrl, status, roundLabel, startDate, endDate, stageLabel, stages, scoring, tieBreakOrder, tieBreakRules, heroLogo, logoSet, favicon, entryFee, longTermContribution, longTermBank, payouts, updatedAt: new Date() } },
-        { returnDocument: "after", projection: { name: 1, participantUserIds: 1, matchSelections: 1, subtitle: 1, shortLabel: 1, tabTitle: 1, season: 1, plannedMatchCount: 1, scheduleUrl: 1, status: 1, roundLabel: 1, startDate: 1, endDate: 1, stageLabel: 1, stages: 1, scoring: 1, tieBreakOrder: 1, tieBreakRules: 1, heroLogo: 1, logoSet: 1, favicon: 1, entryFee: 1, longTermContribution: 1, longTermBank: 1, payouts: 1, createdAt: 1 } },
+        { $set: { name, participantUserIds, matchSelections, subtitle, shortLabel, tabTitle, season, plannedMatchCount, selectionMatchCount, scheduleUrl, status, roundLabel, startDate, endDate, stageLabel, stages, scoring, tieBreakOrder, tieBreakRules, heroLogo, logoSet, favicon, entryFee, longTermContribution, longTermBank, payouts, updatedAt: new Date() } },
+        { returnDocument: "after", projection: { name: 1, participantUserIds: 1, matchSelections: 1, subtitle: 1, shortLabel: 1, tabTitle: 1, season: 1, plannedMatchCount: 1, selectionMatchCount: 1, scheduleUrl: 1, status: 1, roundLabel: 1, startDate: 1, endDate: 1, stageLabel: 1, stages: 1, scoring: 1, tieBreakOrder: 1, tieBreakRules: 1, heroLogo: 1, logoSet: 1, favicon: 1, entryFee: 1, longTermContribution: 1, longTermBank: 1, payouts: 1, createdAt: 1 } },
       );
       if (!result) return res.status(404).json({ ok: false, message: "Turnaj nebyl nalezen." });
       await recalculateAutomaticBanks(getDb(), result._id);
@@ -847,7 +891,7 @@ function createAuthRoutes({ app, getDb }) {
 
       const result = await getDb().collection("matches").findOneAndUpdate(
         { _id: new ObjectId(matchId) },
-        { $set: { round, startsAt, home, away, score: score || null, status, updatedAt: new Date() } },
+        { $set: { round, startsAt, home, away, score: score || null, status, updatedAt: new Date(), updatedByUserId: req.session.sub, updatedByUsername: req.session.displayName || req.session.username || "admin" } },
         { returnDocument: "after", projection: { tournamentId: 1, round: 1, startsAt: 1, home: 1, away: 1, score: 1, bank: 1, bankSource: 1, baseBank: 1, carriedBank: 1, status: 1, createdAt: 1 } },
       );
       if (!result) return res.status(404).json({ ok: false, message: "Zápas nebyl nalezen." });
@@ -869,6 +913,9 @@ function createAuthRoutes({ app, getDb }) {
       const result = await db.collection("matches").deleteOne({ _id: new ObjectId(matchId) });
       if (result.deletedCount !== 1) return res.status(404).json({ ok: false, message: "Zápas nebyl nalezen." });
       await db.collection("tips").deleteMany({ matchId: new ObjectId(matchId) });
+      if (match.scheduleMatchId) {
+        await db.collection("scheduleSelections").deleteOne({ tournamentId: match.tournamentId.toString(), matchIds: match.scheduleMatchId.toString() });
+      }
       await recalculateAutomaticBanks(db, match.tournamentId);
       return res.json({ ok: true });
     } catch {

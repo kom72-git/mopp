@@ -481,7 +481,8 @@ function AuthPanel({ selectedTournamentId, onTournamentUpdated, onMatchesChanged
 function getStageLabel(match, stageRules = [], stageTransitions = [], stages = []) {
   const round = extractRound(match)
   const startsAt = match?.startsAt
-  const date = parseMatchDate(startsAt) ?? new Date(startsAt)
+  const parsedDate = parseMatchDate(startsAt) ?? (startsAt ? new Date(startsAt) : null)
+  const date = parsedDate && !Number.isNaN(parsedDate.getTime()) ? parsedDate : new Date()
 
   if (date && !Number.isNaN(date.getTime()) && Array.isArray(stages) && stages.length > 0) {
     const configuredStages = stages
@@ -2400,6 +2401,7 @@ function App() {
                 <p className="match-item-top">
                   <StartsAtLabel startsAt={match.startsAt} matchId={match.id} round={match.round} tournamentYear={String(selectedTournament?.startDate ?? '').slice(0, 4)} />
                 </p>
+                {match.selectedByName || match.updatedByAdminName ? <span className="match-item-meta">{match.updatedByAdminName ? 'Upravil admin' : `Vybral: ${match.selectedByName}`}</span> : null}
 
                 <div className="match-item-main">
                   <div className="teams-stack">
@@ -3054,6 +3056,12 @@ function App() {
                 <p className="selected-match-time">
                   <StartsAtLabel startsAt={selectedMatch.startsAt} matchId={selectedMatch.id} round={selectedMatch.round} tournamentYear={String(selectedTournament?.startDate ?? '').slice(0, 4)} />
                 </p>
+                {selectedMatch.selectedByName || selectedMatch.updatedByAdminName ? (
+                  <p className="selected-match-meta">
+                    {selectedMatch.selectedByName ? `Vybral: ${selectedMatch.selectedByName}` : null}
+                    {selectedMatch.updatedByAdminName ? ` · Upravil admin: ${selectedMatch.updatedByAdminName}` : null}
+                  </p>
+                ) : null}
                 <div className="selected-match-main">
                   <div className="selected-teams-stack">
                     {(() => {

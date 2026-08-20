@@ -125,6 +125,8 @@ async function loadMongoTournamentData(getDb, tournamentId, session) {
       away: match.away,
       score: match.score || null,
       bank: match.bank ?? null,
+      selectedByName: match.selectedByUsername || null,
+      updatedByAdminName: match.updatedByUsername || null,
       tipCount: eligibleTips.filter((tip) => tip.matchId.equals(match._id)).length,
       playerCount: users.length,
       tipsVisible: new Date(match.startsAt).getTime() <= now,

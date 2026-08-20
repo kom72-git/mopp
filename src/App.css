@@ -786,6 +786,7 @@
 }
 
 .match-item {
+  position: relative;
   width: 100%;
   border: 1px solid #d7e5f2;
   border-radius: 10px;
@@ -793,6 +794,15 @@
   padding: 0.54rem;
   text-align: left;
   cursor: default;
+}
+
+.match-item-meta {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.6rem;
+  color: #5e7890;
+  font-size: 0.66rem;
+  font-weight: 700;
 }
 
 .match-item.is-clickable {
@@ -933,6 +943,7 @@
 }
 
 .selected-match-head {
+  position: relative;
   border: 1px solid #dce8f3;
   border-radius: 10px;
   background: linear-gradient(180deg, #fff, #f8fbff);
@@ -945,6 +956,15 @@
   color: #4d687f;
   font-size: 0.78rem;
   font-weight: 400;
+}
+
+.selected-match-meta {
+  position: absolute;
+  top: 0.58rem;
+  right: 0.65rem;
+  margin: 0;
+  color: #5e7890;
+  font-size: 0.7rem;
 }
 
 .selected-match-main {
@@ -2602,6 +2622,11 @@
 .player-schedule-match input {
   width: auto;
   margin: 0;
+}
+
+.player-schedule-match.is-selected {
+  font-weight: 800;
+  color: #174c73;
 }
 
 .player-schedule-round small {

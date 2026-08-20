@@ -173,17 +173,17 @@ export default function PlayerTipsPanel({ selectedTournamentId, onTipUpdated, on
       {scheduleMessage ? <p className="player-tips-message" role="alert">{scheduleMessage}</p> : null}
       {scheduleRounds.length === 0 ? <p className="player-tips-message">Zatím není dostupné kolo pro tvůj výběr.</p> : scheduleRounds.map((round) => (
         <div className="player-schedule-round" key={round.round}>
-          <strong>{round.round}. kolo · {round.selectorName}</strong>
+          <strong>{round.round}. kolo · {round.selectorName} · vyber {round.requiredSelectionCount} zápas{round.requiredSelectionCount === 1 ? '' : 'y'}</strong>
           {round.matches.map((match) => {
             const checked = (scheduleSelections[round.round] ?? []).includes(match.id)
             return (
-              <label className="player-schedule-match" key={match.id}>
-                <input type="checkbox" checked={checked || Boolean(round.selection)} disabled={!round.canSelect || Boolean(round.selection)} onChange={() => setScheduleSelections((current) => ({ ...current, [round.round]: checked ? (current[round.round] ?? []).filter((id) => id !== match.id) : [...(current[round.round] ?? []), match.id] }))} />
+              <label className={`player-schedule-match${round.selection?.matchIds?.includes(match.id) ? ' is-selected' : ''}`} key={match.id}>
+                <input type="checkbox" checked={checked || Boolean(round.selection)} disabled={!round.canSelect || Boolean(round.selection) || (!checked && (scheduleSelections[round.round] ?? []).length >= round.requiredSelectionCount)} onChange={() => setScheduleSelections((current) => ({ ...current, [round.round]: checked ? (current[round.round] ?? []).filter((id) => id !== match.id) : [...(current[round.round] ?? []), match.id] }))} />
                 <span>{match.home} – {match.away} · {match.startsAt.replace('T', ' ')}</span>
               </label>
             )
           })}
-          {round.canSelect ? <button type="button" className="auth-submit" disabled={(scheduleSelections[round.round] ?? []).length !== round.matches.length} onClick={() => saveScheduleSelection(round)}>Potvrdit výběr</button> : null}
+          {round.canSelect ? <button type="button" className="auth-submit" disabled={(scheduleSelections[round.round] ?? []).length !== round.requiredSelectionCount} onClick={() => saveScheduleSelection(round)}>Potvrdit výběr</button> : null}
           {round.selection ? <small>Výběr je uzamčený.</small> : null}
         </div>
       ))}

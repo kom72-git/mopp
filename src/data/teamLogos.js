@@ -24,15 +24,33 @@ const teamLogosBySet = {
 }
 
 const elhTeamNameAliases = {
+  'Č. Budějovice': 'Budějovice',
+  'České Budějovice': 'Budějovice',
+  'ČEZ Motor České Budějovice': 'Budějovice',
   'Hradec Králové': 'Hradec',
   'Hr. Králové': 'Hradec',
   'Mountfield HK': 'Hradec',
   'HK Mountfield': 'Hradec',
   MHK: 'Hradec',
+  'Kometa Brno': 'Brno',
+  'HC Kometa Brno': 'Brno',
   'BK Mladá Boleslav': 'Boleslav',
   'Ml. Boleslav': 'Boleslav',
+  'M. Boleslav': 'Boleslav',
   'Mladá Boleslav': 'Boleslav',
   MBL: 'Boleslav',
+  'K. Vary': 'Karlovy Vary',
+  'Karlovy Vary': 'Karlovy Vary',
+  'Bílí Tygři Liberec': 'Liberec',
+  'Sparta Praha': 'Sparta',
+  'HC Sparta Praha': 'Sparta',
+  'HC Oceláři Třinec': 'Třinec',
+  'HC Vítkovice Ridera': 'Vítkovice',
+  'HC Škoda Plzeň': 'Plzeň',
+  'HC Dynamo Pardubice': 'Pardubice',
+  'HC Verva Litvínov': 'Litvínov',
+  'Rytíři Kladno': 'Kladno',
+  'HC Olomouc': 'Olomouc',
 }
 
 const elhTeamDisplayNames = {
@@ -60,8 +78,20 @@ function getElhAlias(teamName) {
   const normalizedName = normalizeTeamName(teamName)
   const directAlias = Object.entries(elhTeamNameAliases).find(([name]) => normalizeTeamName(name) === normalizedName)?.[1]
   if (directAlias) return directAlias
+  if (normalizedName.includes('budejovice')) return 'Budějovice'
   if (normalizedName.includes('hradec') || normalizedName.includes('mountfield') || normalizedName === 'mhk') return 'Hradec'
+  if (normalizedName.includes('brno') || normalizedName.includes('kometa')) return 'Brno'
   if (normalizedName.includes('boleslav') || normalizedName === 'mbl') return 'Boleslav'
+  if (normalizedName.includes('karlovy vary') || normalizedName === 'k vary') return 'Karlovy Vary'
+  if (normalizedName.includes('liberec')) return 'Liberec'
+  if (normalizedName.includes('kladno')) return 'Kladno'
+  if (normalizedName.includes('litvinov')) return 'Litvínov'
+  if (normalizedName.includes('olomouc')) return 'Olomouc'
+  if (normalizedName.includes('pardubice')) return 'Pardubice'
+  if (normalizedName.includes('plzen')) return 'Plzeň'
+  if (normalizedName.includes('sparta')) return 'Sparta'
+  if (normalizedName.includes('trinec')) return 'Třinec'
+  if (normalizedName.includes('vitkovice')) return 'Vítkovice'
   return null
 }
 

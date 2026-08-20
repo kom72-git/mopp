@@ -49,6 +49,7 @@ async function loadMongoTournamentData(getDb, tournamentId, session) {
     .sort({ createdAt: 1 })
     .toArray();
   const allowedUserIds = new Set(users.map((user) => user._id.toString()));
+  const usersById = new Map(users.map((user) => [user._id.toString(), user]));
   const longTermBankTotal = users.length * (Number(tournament.longTermContribution) || 0);
   const longTermBankPayouts = tournament.payouts || [];
   const matches = await database.collection("matches")
@@ -125,7 +126,10 @@ async function loadMongoTournamentData(getDb, tournamentId, session) {
       away: match.away,
       score: match.score || null,
       bank: match.bank ?? null,
-      selectedByName: match.selectedByUsername || null,
+      selectedByName: usersById.get(String(match.selectedByUserId))?.displayName
+        || usersById.get(String(match.selectedByUserId))?.username
+        || match.selectedByUsername
+        || null,
       updatedByAdminName: match.updatedByUsername || null,
       tipCount: eligibleTips.filter((tip) => tip.matchId.equals(match._id)).length,
       playerCount: users.length,

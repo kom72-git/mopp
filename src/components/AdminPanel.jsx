@@ -42,7 +42,7 @@ function ManualDateInput({ value, onChange, ...props }) {
   return <ManualDateTimeInput {...props} dateOnly value={value ? `${value}T00:00` : ''} onChange={(nextValue) => onChange(nextValue ? nextValue.slice(0, 10) : '')} />
 }
 
-export default function AdminPanel({ selectedTournamentId: selectedTournamentKey, onTournamentUpdated, onMatchesChanged, onClose }) {
+export default function AdminPanel({ selectedTournamentId: selectedTournamentKey, accountNotificationCount = 0, onAccountNotificationsRead, onTournamentUpdated, onMatchesChanged, onClose }) {
   const [counts, setCounts] = useState(null)
   const [users, setUsers] = useState([])
   const [tipBreakdown, setTipBreakdown] = useState([])
@@ -424,10 +424,13 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
     <button
       type="button"
       className="admin-section-toggle"
-      onClick={() => toggleSection(section)}
+      onClick={() => {
+        toggleSection(section)
+        if (section === 'users') onAccountNotificationsRead?.()
+      }}
       aria-expanded={openSection === section}
     >
-      <span>{label}</span>
+      <span>{label}{section === 'users' && accountNotificationCount > 0 ? <span className="admin-section-notification" title={`${accountNotificationCount} nových hráčů`}><img src="/icons/notifikace.png" alt="" /><strong>{accountNotificationCount}</strong></span> : null}</span>
       <span aria-hidden="true">{openSection === section ? '−' : '+'}</span>
     </button>
   )

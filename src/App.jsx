@@ -234,6 +234,7 @@ function AuthPanel({ selectedTournamentId, onTournamentUpdated, onMatchesChanged
   const [isBusy, setIsBusy] = useState(false)
   const [showPasswords, setShowPasswords] = useState(false)
   const [hasSelectionNotification, setHasSelectionNotification] = useState(false)
+  const [pendingAccountNotificationCount, setPendingAccountNotificationCount] = useState(0)
 
   const refreshSelectionNotification = async () => {
     if (!user || !selectedTournamentId) {
@@ -252,6 +253,38 @@ function AuthPanel({ selectedTournamentId, onTournamentUpdated, onMatchesChanged
   useEffect(() => {
     refreshSelectionNotification()
   }, [user?.id, selectedTournamentId])
+
+  useEffect(() => {
+    if (user?.role !== 'admin') {
+      setPendingAccountNotificationCount(0)
+      return undefined
+    }
+    let cancelled = false
+    const refreshPendingAccounts = async () => {
+      try {
+        const response = await fetch('/api/admin/overview', { credentials: 'include' })
+        const payload = await response.json().catch(() => ({}))
+        if (!cancelled) setPendingAccountNotificationCount(Number(payload.accountNotifications) || 0)
+      } catch {
+        if (!cancelled) setPendingAccountNotificationCount(0)
+      }
+    }
+    refreshPendingAccounts()
+    const intervalId = window.setInterval(refreshPendingAccounts, 30000)
+    return () => {
+      cancelled = true
+      window.clearInterval(intervalId)
+    }
+  }, [user?.id, user?.role])
+
+  const markAccountNotificationsRead = async () => {
+    try {
+      await fetch('/api/admin/account-notifications/read', { method: 'POST', credentials: 'include' })
+      setPendingAccountNotificationCount(0)
+    } catch {
+      return null
+    }
+  }
 
   useEffect(() => {
     const verificationToken = new URLSearchParams(window.location.search).get('verify')
@@ -420,10 +453,10 @@ function AuthPanel({ selectedTournamentId, onTournamentUpdated, onMatchesChanged
           <div className="auth-panel-tabs">
             <button type="button" className={`auth-button auth-tips-button ${activePanel === 'tips' ? 'is-active' : ''}`} onClick={() => setActivePanel((current) => current === 'tips' ? '' : 'tips')}>Tipovat{hasSelectionNotification ? <img className="notification-bell" src="/icons/notifikace.png" alt="Jsi na řadě s výběrem zápasu" title="Jsi na řadě s výběrem zápasu" /> : null}</button>
             <button type="button" className={`auth-button ${activePanel === 'account' ? 'is-active' : ''}`} onClick={() => { setActivePanel((current) => current === 'account' ? '' : 'account'); setAccountForm((current) => ({ ...current, displayName: user.displayName || '' })); setMessage('') }}>Účet</button>
-            {user.role === 'admin' ? <button type="button" className={`auth-button ${activePanel === 'admin' ? 'is-active' : ''}`} onClick={() => setActivePanel((current) => current === 'admin' ? '' : 'admin')}>Admin</button> : null}
+            {user.role === 'admin' ? <button type="button" className={`auth-button auth-admin-button ${activePanel === 'admin' ? 'is-active' : ''}`} onClick={() => setActivePanel((current) => current === 'admin' ? '' : 'admin')}>Admin{pendingAccountNotificationCount > 0 ? <span className="admin-notification-badge" title={`${pendingAccountNotificationCount} nových hráčů`}><img className="notification-bell admin-notification-bell" src="/icons/notifikace.png" alt="" /><span>{pendingAccountNotificationCount}</span></span> : null}</button> : null}
           </div>
           <button type="button" className="auth-button auth-logout" onClick={logout}>Odhlásit</button>
-          {activePanel === 'admin' && user.role === 'admin' ? <AdminPanel selectedTournamentId={selectedTournamentId} onTournamentUpdated={onTournamentUpdated} onMatchesChanged={onMatchesChanged} onClose={() => setActivePanel('')} /> : null}
+          {activePanel === 'admin' && user.role === 'admin' ? <AdminPanel selectedTournamentId={selectedTournamentId} accountNotificationCount={pendingAccountNotificationCount} onAccountNotificationsRead={markAccountNotificationsRead} onTournamentUpdated={onTournamentUpdated} onMatchesChanged={onMatchesChanged} onClose={() => setActivePanel('')} /> : null}
           {activePanel === 'tips' ? <PlayerTipsPanel selectedTournamentId={selectedTournamentId} hasSelectionNotification={hasSelectionNotification} onSelectionUpdated={() => setHasSelectionNotification(false)} onTipUpdated={onTipUpdated} onClose={() => setActivePanel('')} /> : null}
           {activePanel === 'account' ? (
             <div className="auth-form auth-account-form">

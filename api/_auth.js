@@ -588,7 +588,18 @@ function createAuthRoutes({ app, getDb }) {
         }))
         .filter(Boolean)
         .slice(-3);
-      return res.json({ ok: true, rounds: visibleRounds, recentSelectedMatches, participantIndex });
+      const upcomingSelectionRounds = participantIndex >= 0
+        ? rounds
+          .filter((round) => round.selectorUserId === req.session.sub && !round.selection && new Date(round.matches.at(-1)?.startsAt ?? 0).getTime() >= Date.now())
+          .slice(0, 6)
+          .map((round) => ({
+            round: round.round,
+            requiredSelectionCount: round.requiredSelectionCount,
+            startsAt: round.matches[0]?.startsAt ?? null,
+            endsAt: round.matches.at(-1)?.startsAt ?? null,
+          }))
+        : [];
+      return res.json({ ok: true, rounds: visibleRounds, recentSelectedMatches, upcomingSelectionRounds, participantIndex });
     } catch {
       return res.status(500).json({ ok: false, message: "Rozpis se nepodařilo načíst" });
     }
@@ -635,7 +646,7 @@ function createAuthRoutes({ app, getDb }) {
   app.get("/api/admin/overview", requireJwt, requireRole("admin"), async (req, res) => {
     try {
       const db = getDb();
-      const [userDocuments, tournaments, matches, tips, tipBreakdown] = await Promise.all([
+      const [userDocuments, tournaments, matches, tips, tipBreakdown, adminUser] = await Promise.all([
         db.collection("users").find({}, { projection: { username: 1, displayName: 1, role: 1, status: 1, createdAt: 1 } }).sort({ createdAt: 1 }).toArray(),
         db.collection("tournaments").countDocuments(),
         db.collection("matches").countDocuments(),
@@ -647,15 +658,31 @@ function createAuthRoutes({ app, getDb }) {
           { $project: { _id: 0, username: { $ifNull: ["$user.username", "neznámý hráč"] }, count: 1 } },
           { $sort: { username: 1 } },
         ]).toArray(),
+        db.collection("users").findOne({ _id: new ObjectId(req.session.sub), role: "admin" }, { projection: { accountNotificationsSeenAt: 1 } }),
       ]);
+      const accountNotificationsSeenAt = adminUser?.accountNotificationsSeenAt ?? new Date();
+      const newActivePlayerCount = userDocuments.filter((user) => user.role !== "admin" && user.status === "active" && new Date(user.createdAt).getTime() > accountNotificationsSeenAt.getTime()).length;
       return res.json({
         ok: true,
         counts: { users: userDocuments.length, tournaments, matches, tips },
+        accountNotifications: newActivePlayerCount,
         users: userDocuments.map((user) => ({ ...user, _id: user._id.toString() })),
         tipBreakdown,
       });
     } catch {
       return res.status(500).json({ ok: false, message: "Admin přehled se nepodařilo načíst" });
+    }
+  });
+
+  app.post("/api/admin/account-notifications/read", requireJwt, requireRole("admin"), async (req, res) => {
+    try {
+      await getDb().collection("users").updateOne(
+        { _id: new ObjectId(req.session.sub), role: "admin" },
+        { $set: { accountNotificationsSeenAt: new Date(), updatedAt: new Date() } },
+      );
+      return res.json({ ok: true });
+    } catch {
+      return res.status(500).json({ ok: false, message: "Notifikace se nepodařilo označit jako přečtené" });
     }
   });
 

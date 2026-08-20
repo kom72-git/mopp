@@ -51,6 +51,7 @@ export default function PlayerTipsPanel({ selectedTournamentId, hasSelectionNoti
   const [scheduleRounds, setScheduleRounds] = useState([])
   const [scheduleSelections, setScheduleSelections] = useState({})
   const [scheduleHistory, setScheduleHistory] = useState([])
+  const [upcomingSelectionRounds, setUpcomingSelectionRounds] = useState([])
   const [scheduleMessage, setScheduleMessage] = useState('')
   const [tipsMode, setTipsMode] = useState('mine')
 
@@ -97,6 +98,7 @@ export default function PlayerTipsPanel({ selectedTournamentId, hasSelectionNoti
         setScheduleRounds(payload.rounds ?? [])
         setScheduleSelections(Object.fromEntries((payload.rounds ?? []).map((round) => [round.round, round.selection?.matchIds ?? []])))
         setScheduleHistory(payload.recentSelectedMatches ?? [])
+        setUpcomingSelectionRounds(payload.upcomingSelectionRounds ?? [])
       })
       .catch((error) => {
         if (!cancelled) setScheduleMessage(error.message)
@@ -151,7 +153,10 @@ export default function PlayerTipsPanel({ selectedTournamentId, hasSelectionNoti
       })
       const payload = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(payload.message || 'Výběr se nepodařilo uložit')
-      setScheduleRounds((current) => current.map((item) => item.round === round.round ? { ...item, canSelect: false, selection: payload.selection } : item))
+      setScheduleRounds((current) => current.map((item) => item.round === round.round
+        ? { ...item, matches: item.matches.filter((match) => payload.selection.matchIds.includes(match.id)), canSelect: false, selection: payload.selection }
+        : item))
+      setUpcomingSelectionRounds((current) => current.filter((item) => item.round !== round.round))
       onSelectionUpdated?.()
       await onTipUpdated?.()
       const matchesResponse = await fetch('/api/player/matches', { credentials: 'include' })
@@ -190,6 +195,20 @@ export default function PlayerTipsPanel({ selectedTournamentId, hasSelectionNoti
           <h3>Poslední výběry</h3>
           <div className="player-schedule-history player-schedule-history-top">
                 {scheduleHistory.map((match, index) => <span key={`${match.round}-${match.home}-${match.away}-${index}`}>{match.round}. kolo · {match.home} – {match.away}</span>)}
+          </div>
+        </div>
+      ) : null}
+      {upcomingSelectionRounds.length > 0 ? (
+        <div className="player-schedule-box player-schedule-timing-box">
+          <h3>Kdy tipuji</h3>
+          <div className="player-schedule-timing-list">
+            {upcomingSelectionRounds.map((item) => (
+              <div className="player-schedule-timing-row" key={item.round}>
+                <strong>{item.round}. kolo</strong>
+                <span>{item.requiredSelectionCount} zápas{item.requiredSelectionCount === 1 ? '' : 'y'}</span>
+                <span>{item.startsAt ? formatMatchDateTime(item.startsAt) : 'Termín bude doplněn'}</span>
+              </div>
+            ))}
           </div>
         </div>
       ) : null}

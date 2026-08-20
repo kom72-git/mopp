@@ -59,6 +59,7 @@ export const tournaments = [
     id: 'PO-2025',
     label: 'PO-2025',
     title: 'Play-off hokejové extraligy 2025',
+    shortLabel: 'Play-off ELH 2025',
     tabTitle: 'Play-off ELH 2025',
     sheetId: '1cdrtECld-UgY8qjcc2UajQwcO3F85u1EgV2EU2sc9Lw',
     gid: '2015707050',

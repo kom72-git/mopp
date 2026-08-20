@@ -111,6 +111,7 @@ function formatRound(round, roundLabel = 'den') {
 }
 
 function isTournamentActiveByDate(tournament) {
+  if (tournament?.status === 'active') return true
   const startDate = tournament?.startDate
   if (!startDate) return false
 
@@ -2261,45 +2262,6 @@ function App() {
             </span>
             <span>Master of PP</span>
           </p>
-          <div className={`tournament-switcher${isTournamentMenuOpen ? ' is-open' : ''}`} ref={tournamentSwitcherRef}>
-            <button
-              type="button"
-              className="tournament-menu-trigger"
-              aria-haspopup="listbox"
-              aria-expanded={isTournamentMenuOpen}
-              onClick={() => setIsTournamentMenuOpen((current) => !current)}
-            >
-              <span className="tournament-picker-label">Historie</span>
-              <span className="tournament-current-label">{selectedTournament?.shortLabel ?? selectedTournament?.title ?? selectedTournament?.label ?? 'Vyber turnaj'}</span>
-              <span className="tournament-menu-chevron" aria-hidden="true" />
-            </button>
-            {isTournamentMenuOpen ? (
-              <div className="tournament-menu" role="listbox" aria-label="Výběr turnaje">
-                {availableTournaments.map((tournament) => (
-                  <button
-                    type="button"
-                    role="option"
-                    aria-selected={tournament.id === selectedTournamentId}
-                    className={`tournament-menu-option${tournament.id === selectedTournamentId ? ' is-selected' : ''}`}
-                    key={tournament.id}
-                    onClick={() => {
-                      const nextTournamentId = tournament.id
-                      setIsLiveLoading(true)
-                      setData(nextTournamentId === defaultTournamentId ? { players: fallbackPlayers, matches: fallbackMatches } : emptyData)
-                      setSelectedTournamentId(nextTournamentId)
-                      setIsTournamentMenuOpen(false)
-                      const url = new URL(window.location.href)
-                      url.searchParams.set('tournament', nextTournamentId)
-                      window.history.replaceState({}, '', url)
-                    }}
-                  >
-                    {tournament.shortLabel ?? tournament.title ?? tournament.label}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-            {isLiveLoading ? <span className="tournament-loading">Načítám data…</span> : null}
-          </div>
         </div>
 
         <figure className="hero-logo-wrap">
@@ -2318,6 +2280,44 @@ function App() {
       </header>
 
       <nav className="account-nav" aria-label="Navigace účtu">
+        <div className={`tournament-switcher${isTournamentMenuOpen ? ' is-open' : ''}`} ref={tournamentSwitcherRef}>
+          <button
+            type="button"
+            className="tournament-menu-trigger"
+            aria-haspopup="listbox"
+            aria-expanded={isTournamentMenuOpen}
+            onClick={() => setIsTournamentMenuOpen((current) => !current)}
+          >
+            <span className="tournament-picker-label">Historie</span>
+            <span className="tournament-current-label">{isLiveLoading ? 'Načítám…' : selectedTournament?.shortLabel ?? selectedTournament?.title ?? selectedTournament?.label ?? 'Vyber turnaj'}</span>
+            <span className="tournament-menu-chevron" aria-hidden="true" />
+          </button>
+          {isTournamentMenuOpen ? (
+            <div className="tournament-menu" role="listbox" aria-label="Výběr turnaje">
+              {availableTournaments.map((tournament) => (
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={tournament.id === selectedTournamentId}
+                  className={`tournament-menu-option${tournament.id === selectedTournamentId ? ' is-selected' : ''}`}
+                  key={tournament.id}
+                  onClick={() => {
+                    const nextTournamentId = tournament.id
+                    setIsLiveLoading(true)
+                    setData(nextTournamentId === defaultTournamentId ? { players: fallbackPlayers, matches: fallbackMatches } : emptyData)
+                    setSelectedTournamentId(nextTournamentId)
+                    setIsTournamentMenuOpen(false)
+                    const url = new URL(window.location.href)
+                    url.searchParams.set('tournament', nextTournamentId)
+                    window.history.replaceState({}, '', url)
+                  }}
+                >
+                  {tournament.shortLabel ?? tournament.title ?? tournament.label}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
         <AuthPanel selectedTournamentId={selectedTournamentId} onTournamentUpdated={handleTournamentUpdated} onMatchesChanged={handleMatchesChanged} onTipUpdated={handleTipUpdated} />
       </nav>
 

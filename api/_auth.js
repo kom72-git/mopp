@@ -548,7 +548,34 @@ function createAuthRoutes({ app, getDb }) {
       const participants = await getTournamentParticipants(db, tournament);
       const participantIndex = participants.findIndex((user) => user._id.toString() === req.session.sub);
       const scheduleMatches = await db.collection("scheduleMatches").find({ tournamentId }).sort({ round: 1, startsAt: 1 }).toArray();
-      const selections = await db.collection("scheduleSelections").find({ tournamentId }).toArray();
+      let selections = await db.collection("scheduleSelections").find({ tournamentId }).toArray();
+      const selectedScheduleIds = new Set(selections.flatMap((selection) => (selection.matchIds ?? []).map(String)));
+      const createdScheduleMatches = await db.collection("matches")
+        .find({ tournamentId: new ObjectId(tournamentId), scheduleMatchId: { $exists: true } }, { projection: { scheduleMatchId: 1, selectedByUserId: 1, createdAt: 1 } })
+        .toArray();
+      const missingHistoricalSelectionsByRound = new Map();
+      for (const createdMatch of createdScheduleMatches) {
+        const scheduleMatchId = String(createdMatch.scheduleMatchId);
+        if (selectedScheduleIds.has(scheduleMatchId)) continue;
+        const scheduleMatch = scheduleMatches.find((match) => match._id.toString() === scheduleMatchId);
+        if (!scheduleMatch || !createdMatch.selectedByUserId) continue;
+        const selectionKey = `${Number(scheduleMatch.round)}-${String(createdMatch.selectedByUserId)}`;
+        const selection = missingHistoricalSelectionsByRound.get(selectionKey) ?? {
+          tournamentId,
+          round: Number(scheduleMatch.round),
+          userId: String(createdMatch.selectedByUserId),
+          matchIds: [],
+          selectedAt: createdMatch.createdAt ?? new Date(),
+        };
+        selection.matchIds.push(scheduleMatchId);
+        missingHistoricalSelectionsByRound.set(selectionKey, selection);
+        selectedScheduleIds.add(scheduleMatchId);
+      }
+      const missingHistoricalSelections = [...missingHistoricalSelectionsByRound.values()];
+      if (missingHistoricalSelections.length > 0) {
+        await db.collection("scheduleSelections").insertMany(missingHistoricalSelections);
+        selections = [...selections, ...missingHistoricalSelections];
+      }
       for (const selection of selections) await createMatchesFromScheduleSelection(db, tournament, selection, participants);
       const allRounds = [...new Set(scheduleMatches.map((match) => Number(match.round)))].sort((a, b) => a - b);
       const requiredSelectionCount = Math.max(1, Number(tournament.selectionMatchCount) || 1);
@@ -683,6 +710,30 @@ function createAuthRoutes({ app, getDb }) {
       return res.json({ ok: true });
     } catch {
       return res.status(500).json({ ok: false, message: "Notifikace se nepodařilo označit jako přečtené" });
+    }
+  });
+
+  app.delete("/api/admin/users/:id", requireJwt, requireRole("admin"), async (req, res) => {
+    try {
+      const userId = String(req.params.id ?? "").trim();
+      if (!ObjectId.isValid(userId) || userId === req.session.sub) return res.status(400).json({ ok: false, message: "Účet není možné smazat." });
+      const db = getDb();
+      const objectId = new ObjectId(userId);
+      const user = await db.collection("users").findOne({ _id: objectId });
+      if (!user) return res.status(404).json({ ok: false, message: "Účet nebyl nalezen." });
+      await Promise.all([
+        db.collection("tips").deleteMany({ $or: [{ userId: objectId }, { userId }] }),
+        db.collection("passwordResetTokens").deleteMany({ $or: [{ userId: objectId }, { userId }] }),
+        db.collection("emailVerificationTokens").deleteMany({ $or: [{ userId: objectId }, { userId }] }),
+        db.collection("tournaments").updateMany(
+          { participantUserIds: { $in: [userId, objectId] } },
+          { $pull: { participantUserIds: { $in: [userId, objectId] } }, $set: { updatedAt: new Date() } },
+        ),
+      ]);
+      await db.collection("users").deleteOne({ _id: objectId });
+      return res.json({ ok: true, message: "Účet byl smazán." });
+    } catch {
+      return res.status(500).json({ ok: false, message: "Účet se nepodařilo smazat." });
     }
   });
 

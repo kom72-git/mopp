@@ -235,6 +235,7 @@ function AuthPanel({ selectedTournamentId, onTournamentUpdated, onMatchesChanged
   const [showPasswords, setShowPasswords] = useState(false)
   const [hasSelectionNotification, setHasSelectionNotification] = useState(false)
   const [pendingAccountNotificationCount, setPendingAccountNotificationCount] = useState(0)
+  const [scheduleRefreshKey, setScheduleRefreshKey] = useState(0)
 
   const refreshSelectionNotification = async () => {
     if (!user || !selectedTournamentId) {
@@ -284,6 +285,11 @@ function AuthPanel({ selectedTournamentId, onTournamentUpdated, onMatchesChanged
     } catch {
       return null
     }
+  }
+
+  const handleTournamentMembershipChanged = () => {
+    setScheduleRefreshKey((current) => current + 1)
+    refreshSelectionNotification()
   }
 
   useEffect(() => {
@@ -456,8 +462,8 @@ function AuthPanel({ selectedTournamentId, onTournamentUpdated, onMatchesChanged
             {user.role === 'admin' ? <button type="button" className={`auth-button auth-admin-button ${activePanel === 'admin' ? 'is-active' : ''}`} onClick={() => setActivePanel((current) => current === 'admin' ? '' : 'admin')}>Admin{pendingAccountNotificationCount > 0 ? <span className="admin-notification-badge" title={`${pendingAccountNotificationCount} nových hráčů`}><img className="notification-bell admin-notification-bell" src="/icons/notifikace.png" alt="" /><span>{pendingAccountNotificationCount}</span></span> : null}</button> : null}
           </div>
           <button type="button" className="auth-button auth-logout" onClick={logout}>Odhlásit</button>
-          {activePanel === 'admin' && user.role === 'admin' ? <AdminPanel selectedTournamentId={selectedTournamentId} accountNotificationCount={pendingAccountNotificationCount} onAccountNotificationsRead={markAccountNotificationsRead} onTournamentUpdated={onTournamentUpdated} onMatchesChanged={onMatchesChanged} onClose={() => setActivePanel('')} /> : null}
-          {activePanel === 'tips' ? <PlayerTipsPanel selectedTournamentId={selectedTournamentId} hasSelectionNotification={hasSelectionNotification} onSelectionUpdated={() => setHasSelectionNotification(false)} onTipUpdated={onTipUpdated} onClose={() => setActivePanel('')} /> : null}
+          {activePanel === 'admin' && user.role === 'admin' ? <AdminPanel selectedTournamentId={selectedTournamentId} accountNotificationCount={pendingAccountNotificationCount} onAccountNotificationsRead={markAccountNotificationsRead} onTournamentMembershipChanged={handleTournamentMembershipChanged} onTournamentUpdated={onTournamentUpdated} onMatchesChanged={onMatchesChanged} onClose={() => setActivePanel('')} /> : null}
+          {activePanel === 'tips' ? <PlayerTipsPanel selectedTournamentId={selectedTournamentId} scheduleRefreshKey={scheduleRefreshKey} hasSelectionNotification={hasSelectionNotification} onSelectionUpdated={() => setHasSelectionNotification(false)} onTipUpdated={onTipUpdated} onClose={() => setActivePanel('')} /> : null}
           {activePanel === 'account' ? (
             <div className="auth-form auth-account-form">
               <button type="button" className="panel-close-button" onClick={() => setActivePanel('')} aria-label="Zavřít panel" title="Zavřít">×</button>

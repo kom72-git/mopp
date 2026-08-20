@@ -40,7 +40,7 @@ function buildMatchGroups(matches) {
     })
 }
 
-export default function PlayerTipsPanel({ selectedTournamentId, hasSelectionNotification, onSelectionUpdated, onTipUpdated, onClose }) {
+export default function PlayerTipsPanel({ selectedTournamentId, scheduleRefreshKey, hasSelectionNotification, onSelectionUpdated, onTipUpdated, onClose }) {
   const [matches, setMatches] = useState([])
   const [values, setValues] = useState({})
   const [message, setMessage] = useState('')
@@ -104,7 +104,7 @@ export default function PlayerTipsPanel({ selectedTournamentId, hasSelectionNoti
         if (!cancelled) setScheduleMessage(error.message)
       })
     return () => { cancelled = true }
-  }, [selectedTournamentId])
+  }, [selectedTournamentId, scheduleRefreshKey])
 
   const updateScore = (matchId, field, value) => {
     setValues((current) => ({ ...current, [matchId]: { ...current[matchId], [field]: value } }))

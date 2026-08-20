@@ -42,7 +42,7 @@ function ManualDateInput({ value, onChange, ...props }) {
   return <ManualDateTimeInput {...props} dateOnly value={value ? `${value}T00:00` : ''} onChange={(nextValue) => onChange(nextValue ? nextValue.slice(0, 10) : '')} />
 }
 
-export default function AdminPanel({ selectedTournamentId: selectedTournamentKey, accountNotificationCount = 0, onAccountNotificationsRead, onTournamentUpdated, onMatchesChanged, onClose }) {
+export default function AdminPanel({ selectedTournamentId: selectedTournamentKey, accountNotificationCount = 0, onAccountNotificationsRead, onTournamentMembershipChanged, onTournamentUpdated, onMatchesChanged, onClose }) {
   const [counts, setCounts] = useState(null)
   const [users, setUsers] = useState([])
   const [tipBreakdown, setTipBreakdown] = useState([])
@@ -248,6 +248,7 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
       setTournaments((current) => current.map((tournament) => tournament._id === editingTournamentId ? payload.tournament : tournament))
       onTournamentUpdated?.({ ...payload.tournament, id: `db:${payload.tournament._id}` })
       onMatchesChanged?.()
+      onTournamentMembershipChanged?.()
       if (changedUserId) {
         setParticipantMessages((current) => ({ ...current, [changedUserId]: { text: 'Uloženo', isError: false } }))
         window.setTimeout(() => setParticipantMessages((current) => ({ ...current, [changedUserId]: null })), 2500)
@@ -269,6 +270,25 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
     const finalIds = next.length === activeIds.length ? [] : next
     setParticipantMessages((current) => ({ ...current, [userId]: { text: 'Ukládám…', isError: false } }))
     saveParticipantIds(finalIds, userId)
+  }
+
+  const deleteAccount = async (user) => {
+    if (!window.confirm(`Opravdu smazat účet ${user.displayName || user.username}?`)) return
+    setIsBusy(true)
+    setMessage('')
+    try {
+      const response = await fetch(`/api/admin/users/${encodeURIComponent(user._id)}`, { method: 'DELETE', credentials: 'include' })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(payload.message || 'Účet se nepodařilo smazat')
+      setUsers((current) => current.filter((item) => item._id !== user._id))
+      setParticipantUserIds((current) => current.filter((id) => id !== user._id))
+      setMessage(payload.message)
+      onMatchesChanged?.()
+    } catch (error) {
+      setMessage(error.message)
+    } finally {
+      setIsBusy(false)
+    }
   }
 
   const saveMatchSelection = async (round, matchId) => {
@@ -779,6 +799,7 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
                     <span>Hraje</span>
                   </label>
                 ) : null}
+                <button type="button" className="auth-button is-danger" onClick={() => deleteAccount(user)} disabled={isBusy}>Smazat účet</button>
               </div>
             ))}
           </div>

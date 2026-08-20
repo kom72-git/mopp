@@ -115,6 +115,7 @@
 }
 
 .account-nav {
+  container-type: inline-size;
   display: flex;
   align-items: center;
   gap: 0.9rem;
@@ -143,6 +144,7 @@
 
 .account-nav > .auth-panel {
   flex: 1 1 auto;
+  flex-wrap: nowrap;
   box-sizing: border-box;
   padding-right: 0.3rem;
 }
@@ -302,7 +304,7 @@
 .hero-logo-wrap {
   position: static;
   margin: 0;
-  width: clamp(5rem, 12vw, 10rem);
+  width: 8rem;
   height: 8rem;
   min-height: 8rem;
   max-height: 8rem;
@@ -2240,6 +2242,83 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.3rem;
+  white-space: nowrap;
+}
+
+@container (max-width: 700px) {
+  .account-nav {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .account-nav > .tournament-switcher,
+  .account-nav > .auth-panel {
+    width: 100%;
+  }
+
+  .account-nav > .tournament-switcher {
+    min-width: 0;
+    margin-left: 0;
+    border-radius: 0;
+  }
+
+  .account-nav > .auth-panel.is-authenticated {
+    display: grid;
+    grid-template-columns: 1fr auto auto auto;
+    grid-template-areas: '. user tabs logout';
+    align-items: center;
+    gap: 0.45rem;
+    flex-wrap: nowrap;
+    justify-content: initial;
+    padding-left: 0.3rem;
+    padding-right: 0.3rem;
+  }
+
+  .account-nav > .auth-panel.is-authenticated .auth-user {
+    margin-right: 0;
+    min-width: max-content;
+    white-space: nowrap;
+  }
+
+  .account-nav > .auth-panel.is-authenticated .auth-panel-tabs {
+    min-width: max-content;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    margin-left: 0;
+  }
+}
+
+@container (max-width: 450px) {
+  .account-nav > .auth-panel.is-authenticated {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      'user user'
+      'tabs logout';
+  }
+
+  .account-nav > .auth-panel.is-authenticated .auth-user {
+    grid-area: user;
+  }
+
+  .account-nav > .auth-panel.is-authenticated .auth-panel-tabs {
+    grid-area: tabs;
+    justify-content: flex-start;
+  }
+
+  .account-nav > .auth-panel.is-authenticated .auth-logout {
+    grid-area: logout;
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 450px) {
+  .account-nav > .auth-panel.is-authenticated {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      'user user'
+      'tabs logout';
+  }
 }
 
 .auth-button.is-active {
@@ -3267,6 +3346,17 @@
     gap: 0.28rem;
   }
 
+  .hero {
+    grid-template-columns: minmax(0, 1fr) 6.8rem;
+    gap: 0.45rem;
+    padding: 0.78rem;
+  }
+
+  .intro {
+    white-space: nowrap;
+    font-size: 0.84rem;
+  }
+
   .tournament-switcher {
     width: 100%;
     margin-left: 0;
@@ -3294,6 +3384,7 @@
 
   .auth-panel {
     align-items: stretch;
+    flex-wrap: wrap;
   }
 
   .auth-user {
@@ -3302,10 +3393,34 @@
 
   .auth-panel-tabs {
     flex: 1 1 auto;
+    flex-wrap: nowrap;
   }
 
   .auth-logout {
     margin-left: auto;
+  }
+
+  .account-nav > .auth-panel.is-authenticated {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      'user user'
+      'tabs logout';
+    align-items: start;
+  }
+
+  .account-nav > .auth-panel.is-authenticated .auth-user {
+    grid-area: user;
+    flex: 0 0 auto;
+  }
+
+  .account-nav > .auth-panel.is-authenticated .auth-panel-tabs {
+    grid-area: tabs;
+    justify-content: flex-start;
+  }
+
+  .account-nav > .auth-panel.is-authenticated .auth-logout {
+    grid-area: logout;
+    margin-left: 0;
   }
 
   .tournament-select {
@@ -3315,7 +3430,7 @@
 
   .hero-logo-wrap {
     justify-self: end;
-    width: clamp(4.5rem, 20vw, 7rem);
+    width: 6.8rem;
     height: 6.5rem;
     min-height: 6.5rem;
     max-height: 6.5rem;
@@ -3324,6 +3439,25 @@
 
   .hero-content {
     min-height: 6.5rem;
+  }
+
+  .account-nav {
+    padding: 0;
+  }
+
+  .account-nav > .tournament-switcher {
+    width: 100%;
+    min-width: 0;
+    margin-left: 0;
+    border-radius: 0;
+  }
+
+  .account-nav > .auth-panel.is-authenticated {
+    align-items: flex-start;
+  }
+
+  .account-nav .auth-panel-tabs {
+    margin-left: auto;
   }
 
   .sync-tooltip {
@@ -3433,5 +3567,102 @@
 @media (max-width: 390px) {
   .round-tabs {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .account-nav {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0;
+  }
+
+  .account-nav > .tournament-switcher,
+  .account-nav > .auth-panel {
+    width: 100%;
+  }
+
+  .account-nav > .tournament-switcher {
+    min-width: 0;
+    margin-left: 0;
+    border-radius: 0;
+  }
+
+  .account-nav > .auth-panel.is-authenticated {
+    display: grid;
+    grid-template-columns: 1fr auto auto auto;
+    grid-template-areas: '. user tabs logout';
+    align-items: center;
+    flex-wrap: nowrap;
+    justify-content: initial;
+    padding-left: 0.3rem;
+    padding-right: 0.3rem;
+  }
+
+  .account-nav > .auth-panel.is-authenticated .auth-user {
+    grid-area: user;
+    min-width: max-content;
+    margin-right: 0.45rem;
+    white-space: nowrap;
+  }
+
+  .account-nav > .auth-panel.is-authenticated .auth-panel-tabs {
+    grid-area: tabs;
+    min-width: max-content;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    margin-left: 0;
+  }
+
+  .account-nav > .auth-panel.is-authenticated .auth-logout {
+    grid-area: logout;
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 450px) {
+  .account-nav > .auth-panel.is-authenticated {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      'user user'
+      'tabs logout';
+    align-items: start;
+  }
+
+  .account-nav > .auth-panel.is-authenticated .auth-user {
+    grid-area: user;
+    margin-right: 0;
+  }
+
+  .account-nav > .auth-panel.is-authenticated .auth-panel-tabs {
+    grid-area: tabs;
+    justify-content: flex-start;
+  }
+
+  .account-nav > .auth-panel.is-authenticated .auth-logout {
+    grid-area: logout;
+  }
+}
+
+@media (max-width: 380px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr) 5.5rem;
+  }
+
+  .hero-logo-wrap {
+    width: 5.5rem;
+    height: 5.5rem;
+    min-height: 5.5rem;
+    max-height: 5.5rem;
+  }
+}
+
+@media (max-width: 450px) {
+  .account-nav > .auth-panel.is-authenticated {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      'user user'
+      'tabs logout';
   }
 }

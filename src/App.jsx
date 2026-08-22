@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import Cropper from 'react-easy-crop'
 import './App.css'
 import { matches as fallbackMatches, players as fallbackPlayers } from './data/moppData'
 import { defaultTournamentId, getTournamentById, tournaments } from './data/tournaments'
@@ -223,7 +224,7 @@ function StartsAtLabel({ startsAt, matchId, round, tournamentYear }) {
   )
 }
 
-function createAvatarDataUrl(file) {
+function readAvatarSource(file) {
   return new Promise((resolve, reject) => {
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
       reject(new Error('Vyber obrázek JPEG, PNG nebo WebP.'))
@@ -234,27 +235,28 @@ function createAvatarDataUrl(file) {
       return
     }
 
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result))
+    reader.onerror = () => reject(new Error('Obrázek se nepodařilo načíst.'))
+    reader.readAsDataURL(file)
+  })
+}
+
+function createCroppedAvatar(source, cropArea) {
+  return new Promise((resolve, reject) => {
     const image = new Image()
-    const objectUrl = URL.createObjectURL(file)
     image.onload = () => {
-      const size = Math.min(image.naturalWidth, image.naturalHeight)
-      const sourceX = (image.naturalWidth - size) / 2
-      const sourceY = (image.naturalHeight - size) / 2
       const canvas = document.createElement('canvas')
       canvas.width = 160
       canvas.height = 160
       const context = canvas.getContext('2d')
       context.fillStyle = '#ffffff'
       context.fillRect(0, 0, 160, 160)
-      context.drawImage(image, sourceX, sourceY, size, size, 0, 0, 160, 160)
-      URL.revokeObjectURL(objectUrl)
+      context.drawImage(image, cropArea.x, cropArea.y, cropArea.width, cropArea.height, 0, 0, 160, 160)
       resolve(canvas.toDataURL('image/jpeg', 0.82))
     }
-    image.onerror = () => {
-      URL.revokeObjectURL(objectUrl)
-      reject(new Error('Obrázek se nepodařilo načíst.'))
-    }
-    image.src = objectUrl
+    image.onerror = () => reject(new Error('Ořez obrázku se nepodařil.'))
+    image.src = source
   })
 }
 
@@ -265,6 +267,10 @@ function AuthPanel({ selectedTournamentId, onTournamentUpdated, onMatchesChanged
   const [activePanel, setActivePanel] = useState('')
   const [form, setForm] = useState({ usernameOrEmail: '', username: '', displayName: '', email: '', password: '', confirmPassword: '', resetToken: '' })
   const [accountForm, setAccountForm] = useState({ displayName: '', avatar: '', currentPassword: '', newPassword: '', confirmPassword: '' })
+  const [avatarCropSource, setAvatarCropSource] = useState('')
+  const [avatarCrop, setAvatarCrop] = useState({ x: 0, y: 0 })
+  const [avatarZoom, setAvatarZoom] = useState(1)
+  const [avatarCropPixels, setAvatarCropPixels] = useState(null)
   const [profileMessage, setProfileMessage] = useState('')
   const [message, setMessage] = useState('')
   const [isBusy, setIsBusy] = useState(false)
@@ -368,8 +374,23 @@ function AuthPanel({ selectedTournamentId, onTournamentUpdated, onMatchesChanged
     if (!file) return
     setProfileMessage('')
     try {
-      const avatar = await createAvatarDataUrl(file)
+      const source = await readAvatarSource(file)
+      setAvatarCropSource(source)
+      setAvatarCrop({ x: 0, y: 0 })
+      setAvatarZoom(1)
+      setAvatarCropPixels(null)
+    } catch (error) {
+      setProfileMessage(error.message)
+    }
+  }
+
+  const applyAvatarCrop = async () => {
+    if (!avatarCropSource || !avatarCropPixels) return
+    setProfileMessage('')
+    try {
+      const avatar = await createCroppedAvatar(avatarCropSource, avatarCropPixels)
       setAccountForm((current) => ({ ...current, avatar }))
+      setAvatarCropSource('')
     } catch (error) {
       setProfileMessage(error.message)
     }
@@ -541,6 +562,37 @@ function AuthPanel({ selectedTournamentId, onTournamentUpdated, onMatchesChanged
                 <button type="submit" className="auth-submit" disabled={isBusy}>Změnit heslo</button>
               </form>
               {message ? <p className="auth-message" role="alert">{message}</p> : null}
+              {avatarCropSource ? (
+                <div className="avatar-crop-dialog" role="dialog" aria-modal="true" aria-label="Upravit profilový obrázek">
+                  <div className="avatar-crop-card">
+                    <div className="avatar-crop-head">
+                      <h3>Upravit obrázek</h3>
+                      <button type="button" className="panel-close-button" onClick={() => setAvatarCropSource('')} aria-label="Zrušit ořez">×</button>
+                    </div>
+                    <div className="avatar-crop-stage">
+                      <Cropper
+                        image={avatarCropSource}
+                        crop={avatarCrop}
+                        zoom={avatarZoom}
+                        aspect={1}
+                        cropShape="round"
+                        showGrid={false}
+                        onCropChange={setAvatarCrop}
+                        onZoomChange={setAvatarZoom}
+                        onCropComplete={(_, croppedAreaPixels) => setAvatarCropPixels(croppedAreaPixels)}
+                      />
+                    </div>
+                    <label className="avatar-zoom-control">
+                      <span>Přiblížení</span>
+                      <input type="range" min="1" max="3" step="0.01" value={avatarZoom} onChange={(event) => setAvatarZoom(Number(event.target.value))} />
+                    </label>
+                    <div className="avatar-crop-actions">
+                      <button type="button" className="auth-button" onClick={() => setAvatarCropSource('')}>Zrušit</button>
+                      <button type="button" className="auth-submit" onClick={applyAvatarCrop} disabled={!avatarCropPixels}>Použít</button>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
             </div>
           ) : null}
         </>

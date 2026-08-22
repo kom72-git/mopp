@@ -3460,6 +3460,79 @@
   white-space: nowrap;
 }
 
+.avatar-crop-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgb(7 25 39 / 62%);
+}
+
+.avatar-crop-card {
+  width: min(26rem, 100%);
+  border: 1px solid #b9d3e8;
+  border-radius: 8px;
+  background: #fff;
+  padding: 0.75rem;
+  display: grid;
+  gap: 0.7rem;
+  box-shadow: 0 16px 42px rgb(4 24 39 / 34%);
+}
+
+.avatar-crop-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+}
+
+.avatar-crop-head h3 {
+  margin: 0;
+}
+
+.avatar-crop-stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  max-height: min(58vh, 22rem);
+  overflow: hidden;
+  border-radius: 6px;
+  background: #102436;
+}
+
+.avatar-zoom-control {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.65rem;
+  color: #315d7c;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.avatar-zoom-control input {
+  width: 100%;
+  accent-color: #1f5f91;
+}
+
+.avatar-crop-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+
+@media (max-width: 450px) {
+  .avatar-crop-dialog {
+    padding: 0.55rem;
+  }
+
+  .avatar-crop-card {
+    padding: 0.6rem;
+  }
+}
+
 .panel-close-button {
   width: 1.55rem;
   height: 1.55rem;

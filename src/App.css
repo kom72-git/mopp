@@ -3366,10 +3366,26 @@
 
   .account-nav-main > .product-nav {
     flex: 1 1 12rem;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .account-nav-main > .product-nav button {
-    flex: 1 1 0;
+  .account-nav-main > .product-nav > .product-tournament-control,
+  .account-nav-main > .product-nav > button {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .account-nav-main > .product-nav .product-tournament-buttons {
+    width: 100%;
+  }
+
+  .account-nav-main > .product-nav .product-tips-tab {
+    flex: 1 1 auto;
+  }
+
+  .account-nav-main > .product-nav .product-tournament-toggle {
+    flex: 0 0 1.75rem;
   }
 
   .account-nav-main > .auth-panel.is-guest {
@@ -5274,14 +5290,14 @@
 
 @media (max-width: 380px) {
   .hero {
-    grid-template-columns: minmax(0, 1fr) 5.5rem;
+    grid-template-columns: minmax(0, 1fr) 6.5rem;
   }
 
   .hero-logo-wrap {
-    width: 5.5rem;
-    height: 5.5rem;
-    min-height: 5.5rem;
-    max-height: 5.5rem;
+    width: 6.5rem;
+    height: 6.5rem;
+    min-height: 6.5rem;
+    max-height: 6.5rem;
   }
 }
 

@@ -123,6 +123,16 @@ function isTournamentActiveByDate(tournament) {
   return now >= start
 }
 
+function getTournamentStatus(tournament) {
+  if (tournament?.status === 'finished') return { key: 'finished', label: 'Ukončeno' }
+
+  const start = new Date(tournament?.firstMatchStartsAt || tournament?.startDate || '').getTime()
+  if (Number.isFinite(start) && start > Date.now()) return { key: 'draft', label: 'Připravuje se' }
+  if (tournament?.status === 'draft' && !Number.isFinite(start)) return { key: 'draft', label: 'Připravuje se' }
+  if (tournament?.status === 'active') return { key: 'active', label: 'Probíhá' }
+  return { key: 'finished', label: 'Ukončeno' }
+}
+
 function extractCalendarDate(startsAt) {
   const matched = startsAt?.match(/^\d+\.\s*\([^)]+\)\s*(\d{1,2}\.\d{1,2}\.)/)
   if (matched) return matched[1]
@@ -1062,7 +1072,8 @@ function App() {
   const touchLegendHandledRef = useRef(false)
   const playerDetailHeadingRef = useRef(null)
   const roundTabsRef = useRef(null)
-  const tournamentSwitcherRef = useRef(null)
+  const productTournamentMenuRef = useRef(null)
+  const tournamentMenuCloseTimerRef = useRef(null)
   const initialTournamentId = getStoredTournamentId()
   const [selectedTournamentId, setSelectedTournamentId] = useState(initialTournamentId)
   const [availableTournaments, setAvailableTournaments] = useState(() => sortTournamentsBySchedule(tournaments))
@@ -1074,6 +1085,7 @@ function App() {
   const [isLiveLoading, setIsLiveLoading] = useState(true)
   const [isRoundTabsMultiRow, setIsRoundTabsMultiRow] = useState(false)
   const [isTournamentMenuOpen, setIsTournamentMenuOpen] = useState(false)
+  const [isTournamentMenuHovered, setIsTournamentMenuHovered] = useState(false)
   const [activeProduct, setActiveProduct] = useState('tips')
   const [viewStateByTournament, setViewStateByTournament] = useState({})
   useEffect(() => {
@@ -1125,7 +1137,7 @@ function App() {
 
   useEffect(() => {
     const closeTournamentMenu = (event) => {
-      if (!tournamentSwitcherRef.current?.contains(event.target)) setIsTournamentMenuOpen(false)
+      if (!productTournamentMenuRef.current?.contains(event.target)) setIsTournamentMenuOpen(false)
     }
     document.addEventListener('pointerdown', closeTournamentMenu)
     return () => document.removeEventListener('pointerdown', closeTournamentMenu)
@@ -2427,43 +2439,49 @@ function App() {
     }
   }
 
+  const selectTournament = (nextTournamentId) => {
+    window.clearTimeout(tournamentMenuCloseTimerRef.current)
+    setIsLiveLoading(true)
+    setData(nextTournamentId === defaultTournamentId ? { players: fallbackPlayers, matches: fallbackMatches } : emptyData)
+    setSelectedTournamentId(nextTournamentId)
+    setActiveProduct('tips')
+    setIsTournamentMenuOpen(false)
+    setIsTournamentMenuHovered(false)
+    const url = new URL(window.location.href)
+    url.searchParams.set('tournament', nextTournamentId)
+    window.history.replaceState({}, '', url)
+  }
+
+  const openTournamentMenuFromHover = () => {
+    window.clearTimeout(tournamentMenuCloseTimerRef.current)
+    setIsTournamentMenuHovered(true)
+  }
+
+  const closeTournamentMenuFromHover = () => {
+    window.clearTimeout(tournamentMenuCloseTimerRef.current)
+    tournamentMenuCloseTimerRef.current = window.setTimeout(() => {
+      setIsTournamentMenuHovered(false)
+    }, 220)
+  }
+
+  const isTournamentMenuVisible = isTournamentMenuOpen || isTournamentMenuHovered
+
   return (
     <main className={`layout is-${activeProduct}`}>
       <header className={`hero hero-${activeProduct}`}>
         <div className="hero-content">
           <div className="hero-identity">
-            <span className="hero-brand-name">Master of Polypropylene <span>(MOPP)</span></span>
+            <span className="hero-brand-name">Master of PP</span>
             <span className="hero-section">{activeProduct === 'fantasy' ? 'Fantasy' : 'Tipovačka'}</span>
           </div>
           <h1>{activeProduct === 'fantasy' ? 'ELH 2024/25' : selectedTournament?.title ?? selectedTournament?.label ?? 'MOPP turnaj'}</h1>
-          <p className="tournament-subtitle">{activeProduct === 'fantasy' ? 'Základní část · Tipsport Fantasy' : selectedTournament?.subtitle ?? 'Tipovací soutěž'}</p>
-          {activeProduct === 'tips' ? (
-            <div className={`tournament-switcher tournament-hero-switcher${isTournamentMenuOpen ? ' is-open' : ''}`} ref={tournamentSwitcherRef}>
-              <button type="button" className="tournament-menu-trigger" aria-haspopup="listbox" aria-expanded={isTournamentMenuOpen} onClick={() => setIsTournamentMenuOpen((current) => !current)}>
-                <span className="tournament-picker-label">Historie</span>
-                <span className="tournament-current-label">{isLiveLoading ? 'Načítám…' : selectedTournament?.shortLabel ?? selectedTournament?.title ?? selectedTournament?.label ?? 'Vyber turnaj'}</span>
-                <span className="tournament-menu-chevron" aria-hidden="true" />
-              </button>
-              {isTournamentMenuOpen ? (
-                <div className="tournament-menu" role="listbox" aria-label="Výběr turnaje">
-                  {availableTournaments.map((tournament) => (
-                    <button type="button" role="option" aria-selected={tournament.id === selectedTournamentId} className={`tournament-menu-option${tournament.id === selectedTournamentId ? ' is-selected' : ''}`} key={tournament.id} onClick={() => {
-                      const nextTournamentId = tournament.id
-                      setIsLiveLoading(true)
-                      setData(nextTournamentId === defaultTournamentId ? { players: fallbackPlayers, matches: fallbackMatches } : emptyData)
-                      setSelectedTournamentId(nextTournamentId)
-                      setIsTournamentMenuOpen(false)
-                      const url = new URL(window.location.href)
-                      url.searchParams.set('tournament', nextTournamentId)
-                      window.history.replaceState({}, '', url)
-                    }}>
-                      {tournament.shortLabel ?? tournament.title ?? tournament.label}
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          ) : null}
+          <div className="tournament-subtitle-row">
+            <p className="tournament-subtitle">{activeProduct === 'fantasy' ? 'Základní část · Tipsport Fantasy' : selectedTournament?.subtitle ?? 'Tipovací soutěž'}</p>
+          </div>
+          {activeProduct === 'tips' && selectedTournament ? (() => {
+            const status = getTournamentStatus(selectedTournament)
+            return <span className={`tournament-status hero-tournament-status is-${status.key}`}>{status.label}</span>
+          })() : <span className="tournament-status hero-tournament-status is-development">Ve vývoji</span>}
         </div>
 
         <figure className="hero-logo-wrap">
@@ -2487,15 +2505,56 @@ function App() {
 
       <nav className="account-nav" aria-label="Navigace účtu">
         <div className="account-nav-main">
-          <div className="product-nav" role="tablist" aria-label="Sekce Master of PP">
-            <button type="button" role="tab" aria-selected={activeProduct === 'tips'} className={activeProduct === 'tips' ? 'is-active' : ''} onClick={() => {
-              setIsTournamentMenuOpen(false)
-              setActiveProduct('tips')
-            }}>
-              Tipovačka
-            </button>
+          <div className="product-nav" aria-label="Sekce Master of PP">
+            <div
+              className={`product-tournament-control${isTournamentMenuVisible ? ' is-open' : ''}`}
+              ref={productTournamentMenuRef}
+              onMouseEnter={openTournamentMenuFromHover}
+              onMouseLeave={closeTournamentMenuFromHover}
+              onBlur={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget)) {
+                  setIsTournamentMenuOpen(false)
+                  setIsTournamentMenuHovered(false)
+                }
+              }}
+            >
+              <div className="product-tournament-buttons">
+                <button type="button" aria-pressed={activeProduct === 'tips'} className={`product-tab product-tips-tab${activeProduct === 'tips' ? ' is-active' : ''}`} onClick={() => setActiveProduct('tips')}>
+                  Tipovačka
+                </button>
+                <button
+                  type="button"
+                  className={`product-tournament-toggle${activeProduct === 'tips' ? ' is-active' : ''}`}
+                  aria-label="Vybrat turnaj Tipovačky"
+                  aria-haspopup="listbox"
+                  aria-expanded={isTournamentMenuVisible}
+                  onPointerUp={(event) => {
+                    if (event.pointerType !== 'mouse') setIsTournamentMenuOpen((current) => !current)
+                  }}
+                  onClick={(event) => {
+                    if (event.detail === 0) setIsTournamentMenuOpen((current) => !current)
+                  }}
+                >
+                  <span className="tournament-menu-chevron" aria-hidden="true" />
+                </button>
+              </div>
+              {isTournamentMenuVisible ? (
+                <div className="tournament-menu product-tournament-menu" role="listbox" aria-label="Výběr turnaje Tipovačky" onMouseEnter={openTournamentMenuFromHover} onMouseLeave={closeTournamentMenuFromHover}>
+                  {availableTournaments.map((tournament) => {
+                    const status = getTournamentStatus(tournament)
+                    return (
+                      <button type="button" role="option" aria-selected={tournament.id === selectedTournamentId} className={`tournament-menu-option is-${status.key}${tournament.id === selectedTournamentId ? ' is-selected' : ''}`} key={tournament.id} onClick={() => selectTournament(tournament.id)}>
+                        <span>{tournament.shortLabel ?? tournament.title ?? tournament.label}</span>
+                        <small>{status.key === 'finished' ? 'Archiv' : status.label}</small>
+                      </button>
+                    )
+                  })}
+                </div>
+              ) : null}
+            </div>
             <button type="button" role="tab" aria-selected={activeProduct === 'fantasy'} className={activeProduct === 'fantasy' ? 'is-active' : ''} onClick={() => {
               setIsTournamentMenuOpen(false)
+              setIsTournamentMenuHovered(false)
               setActiveProduct('fantasy')
             }}>
               Fantasy

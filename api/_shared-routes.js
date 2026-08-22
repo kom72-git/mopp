@@ -174,10 +174,16 @@ function registerSharedRoutes({ app, getDb, requireJwt, requireRole }) {
   app.get("/api/tournaments", async (req, res) => {
     try {
       const db = getDb();
-      const [rows, activeUsers] = await Promise.all([
+      const [rows, activeUsers, firstMatches] = await Promise.all([
         db.collection("tournaments").find({}).sort({ createdAt: -1 }).toArray(),
         db.collection("users").find({ status: "active" }, { projection: { _id: 1 } }).toArray(),
+        db.collection("matches").aggregate([
+          { $match: { startsAt: { $type: "string", $ne: "" } } },
+          { $sort: { startsAt: 1 } },
+          { $group: { _id: "$tournamentId", startsAt: { $first: "$startsAt" } } },
+        ]).toArray(),
       ]);
+      const firstMatchByTournament = new Map(firstMatches.map((match) => [String(match._id), match.startsAt]));
       return res.json({ ok: true, tournaments: rows.map((tournament) => ({
         id: dbTournamentId(tournament._id),
         label: tournament.name,
@@ -193,6 +199,7 @@ function registerSharedRoutes({ app, getDb, requireJwt, requireRole }) {
         heroLogo: tournament.heroLogo || "",
         startDate: tournament.startDate || "",
         endDate: tournament.endDate || "",
+        firstMatchStartsAt: firstMatchByTournament.get(String(tournament._id)) || "",
         plannedMatchCount: Number(tournament.plannedMatchCount) || 0,
         entryFee: tournament.entryFee || 10,
         longTermContribution: tournament.longTermContribution || 0,

@@ -169,6 +169,15 @@
   gap: 0.3rem;
 }
 
+.product-tournament-control {
+  position: relative;
+}
+
+.product-tournament-buttons {
+  display: inline-flex;
+  align-items: stretch;
+}
+
 .product-nav button {
   border: 1px solid #b9d3e8;
   border-radius: 7px;
@@ -179,6 +188,31 @@
   font-size: 0.78rem;
   font-weight: 700;
   cursor: pointer;
+}
+
+.product-nav .product-tips-tab {
+  border-radius: 7px 0 0 7px;
+}
+
+.product-nav .product-tournament-toggle {
+  width: 1.75rem;
+  padding: 0;
+  border-left: 0;
+  border-radius: 0 7px 7px 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.product-tournament-toggle .tournament-menu-chevron {
+  margin: 0;
+  width: 0.34rem;
+  height: 0.34rem;
+  border-width: 0 1.5px 1.5px 0;
+}
+
+.product-tournament-control.is-open .product-tournament-toggle .tournament-menu-chevron {
+  transform: translateY(2px) rotate(225deg);
 }
 
 .product-nav button:hover,
@@ -193,6 +227,14 @@
   border-color: #1f5f91;
   color: #fff;
   box-shadow: 0 1px 3px rgb(19 66 101 / 22%);
+}
+
+.product-tournament-menu {
+  z-index: 30;
+  top: calc(100% - 1px);
+  width: min(18rem, calc(100vw - 1.2rem));
+  min-width: 15rem;
+  border-radius: 8px;
 }
 
 .round-panel-actions {
@@ -1046,6 +1088,21 @@
   font-weight: 700;
   text-align: left;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.tournament-menu-option small {
+  flex: 0 0 auto;
+  color: #617b91;
+  font-size: 0.66rem;
+  font-weight: 700;
+}
+
+.tournament-menu-option.is-finished {
+  color: #718597;
 }
 
 .tournament-menu-option:hover,
@@ -1054,6 +1111,12 @@
   background: #e5f2fb;
   color: #174c73;
   outline: none;
+}
+
+.tournament-menu-option.is-finished:hover,
+.tournament-menu-option.is-finished:focus-visible,
+.tournament-menu-option.is-finished.is-selected {
+  color: #315b7c;
 }
 
 .hero-logo-wrap {
@@ -1141,10 +1204,55 @@
   font-size: clamp(1.15rem, 2.4vw, 1.9rem);
 }
 
+.tournament-subtitle-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.42rem;
+  margin-top: 0.18rem;
+}
+
 .tournament-subtitle {
-  margin: 0.18rem 0 0;
+  margin: 0;
   color: rgb(235 245 255 / 72%);
   font-size: 0.9rem;
+}
+
+.tournament-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  color: rgb(239 247 255 / 72%);
+  font-size: 0.67rem;
+  font-weight: 700;
+}
+
+.hero-tournament-status {
+  margin: auto 0 0;
+}
+
+.tournament-status::before {
+  content: '';
+  width: 0.36rem;
+  height: 0.36rem;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.tournament-status.is-draft::before {
+  color: #e8c873;
+}
+
+.tournament-status.is-active::before {
+  color: #62c98b;
+}
+
+.tournament-status.is-finished::before {
+  color: #8fa0ad;
+}
+
+.tournament-status.is-development::before {
+  color: #ef6b6b;
 }
 
 .intro {
@@ -2228,11 +2336,11 @@
 }
 
 .user-avatar-player {
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 3rem;
+  height: 3rem;
   border: 1px solid #bcd2e2;
   box-shadow: 0 0 0 3px #edf5fa;
-  font-size: 0.95rem;
+  font-size: 1rem;
 }
 
 .user-avatar-tip {

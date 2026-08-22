@@ -7,6 +7,8 @@ const cheerio = require("cheerio");
 
 const COOKIE_NAME = "mopp_session";
 const SESSION_TTL = "7d";
+const MAX_AVATAR_LENGTH = 96 * 1024;
+const AVATAR_PATTERN = /^data:image\/(?:jpeg|png|webp);base64,[a-z0-9+/=]+$/i;
 
 function publicUser(user) {
   return {
@@ -16,6 +18,7 @@ function publicUser(user) {
     displayName: user.displayName,
     role: user.role,
     status: user.status,
+    avatar: user.avatar || "",
   };
 }
 
@@ -372,18 +375,22 @@ function createAuthRoutes({ app, getDb }) {
   app.patch("/api/auth/profile", requireJwt, async (req, res) => {
     try {
       const displayName = String(req.body?.displayName ?? "").trim();
+      const avatar = String(req.body?.avatar ?? "").trim();
       if (displayName.length < 1 || displayName.length > 60) {
         return res.status(400).json({ ok: false, message: "Zobrazované jméno musí mít 1 až 60 znaků." });
       }
+      if (avatar.length > MAX_AVATAR_LENGTH || (avatar && !AVATAR_PATTERN.test(avatar))) {
+        return res.status(400).json({ ok: false, message: "Profilový obrázek musí být JPEG, PNG nebo WebP do 96 KB." });
+      }
       const result = await getDb().collection("users").findOneAndUpdate(
         { _id: new ObjectId(req.session.sub), status: "active" },
-        { $set: { displayName, updatedAt: new Date() } },
+        { $set: { displayName, avatar, updatedAt: new Date() } },
         { returnDocument: "after" },
       );
       if (!result) return res.status(404).json({ ok: false, message: "Účet nebyl nalezen." });
-      return res.json({ ok: true, user: publicUser(result), message: "Zobrazované jméno bylo změněno." });
+      return res.json({ ok: true, user: publicUser(result), message: "Profil byl uložen." });
     } catch {
-      return res.status(500).json({ ok: false, message: "Zobrazované jméno se nepodařilo změnit" });
+      return res.status(500).json({ ok: false, message: "Profil se nepodařilo uložit." });
     }
   });
 

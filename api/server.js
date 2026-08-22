@@ -47,7 +47,7 @@ function getDb() {
 
 const app = express();
 app.use(cors({ origin: true, credentials: true }));
-app.use(express.json());
+app.use(express.json({ limit: "128kb" }));
 app.use(async (req, res, next) => {
   try {
     await ensureDb();

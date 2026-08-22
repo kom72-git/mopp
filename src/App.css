@@ -1860,6 +1860,7 @@
 
 .name-cell {
   display: grid;
+  align-content: center;
   gap: 0.06rem;
   color: #193a58;
   font-weight: 600;
@@ -2204,9 +2205,41 @@
 .player-focus-title {
   margin: 0;
   display: inline-flex;
-  align-items: baseline;
+  align-items: center;
   gap: 0.42rem;
   flex-wrap: wrap;
+}
+
+.user-avatar {
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #dceaf4;
+  color: #315e7d;
+  font-weight: 800;
+}
+
+.user-avatar-nav {
+  width: 1.55rem;
+  height: 1.55rem;
+  font-size: 0.68rem;
+}
+
+.user-avatar-player {
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 1px solid #bcd2e2;
+  box-shadow: 0 0 0 3px #edf5fa;
+  font-size: 0.95rem;
+}
+
+.user-avatar-tip {
+  width: 1.7rem;
+  height: 1.7rem;
+  border: 1px solid #d7e6f1;
+  font-size: 0.65rem;
 }
 
 .player-focus-player-name {
@@ -3328,6 +3361,9 @@
   color: #174c73;
   font-size: 0.82rem;
   font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.38rem;
 }
 
 .account-nav .auth-panel.is-authenticated .auth-panel-tabs {
@@ -3389,6 +3425,39 @@
   margin: 0;
   color: #173e5f;
   font-size: 0.9rem;
+}
+
+.avatar-editor {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.user-avatar-preview {
+  width: 4rem;
+  height: 4rem;
+  border: 2px solid #d5e4ef;
+  font-size: 1.3rem;
+}
+
+.avatar-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.avatar-file-button {
+  display: inline-flex;
+  align-items: center;
+}
+
+.avatar-file-button input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
 .panel-close-button {

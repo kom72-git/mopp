@@ -223,13 +223,48 @@ function StartsAtLabel({ startsAt, matchId, round, tournamentYear }) {
   )
 }
 
+function createAvatarDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      reject(new Error('Vyber obrázek JPEG, PNG nebo WebP.'))
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      reject(new Error('Původní obrázek může mít nejvýše 5 MB.'))
+      return
+    }
+
+    const image = new Image()
+    const objectUrl = URL.createObjectURL(file)
+    image.onload = () => {
+      const size = Math.min(image.naturalWidth, image.naturalHeight)
+      const sourceX = (image.naturalWidth - size) / 2
+      const sourceY = (image.naturalHeight - size) / 2
+      const canvas = document.createElement('canvas')
+      canvas.width = 160
+      canvas.height = 160
+      const context = canvas.getContext('2d')
+      context.fillStyle = '#ffffff'
+      context.fillRect(0, 0, 160, 160)
+      context.drawImage(image, sourceX, sourceY, size, size, 0, 0, 160, 160)
+      URL.revokeObjectURL(objectUrl)
+      resolve(canvas.toDataURL('image/jpeg', 0.82))
+    }
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl)
+      reject(new Error('Obrázek se nepodařilo načíst.'))
+    }
+    image.src = objectUrl
+  })
+}
+
 function AuthPanel({ selectedTournamentId, onTournamentUpdated, onMatchesChanged, onTipUpdated }) {
   const [user, setUser] = useState(null)
   const [mode, setMode] = useState('login')
   const [isOpen, setIsOpen] = useState(false)
   const [activePanel, setActivePanel] = useState('')
   const [form, setForm] = useState({ usernameOrEmail: '', username: '', displayName: '', email: '', password: '', confirmPassword: '', resetToken: '' })
-  const [accountForm, setAccountForm] = useState({ displayName: '', currentPassword: '', newPassword: '', confirmPassword: '' })
+  const [accountForm, setAccountForm] = useState({ displayName: '', avatar: '', currentPassword: '', newPassword: '', confirmPassword: '' })
   const [profileMessage, setProfileMessage] = useState('')
   const [message, setMessage] = useState('')
   const [isBusy, setIsBusy] = useState(false)
@@ -327,6 +362,19 @@ function AuthPanel({ selectedTournamentId, onTournamentUpdated, onMatchesChanged
     setAccountForm((current) => ({ ...current, [event.target.name]: event.target.value }))
   }
 
+  const updateAvatar = async (event) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    setProfileMessage('')
+    try {
+      const avatar = await createAvatarDataUrl(file)
+      setAccountForm((current) => ({ ...current, avatar }))
+    } catch (error) {
+      setProfileMessage(error.message)
+    }
+  }
+
   const saveAccountProfile = async (event) => {
     event.preventDefault()
     setIsBusy(true)
@@ -336,12 +384,13 @@ function AuthPanel({ selectedTournamentId, onTournamentUpdated, onMatchesChanged
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ displayName: accountForm.displayName }),
+        body: JSON.stringify({ displayName: accountForm.displayName, avatar: accountForm.avatar }),
       })
       const payload = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(payload.message || 'Profil se nepodařilo uložit')
       setUser(payload.user)
       setProfileMessage(payload.message)
+      await onTipUpdated?.()
     } catch (error) {
       setProfileMessage(error.message)
     } finally {
@@ -456,10 +505,13 @@ function AuthPanel({ selectedTournamentId, onTournamentUpdated, onMatchesChanged
     <div className={`auth-panel ${user ? 'is-authenticated' : 'is-guest'}`}>
       {user ? (
         <>
-          <span className="auth-user">{user.displayName || user.username}</span>
+          <span className="auth-user">
+            {user.avatar ? <img className="user-avatar user-avatar-nav" src={user.avatar} alt="" /> : <span className="user-avatar user-avatar-nav is-placeholder" aria-hidden="true">{(user.displayName || user.username).slice(0, 1).toUpperCase()}</span>}
+            <span>{user.displayName || user.username}</span>
+          </span>
           <div className="auth-panel-tabs">
             <button type="button" className={`auth-button auth-tips-button ${activePanel === 'tips' ? 'is-active' : ''}`} onClick={() => setActivePanel((current) => current === 'tips' ? '' : 'tips')}>Tipovat{hasSelectionNotification ? <img className="notification-bell" src="/icons/notifikace.png" alt="Jsi na řadě s výběrem zápasu" title="Jsi na řadě s výběrem zápasu" /> : null}</button>
-            <button type="button" className={`auth-button ${activePanel === 'account' ? 'is-active' : ''}`} onClick={() => { setActivePanel((current) => current === 'account' ? '' : 'account'); setAccountForm((current) => ({ ...current, displayName: user.displayName || '' })); setMessage('') }}>Účet</button>
+            <button type="button" className={`auth-button ${activePanel === 'account' ? 'is-active' : ''}`} onClick={() => { setActivePanel((current) => current === 'account' ? '' : 'account'); setAccountForm((current) => ({ ...current, displayName: user.displayName || '', avatar: user.avatar || '' })); setMessage('') }}>Účet</button>
             {user.role === 'admin' ? <button type="button" className={`auth-button auth-admin-button ${activePanel === 'admin' ? 'is-active' : ''}`} onClick={() => setActivePanel((current) => current === 'admin' ? '' : 'admin')}>Admin{pendingAccountNotificationCount > 0 ? <span className="admin-notification-badge" title={`${pendingAccountNotificationCount} nových hráčů`}><img className="notification-bell admin-notification-bell" src="/icons/notifikace.png" alt="" /><span>{pendingAccountNotificationCount}</span></span> : null}</button> : null}
           </div>
           <button type="button" className="auth-button auth-logout" onClick={logout}>Odhlásit</button>
@@ -470,8 +522,15 @@ function AuthPanel({ selectedTournamentId, onTournamentUpdated, onMatchesChanged
               <button type="button" className="panel-close-button" onClick={() => setActivePanel('')} aria-label="Zavřít panel" title="Zavřít">×</button>
               <form onSubmit={saveAccountProfile}>
                 <h3>Profil</h3>
+                <div className="avatar-editor">
+                  {accountForm.avatar ? <img className="user-avatar user-avatar-preview" src={accountForm.avatar} alt="Náhled profilového obrázku" /> : <span className="user-avatar user-avatar-preview is-placeholder" aria-hidden="true">{(accountForm.displayName || user.username).slice(0, 1).toUpperCase()}</span>}
+                  <div className="avatar-editor-actions">
+                    <label className="auth-button avatar-file-button">Vybrat obrázek<input type="file" accept="image/jpeg,image/png,image/webp" onChange={updateAvatar} /></label>
+                    {accountForm.avatar ? <button type="button" className="auth-button" onClick={() => setAccountForm((current) => ({ ...current, avatar: '' }))}>Odstranit</button> : null}
+                  </div>
+                </div>
                 <input name="displayName" value={accountForm.displayName} onChange={updateAccountField} placeholder="Zobrazované jméno" maxLength={60} required />
-                <button type="submit" className="auth-submit" disabled={isBusy}>Uložit jméno</button>
+                <button type="submit" className="auth-submit" disabled={isBusy}>Uložit profil</button>
                 {profileMessage ? <p className="auth-message" role="alert">{profileMessage}</p> : null}
               </form>
               <form onSubmit={changeAccountPassword}>
@@ -1805,6 +1864,7 @@ function App() {
     return {
       id: selectedStanding.id,
       name: selectedStanding.name,
+      avatar: selectedStanding.avatar || '',
       evaluatedCount,
       formWindow: requestedFormWindow,
       recentCount: recent.length,
@@ -1970,6 +2030,7 @@ function App() {
         return {
           ...tip,
           playerName: player?.name ?? tip.playerId,
+          playerAvatar: player?.avatar ?? '',
           tipNote: formatTipNote(tip.updatedAt, tip.updatedState, tip.updatedByUsername),
           tipValueHidden: Boolean(tip.tipValueHidden),
           rank,
@@ -2644,6 +2705,7 @@ function App() {
             <>
               <div className="panel-head player-focus-headline" ref={playerDetailHeadingRef}>
                 <h2 className="player-focus-title">
+                  {selectedPlayerProfile.avatar ? <img className="user-avatar user-avatar-player" src={selectedPlayerProfile.avatar} alt="" /> : <span className="user-avatar user-avatar-player is-placeholder" aria-hidden="true">{selectedPlayerProfile.name.slice(0, 1).toUpperCase()}</span>}
                   <span>Statistika hráče</span>
                   <span className="player-focus-separator" aria-hidden="true">|</span>
                   <span className="player-focus-player-name">{selectedPlayerProfile.name}</span>
@@ -3221,6 +3283,7 @@ function App() {
                         onClick={() => toggleSelectedPlayerId(tip.playerId)}
                         title="Zobrazit detail hráče"
                       >
+                        {tip.playerAvatar ? <img className="user-avatar user-avatar-tip" src={tip.playerAvatar} alt="" /> : <span className="user-avatar user-avatar-tip is-placeholder" aria-hidden="true">{tip.playerName.slice(0, 1).toUpperCase()}</span>}
                         <span className="player-name">{tip.playerName}</span>
                       </button>
                       {tip.tipNote ? <span className="tip-note">{tip.tipNote}</span> : null}

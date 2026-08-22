@@ -15,7 +15,7 @@ const mongoClient = new MongoClient(process.env.MONGODB_URI, {
 let database;
 
 app.use(cors({ origin: true, credentials: true }));
-app.use(express.json());
+app.use(express.json({ limit: "128kb" }));
 
 function getDb() {
   if (!database) throw new Error("MongoDB není připojená");

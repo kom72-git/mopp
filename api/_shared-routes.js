@@ -45,7 +45,7 @@ async function loadMongoTournamentData(getDb, tournamentId, session) {
     ? { _id: { $in: participantUserIds }, status: "active" }
     : { status: "active" };
   const users = await database.collection("users")
-    .find(userQuery, { projection: { username: 1, displayName: 1 } })
+    .find(userQuery, { projection: { username: 1, displayName: 1, avatar: 1 } })
     .sort({ createdAt: 1 })
     .toArray();
   const allowedUserIds = new Set(users.map((user) => user._id.toString()));
@@ -117,7 +117,7 @@ async function loadMongoTournamentData(getDb, tournamentId, session) {
       favicon: tournament.favicon || "",
       longTermBank: { totalAmount: longTermBankTotal, baseAmount: 0, contributionAmount: tournament.longTermContribution || 0, contributorCount: users.length, payouts: longTermBankPayouts, tieBreakHeading: "V případě shodného počtu bodů rozhoduje:", tieBreakRules: tournament.tieBreakRules?.length ? tournament.tieBreakRules : tieBreakRulesFor(tournament.tieBreakOrder || []) },
     },
-    players: users.map((user) => ({ id: user._id.toString(), name: user.displayName || user.username, points: pointsByUser.get(user._id.toString()) || 0 })),
+    players: users.map((user) => ({ id: user._id.toString(), name: user.displayName || user.username, avatar: user.avatar || "", points: pointsByUser.get(user._id.toString()) || 0 })),
     matches: matches.map((match) => ({
       id: match._id.toString(),
       round: match.round,

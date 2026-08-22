@@ -5,6 +5,7 @@ import { defaultTournamentId, getTournamentById, tournaments } from './data/tour
 import { getFlagUrl } from './data/countryFlags'
 import { getTeamDisplayName, getTeamLogoUrl } from './data/teamLogos'
 import AdminPanel from './components/AdminPanel'
+import FantasyOverview from './components/FantasyOverview'
 import PlayerTipsPanel from './components/PlayerTipsPanel'
 
 // Volitelny rucni bonus navic mimo vyhry ze zapasu.
@@ -962,6 +963,7 @@ function App() {
   const [isLiveLoading, setIsLiveLoading] = useState(true)
   const [isRoundTabsMultiRow, setIsRoundTabsMultiRow] = useState(false)
   const [isTournamentMenuOpen, setIsTournamentMenuOpen] = useState(false)
+  const [activeProduct, setActiveProduct] = useState('tips')
   const [viewStateByTournament, setViewStateByTournament] = useState({})
   useEffect(() => {
     try {
@@ -1002,9 +1004,13 @@ function App() {
 
   useEffect(() => {
     if (typeof document === 'undefined') return
+    if (activeProduct === 'fantasy') {
+      document.title = 'MOPP | Fantasy | ELH 2024/25'
+      return
+    }
     const suffix = selectedTournament?.shortLabel ?? selectedTournament?.title ?? selectedTournament?.label ?? 'MOPP'
-    document.title = `Master of PP | ${suffix}`
-  }, [selectedTournament])
+    document.title = `MOPP | Tipovačka | ${suffix}`
+  }, [activeProduct, selectedTournament])
 
   useEffect(() => {
     const closeTournamentMenu = (event) => {
@@ -2309,29 +2315,57 @@ function App() {
   }
 
   return (
-    <main className="layout">
-      <header className="hero">
+    <main className={`layout is-${activeProduct}`}>
+      <header className={`hero hero-${activeProduct}`}>
         <div className="hero-content">
-          <h1>{selectedTournament?.title ?? selectedTournament?.label ?? 'MOPP turnaj'}</h1>
-          {selectedTournament?.subtitle ? <p className="tournament-subtitle">{selectedTournament.subtitle}</p> : null}
-          <p className="intro">
-            <span>tipovací soutěž</span>
-            <span className="intro-sep" aria-hidden="true">
-              –
-            </span>
-            <span>Master of PP</span>
-          </p>
+          <div className="hero-identity">
+            <span className="hero-brand-name">Master of Polypropylene <span>(MOPP)</span></span>
+            <span className="hero-section">{activeProduct === 'fantasy' ? 'Fantasy' : 'Tipovačka'}</span>
+          </div>
+          <h1>{activeProduct === 'fantasy' ? 'ELH 2024/25' : selectedTournament?.title ?? selectedTournament?.label ?? 'MOPP turnaj'}</h1>
+          <p className="tournament-subtitle">{activeProduct === 'fantasy' ? 'Základní část · Tipsport Fantasy' : selectedTournament?.subtitle ?? 'Tipovací soutěž'}</p>
+          {activeProduct === 'tips' ? (
+            <div className={`tournament-switcher tournament-hero-switcher${isTournamentMenuOpen ? ' is-open' : ''}`} ref={tournamentSwitcherRef}>
+              <button type="button" className="tournament-menu-trigger" aria-haspopup="listbox" aria-expanded={isTournamentMenuOpen} onClick={() => setIsTournamentMenuOpen((current) => !current)}>
+                <span className="tournament-picker-label">Historie</span>
+                <span className="tournament-current-label">{isLiveLoading ? 'Načítám…' : selectedTournament?.shortLabel ?? selectedTournament?.title ?? selectedTournament?.label ?? 'Vyber turnaj'}</span>
+                <span className="tournament-menu-chevron" aria-hidden="true" />
+              </button>
+              {isTournamentMenuOpen ? (
+                <div className="tournament-menu" role="listbox" aria-label="Výběr turnaje">
+                  {availableTournaments.map((tournament) => (
+                    <button type="button" role="option" aria-selected={tournament.id === selectedTournamentId} className={`tournament-menu-option${tournament.id === selectedTournamentId ? ' is-selected' : ''}`} key={tournament.id} onClick={() => {
+                      const nextTournamentId = tournament.id
+                      setIsLiveLoading(true)
+                      setData(nextTournamentId === defaultTournamentId ? { players: fallbackPlayers, matches: fallbackMatches } : emptyData)
+                      setSelectedTournamentId(nextTournamentId)
+                      setIsTournamentMenuOpen(false)
+                      const url = new URL(window.location.href)
+                      url.searchParams.set('tournament', nextTournamentId)
+                      window.history.replaceState({}, '', url)
+                    }}>
+                      {tournament.shortLabel ?? tournament.title ?? tournament.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
         </div>
 
         <figure className="hero-logo-wrap">
-          <button type="button" className="hero-logo-button" onClick={handleLogoClick}>
-            <img
-              className="hero-logo"
-              src={selectedTournament?.heroLogo ?? '/tournaments/2026-logo.svg'}
-              alt={`Logo turnaje ${selectedTournament?.title ?? selectedTournament?.label ?? ''}`}
-              loading="lazy"
-            />
-          </button>
+          {activeProduct === 'fantasy' ? (
+            <img className="hero-logo fantasy-hero-logo" src="/fantasy.png" alt="Tipsport Fantasy" />
+          ) : (
+            <button type="button" className="hero-logo-button" onClick={handleLogoClick}>
+              <img
+                className="hero-logo"
+                src={selectedTournament?.heroLogo ?? '/tournaments/2026-logo.svg'}
+                alt={`Logo turnaje ${selectedTournament?.title ?? selectedTournament?.label ?? ''}`}
+                loading="lazy"
+              />
+            </button>
+          )}
           {showSyncTooltip ? (
             <span className={`sync-tooltip ${isSyncing ? 'is-info' : ''}`}>{syncMessage}</span>
           ) : null}
@@ -2339,47 +2373,27 @@ function App() {
       </header>
 
       <nav className="account-nav" aria-label="Navigace účtu">
-        <div className={`tournament-switcher${isTournamentMenuOpen ? ' is-open' : ''}`} ref={tournamentSwitcherRef}>
-          <button
-            type="button"
-            className="tournament-menu-trigger"
-            aria-haspopup="listbox"
-            aria-expanded={isTournamentMenuOpen}
-            onClick={() => setIsTournamentMenuOpen((current) => !current)}
-          >
-            <span className="tournament-picker-label">Historie</span>
-            <span className="tournament-current-label">{isLiveLoading ? 'Načítám…' : selectedTournament?.shortLabel ?? selectedTournament?.title ?? selectedTournament?.label ?? 'Vyber turnaj'}</span>
-            <span className="tournament-menu-chevron" aria-hidden="true" />
-          </button>
-          {isTournamentMenuOpen ? (
-            <div className="tournament-menu" role="listbox" aria-label="Výběr turnaje">
-              {availableTournaments.map((tournament) => (
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={tournament.id === selectedTournamentId}
-                  className={`tournament-menu-option${tournament.id === selectedTournamentId ? ' is-selected' : ''}`}
-                  key={tournament.id}
-                  onClick={() => {
-                    const nextTournamentId = tournament.id
-                    setIsLiveLoading(true)
-                    setData(nextTournamentId === defaultTournamentId ? { players: fallbackPlayers, matches: fallbackMatches } : emptyData)
-                    setSelectedTournamentId(nextTournamentId)
-                    setIsTournamentMenuOpen(false)
-                    const url = new URL(window.location.href)
-                    url.searchParams.set('tournament', nextTournamentId)
-                    window.history.replaceState({}, '', url)
-                  }}
-                >
-                  {tournament.shortLabel ?? tournament.title ?? tournament.label}
-                </button>
-              ))}
-            </div>
-          ) : null}
+        <div className="account-nav-main">
+          <div className="product-nav" role="tablist" aria-label="Sekce Master of PP">
+            <button type="button" role="tab" aria-selected={activeProduct === 'tips'} className={activeProduct === 'tips' ? 'is-active' : ''} onClick={() => {
+              setIsTournamentMenuOpen(false)
+              setActiveProduct('tips')
+            }}>
+              Tipovačka
+            </button>
+            <button type="button" role="tab" aria-selected={activeProduct === 'fantasy'} className={activeProduct === 'fantasy' ? 'is-active' : ''} onClick={() => {
+              setIsTournamentMenuOpen(false)
+              setActiveProduct('fantasy')
+            }}>
+              Fantasy
+            </button>
+          </div>
+          <AuthPanel selectedTournamentId={selectedTournamentId} onTournamentUpdated={handleTournamentUpdated} onMatchesChanged={handleMatchesChanged} onTipUpdated={handleTipUpdated} />
         </div>
-        <AuthPanel selectedTournamentId={selectedTournamentId} onTournamentUpdated={handleTournamentUpdated} onMatchesChanged={handleMatchesChanged} onTipUpdated={handleTipUpdated} />
       </nav>
 
+      {activeProduct === 'fantasy' ? <FantasyOverview /> : (
+      <>
       <section className="panel controls-panel">
         <div className="panel-head">
           <h2>
@@ -2391,14 +2405,11 @@ function App() {
               </span>
             ) : null}
           </h2>
-          <button
-            type="button"
-            className={`info-toggle round-filter-toggle ${hidePlayedRounds ? 'is-active' : ''}`.trim()}
-            aria-pressed={hidePlayedRounds}
-            onClick={() => setHidePlayedRounds((prev) => !prev)}
-          >
-            {hidePlayedRounds ? 'Zobrazit odehraná kola' : 'Skrýt odehraná kola'}
-          </button>
+          <div className="round-panel-actions">
+            <button type="button" className={`info-toggle round-filter-toggle ${hidePlayedRounds ? 'is-active' : ''}`.trim()} aria-pressed={hidePlayedRounds} onClick={() => setHidePlayedRounds((prev) => !prev)}>
+              {hidePlayedRounds ? 'Zobrazit odehraná kola' : 'Skrýt odehraná kola'}
+            </button>
+          </div>
         </div>
 
         <div
@@ -3450,7 +3461,8 @@ function App() {
           <p>Zatím nejsou data pro graf.</p>
         )}
       </section>
-
+      </>
+      )}
     </main>
   )
 }

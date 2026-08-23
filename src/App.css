@@ -2717,7 +2717,8 @@
 
 .money-potential-values {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, auto));
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: baseline;
   gap: 0;
   justify-content: end;
@@ -5171,6 +5172,8 @@
 
   .money-potential-values {
     width: 100%;
+    grid-auto-flow: row;
+    grid-auto-columns: auto;
     grid-template-columns: minmax(0, 1fr);
     justify-content: stretch;
   }

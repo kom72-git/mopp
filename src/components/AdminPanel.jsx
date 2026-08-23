@@ -246,8 +246,7 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
       const payload = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(payload.message || 'Členství se nepodařilo uložit')
       setTournaments((current) => current.map((tournament) => tournament._id === editingTournamentId ? payload.tournament : tournament))
-      onTournamentUpdated?.({ ...payload.tournament, id: `db:${payload.tournament._id}` })
-      onMatchesChanged?.()
+      await onTournamentUpdated?.({ ...payload.tournament, id: `db:${payload.tournament._id}` })
       onTournamentMembershipChanged?.()
       if (changedUserId) {
         setParticipantMessages((current) => ({ ...current, [changedUserId]: { text: 'Uloženo', isError: false } }))
@@ -310,6 +309,7 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
       const payload = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(payload.message || 'Výběr se nepodařilo uložit')
       setTournaments((current) => current.map((tournament) => tournament._id === editingTournamentId ? payload.tournament : tournament))
+      await onTournamentUpdated?.({ ...payload.tournament, id: `db:${payload.tournament._id}` })
       setMessage('Výběr zápasu uložen.')
     } catch (error) {
       setMessage(error.message)
@@ -334,7 +334,7 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
       if (!response.ok) throw new Error(payload.message || 'Turnaj se nepodařilo založit')
       if (editingTournamentId) {
         setTournaments((current) => current.map((tournament) => tournament._id === editingTournamentId ? payload.tournament : tournament))
-        onTournamentUpdated?.({ ...payload.tournament, id: `db:${payload.tournament._id}` })
+        await onTournamentUpdated?.({ ...payload.tournament, id: `db:${payload.tournament._id}` })
         setMessage('Turnaj byl upraven.')
         return
       }
@@ -346,6 +346,7 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
       setTieBreakOrder(['exact', 'scored', 'noBet'])
       setTieBreakRules([])
       await loadAdminData()
+      await onTournamentUpdated?.({ ...payload.tournament, id: `db:${payload.tournament._id}` })
     } catch (error) {
       setMessage(error.message)
     } finally {
@@ -642,7 +643,7 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
               {payouts.map((amount, index) => (
                 <label className="admin-field" key={`payout-${index}`}>
                   <span className="admin-field-label">{index + 1}. místo</span>
-                  <input type="number" min="0" value={amount} onChange={(event) => setPayouts((current) => current.map((item, itemIndex) => itemIndex === index ? event.target.value : item))} placeholder="Neurčeno" />
+                  <input type="number" min="0" step="100" value={amount} onChange={(event) => setPayouts((current) => current.map((item, itemIndex) => itemIndex === index ? event.target.value : item))} placeholder="Neurčeno" />
                 </label>
               ))}
             </div>

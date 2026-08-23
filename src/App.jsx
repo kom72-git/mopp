@@ -509,6 +509,7 @@ function AuthPanel({ selectedTournamentId, onTournamentUpdated, onMatchesChanged
       if (mode === 'verify') {
         setUser(payload.user)
         setIsOpen(false)
+        await onTipUpdated?.()
         return
       }
       if (mode === 'reset') {
@@ -520,6 +521,7 @@ function AuthPanel({ selectedTournamentId, onTournamentUpdated, onMatchesChanged
       setUser(payload.user)
       setIsOpen(false)
       setForm({ usernameOrEmail: '', username: '', displayName: '', email: '', password: '', confirmPassword: '', resetToken: '' })
+      await onTipUpdated?.()
     } catch (error) {
       setMessage(error.message)
     } finally {
@@ -530,6 +532,7 @@ function AuthPanel({ selectedTournamentId, onTournamentUpdated, onMatchesChanged
   const logout = async () => {
     await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
     setUser(null)
+    await onTipUpdated?.()
   }
 
   return (
@@ -985,6 +988,13 @@ function sortTournamentsBySchedule(items) {
   })
 }
 
+async function fetchTournamentCatalog() {
+  const response = await fetch('/api/tournaments', { cache: 'no-store' })
+  const payload = await response.json()
+  if (!response.ok || !payload?.tournaments) throw new Error(payload?.message || 'Turnaje nejsou dostupné')
+  return sortTournamentsBySchedule([...tournaments, ...payload.tournaments])
+}
+
 function SplitTip({ value }) {
   const { home, away } = parseTipValue(value)
 
@@ -1145,11 +1155,10 @@ function App() {
 
   useEffect(() => {
     let cancelled = false
-    fetch('/api/tournaments', { cache: 'no-store' })
-      .then((response) => (response.ok ? response.json() : null))
-      .then((payload) => {
-        if (cancelled || !payload?.tournaments) return
-        setAvailableTournaments(sortTournamentsBySchedule([...tournaments, ...payload.tournaments]))
+    fetchTournamentCatalog()
+      .then((nextTournaments) => {
+        if (cancelled) return
+        setAvailableTournaments(nextTournaments)
       })
       .catch(() => {})
     return () => {
@@ -1751,12 +1760,10 @@ function App() {
     const totalInserted = matchStakeTotal + longTermContribution
     const currentBalance = realizedWinnings - totalInserted
     const currentBalanceWithBank = currentBalance + currentLongTermPayout
-    const place1Payout = payoutByPlace.get(1) ?? 0
-    const place2Payout = payoutByPlace.get(2) ?? 0
-    const place3Payout = payoutByPlace.get(3) ?? 0
-    const place1Balance = currentBalance + place1Payout
-    const place2Balance = currentBalance + place2Payout
-    const place3Balance = currentBalance + place3Payout
+    const potentialBalances = [...payoutByPlace.entries()]
+      .filter(([place, amount]) => place >= 1 && amount > 0)
+      .sort(([placeA], [placeB]) => placeA - placeB)
+      .map(([place, amount]) => ({ place, balance: currentBalance + amount }))
 
     const recentRoundsSet = new Set(recentRounds)
     const matchesInRecentRounds = recentRoundsSet.size > 0
@@ -1973,9 +1980,7 @@ function App() {
         longTermContribution,
         totalInserted,
         currentBalance,
-        place1Balance,
-        place2Balance,
-        place3Balance,
+        potentialBalances,
         currentLongTermPayout,
         currentBalanceWithBank,
         projectedLongTermPayout,
@@ -2410,34 +2415,19 @@ function App() {
     }
   }
 
-  const handleTournamentUpdated = (tournament) => {
-    const normalized = {
-      ...tournament,
-      id: tournament.id ?? `db:${tournament._id}`,
-      title: tournament.title ?? tournament.name,
-      label: tournament.label ?? tournament.name,
-      tabTitle: tournament.tabTitle ?? tournament.name,
-      source: 'mongodb',
-      logoSet: tournament.logoSet ?? 'elh',
-    }
-    setAvailableTournaments((current) => current.map((item) => item.id === normalized.id ? normalized : item))
+  const refreshCurrentTournament = async () => {
+    const [catalogResult, dataResult] = await Promise.allSettled([
+      fetchTournamentCatalog(),
+      fetchLiveData(selectedTournamentId),
+    ])
+    if (catalogResult.status === 'fulfilled') setAvailableTournaments(catalogResult.value)
+    if (dataResult.status === 'fulfilled') setData(dataResult.value)
+    return catalogResult.status === 'fulfilled' || dataResult.status === 'fulfilled'
   }
 
-  const handleTipUpdated = async () => {
-    try {
-      setData(await fetchLiveData(selectedTournamentId))
-    } catch {
-      return null
-    }
-  }
-
-  const handleMatchesChanged = async () => {
-    try {
-      setData(await fetchLiveData(selectedTournamentId))
-    } catch {
-      return null
-    }
-  }
+  const handleTournamentUpdated = refreshCurrentTournament
+  const handleTipUpdated = refreshCurrentTournament
+  const handleMatchesChanged = refreshCurrentTournament
 
   const selectTournament = (nextTournamentId) => {
     window.clearTimeout(tournamentMenuCloseTimerRef.current)
@@ -3260,27 +3250,17 @@ function App() {
                     </article>
                   ) : null}
                 </div>
-                <article className="money-potential-strip" aria-label="Potenciální zisk při 1. 2. a 3. místě">
-                  <span className="money-potential-label">Potenciální zisk při umístění na 1.  2.  3. místě</span>
+                <article className="money-potential-strip" aria-label="Potenciální zisk podle umístění">
+                  <span className="money-potential-label">Potenciální zisk podle umístění</span>
                   <div className="money-potential-values">
-                    <p className="money-potential-value">
-                      <span>1.</span>
-                      <strong className={`money-amount ${moneyAmountClass(selectedPlayerProfile.moneySummary.place1Balance)}`}>
-                        {formatMoneyWithSign(selectedPlayerProfile.moneySummary.place1Balance)}
-                      </strong>
-                    </p>
-                    <p className="money-potential-value">
-                      <span>2.</span>
-                      <strong className={`money-amount ${moneyAmountClass(selectedPlayerProfile.moneySummary.place2Balance)}`}>
-                        {formatMoneyWithSign(selectedPlayerProfile.moneySummary.place2Balance)}
-                      </strong>
-                    </p>
-                    <p className="money-potential-value">
-                      <span>3.</span>
-                      <strong className={`money-amount ${moneyAmountClass(selectedPlayerProfile.moneySummary.place3Balance)}`}>
-                        {formatMoneyWithSign(selectedPlayerProfile.moneySummary.place3Balance)}
-                      </strong>
-                    </p>
+                    {selectedPlayerProfile.moneySummary.potentialBalances.map(({ place, balance }) => (
+                      <p className="money-potential-value" key={place}>
+                        <span>{place}.</span>
+                        <strong className={`money-amount ${moneyAmountClass(balance)}`}>
+                          {formatMoneyWithSign(balance)}
+                        </strong>
+                      </p>
+                    ))}
                   </div>
                 </article>
               </section>

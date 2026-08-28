@@ -4,13 +4,16 @@ import { getTeamDisplayName } from '../data/teamLogos'
 function formatMatchDateTime(value) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return value
-  return new Intl.DateTimeFormat('cs-CZ', {
+  const formattedDate = new Intl.DateTimeFormat('cs-CZ', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
+  }).format(date)
+  const formattedTime = new Intl.DateTimeFormat('cs-CZ', {
     hour: '2-digit',
     minute: '2-digit',
   }).format(date)
+  return `${formattedDate} (${formattedTime})`
 }
 
 // Vstup <input type="datetime-local"> nemá časovou zónu, prohlížeč ji ale bere jako místní čas.
@@ -42,7 +45,7 @@ function ManualDateInput({ value, onChange, ...props }) {
   return <ManualDateTimeInput {...props} dateOnly value={value ? `${value}T00:00` : ''} onChange={(nextValue) => onChange(nextValue ? nextValue.slice(0, 10) : '')} />
 }
 
-export default function AdminPanel({ selectedTournamentId: selectedTournamentKey, accountNotificationCount = 0, onAccountNotificationsRead, onTournamentMembershipChanged, onTournamentUpdated, onMatchesChanged, onClose }) {
+export default function AdminPanel({ selectedTournamentId: selectedTournamentKey, accountNotificationCount = 0, onAccountNotificationsRead, onTournamentMembershipChanged, onTournamentUpdated, onMatchesChanged, onEntryFeeChanged, onClose }) {
   const [counts, setCounts] = useState(null)
   const [users, setUsers] = useState([])
   const [tipBreakdown, setTipBreakdown] = useState([])
@@ -269,6 +272,29 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
     const finalIds = next.length === activeIds.length ? [] : next
     setParticipantMessages((current) => ({ ...current, [userId]: { text: 'Ukládám…', isError: false } }))
     saveParticipantIds(finalIds, userId)
+  }
+
+  const toggleEntryFeePaid = async (user) => {
+    const nextValue = !Boolean(user.entryFeePaid)
+    setIsBusy(true)
+    setMessage('')
+    try {
+      const response = await fetch(`/api/admin/users/${encodeURIComponent(user._id)}/entry-fee`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ entryFeePaid: nextValue }),
+      })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(payload.message || 'Vstupné se nepodařilo upravit')
+      setUsers((current) => current.map((item) => item._id === user._id ? { ...item, entryFeePaid: nextValue } : item))
+      onEntryFeeChanged?.(nextValue)
+      setMessage(payload.message)
+    } catch (error) {
+      setMessage(error.message)
+    } finally {
+      setIsBusy(false)
+    }
   }
 
   const deleteAccount = async (user) => {
@@ -787,6 +813,7 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
             <p className="admin-panel-note">Zaškrtni hráče, kteří hrají právě vybraný turnaj. Výběr ovlivní počet hráčů a bank.</p>
             {users.map((user) => (
               <div className="admin-tournament-row" key={user._id}>
+                {user.avatar ? <img className="user-avatar user-avatar-admin" src={user.avatar} alt="" /> : <span className="user-avatar user-avatar-admin is-placeholder" aria-hidden="true">{(user.displayName || user.username).slice(0, 1).toUpperCase()}</span>}
                 <strong>{user.displayName || user.username}</strong>
                 {participantMessages[String(user._id)] ? <span className={`admin-member-message${participantMessages[String(user._id)].isError ? ' is-error' : ''}`}>{participantMessages[String(user._id)].text}</span> : null}
                 <span>{user.role === 'admin' ? 'admin' : 'hráč'} · {user.status} · {tipBreakdown.find((item) => item.username === user.username)?.count ?? 0} tipů</span>
@@ -798,6 +825,16 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
                       onChange={() => toggleParticipant(String(user._id))}
                     />
                     <span>Hraje</span>
+                  </label>
+                ) : null}
+                {user.status === 'active' ? (
+                  <label className="admin-member-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(user.entryFeePaid)}
+                      onChange={() => toggleEntryFeePaid(user)}
+                    />
+                    <span>Uhrazeno</span>
                   </label>
                 ) : null}
                 <button type="button" className="auth-button is-danger" onClick={() => deleteAccount(user)} disabled={isBusy}>Smazat účet</button>

@@ -2350,6 +2350,13 @@
   font-size: 0.65rem;
 }
 
+.user-avatar-admin {
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid #c5d9e8;
+  font-size: 0.72rem;
+}
+
 .player-focus-player-name {
   font-size: 1.08em;
   font-weight: 900;
@@ -3552,6 +3559,18 @@
   font-size: 0.9rem;
 }
 
+.account-name-field {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.account-name-field > span {
+  color: #315d7c;
+  font-size: 0.74rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .avatar-editor {
   display: flex;
   align-items: center;
@@ -3701,6 +3720,49 @@
   line-height: 1.35;
 }
 
+.account-payment-status {
+  display: grid;
+  gap: 0.38rem;
+  padding: 0.56rem 0.62rem;
+  border: 1px solid #d9e8f4;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #f9fcff, #edf5fc);
+}
+
+.account-payment-status-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.account-payment-status-label {
+  color: #1b4568;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.payment-summary-grid {
+  display: grid;
+  gap: 0.34rem;
+  color: #48657d;
+  font-size: 0.73rem;
+  line-height: 1.45;
+}
+
+.payment-summary-grid strong {
+  color: #224d72;
+}
+
+.account-payment-status-note {
+  margin: 0;
+  color: #48657d;
+  font-size: 0.73rem;
+  line-height: 1.45;
+}
+
 .auth-password-toggle {
   display: flex;
   align-items: center;
@@ -3713,6 +3775,26 @@
 .auth-form .auth-password-toggle input {
   width: auto;
   margin: 0;
+}
+
+.player-entry-fee-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.18rem 0.48rem;
+  border: 1px solid #b4ddb9;
+  border-radius: 999px;
+  background: #ebf9ee;
+  color: #1c7541;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.player-entry-fee-badge.is-pending {
+  border-color: #e4d7a5;
+  background: #fffaf0;
+  color: #8d6d00;
 }
 
 .auth-mode-tabs {
@@ -3763,9 +3845,10 @@
   top: calc(100% + 0.45rem);
   left: auto;
   right: 0;
-  width: min(42rem, calc(100vw - 2rem));
-  max-height: min(70vh, 36rem);
-  overflow-y: auto;
+  width: min(50rem, calc(100vw - 2rem));
+  overflow-y: visible;
+  overflow-x: clip;
+  box-sizing: border-box;
   padding: 0.8rem;
   border: 1px solid #b9d3e8;
   border-radius: 8px;
@@ -3893,6 +3976,7 @@
 }
 
 .player-schedule-history span {
+  min-width: 0;
   padding: 0.18rem 0.35rem;
   border: 1px solid #d7e5f2;
   border-radius: 4px;
@@ -3970,6 +4054,24 @@
   color: #16a34a;
 }
 
+.player-tip-save-status {
+  width: 9.5rem;
+  min-height: 1rem;
+  color: #16a34a;
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.player-tip-save-status.is-error {
+  color: #dc2626;
+}
+
+.player-tip-save-status.is-pending {
+  color: #8d6d00;
+}
+
 .player-tips-navigation {
   display: flex;
   align-items: center;
@@ -4019,7 +4121,8 @@
   gap: 0.8rem;
   margin-top: 0.55rem;
   padding-top: 0.55rem;
-  border-top: 1px solid #d7e5f2;
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid #e8eff5;
 }
 
 .player-tip-group + .player-tip-group {
@@ -4029,7 +4132,6 @@
 .player-tip-group h3 {
   margin: 0.7rem 0 0;
   padding-top: 0.6rem;
-  border-top: 1px solid #c7d9e8;
   color: #315d7c;
   font-size: 0.82rem;
 }
@@ -4040,16 +4142,41 @@
   min-width: 0;
 }
 
-.player-tip-row > div:first-child span {
+.player-tip-date {
+  color: #5e7890;
+  font-size: 0.68rem;
+  font-weight: 400;
+}
+
+.player-tip-match {
+  color: #173e5f;
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.player-tip-meta {
   color: #5e7890;
   font-size: 0.72rem;
+  font-weight: 400;
+}
+
+.starts-at-round {
+  font-weight: 800;
 }
 
 .player-tip-score {
-  display: flex;
+  display: grid;
+  justify-items: center;
   align-items: center;
   gap: 0.3rem;
   flex-shrink: 0;
+}
+
+.player-tip-score-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
 }
 
 .player-tip-score input {
@@ -4076,14 +4203,73 @@
 }
 
 @media (max-width: 560px) {
+  .player-tips-panel {
+    max-height: none;
+    overflow-y: visible;
+  }
+
+  .player-schedule-history-top {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    overflow-x: hidden;
+    white-space: normal;
+  }
+
   .player-tip-row {
-    align-items: stretch;
-    flex-direction: column;
-    gap: 0.4rem;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.3rem 0.55rem;
+    margin-top: 0.45rem;
+    padding: 0.65rem 0.55rem;
+    border: 1px solid #e1ebf3;
+    border-radius: 7px;
+    background: #fbfdff;
   }
 
   .player-tip-score {
-    justify-content: flex-end;
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .player-tip-row > div:first-child {
+    grid-column: 1;
+    grid-row: 1;
+  }
+}
+
+@media (max-width: 620px) {
+  .player-schedule-history-top {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    overflow-x: hidden;
+    white-space: normal;
+  }
+
+  .player-schedule-history-top > span {
+    overflow-wrap: anywhere;
+  }
+
+  .detail-panel {
+    min-width: 0;
+    overflow-x: hidden;
+  }
+
+  .player-success-grid,
+  .player-field-compare-grid,
+  .player-money-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .player-success-item,
+  .player-field-item,
+  .money-stat-box {
+    min-width: 0;
+  }
+
+  .player-success-main,
+  .player-money-head {
+    min-width: 0;
   }
 }
 
@@ -4382,7 +4568,7 @@
 
 .admin-tournament-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto minmax(0, auto) auto;
+  grid-template-columns: auto minmax(0, 1fr) auto auto minmax(0, auto) auto;
   align-items: center;
   gap: 0.6rem;
   padding: 0.42rem 0.5rem;
@@ -4805,7 +4991,7 @@
   }
 
   .tips-row {
-    grid-template-columns: 30px 24px fit-content(9.5rem) minmax(0, 1fr) auto;
+    grid-template-columns: 30px 24px minmax(0, 9.5rem) minmax(0, 1fr) auto;
     column-gap: 0.16rem;
     row-gap: 0.14rem;
     grid-template-areas:
@@ -4835,6 +5021,8 @@
   .tips-row .name-cell .tip-player-button {
     grid-area: name;
     align-self: start;
+    min-width: 0;
+    max-width: 100%;
   }
 
   .tips-row .name-cell .tip-note {
@@ -4944,6 +5132,27 @@
     letter-spacing: 0.01em;
     text-transform: none;
     white-space: nowrap;
+  }
+}
+
+@media (max-width: 360px) {
+  .tips-row {
+    grid-template-columns: 28px 22px minmax(0, 6rem) minmax(36px, 1fr) auto;
+    column-gap: 0.12rem;
+  }
+
+  .tips-row .tip-value,
+  .tips-row .payout-cell {
+    padding-left: 0;
+  }
+
+  .tips-row .hidden-tip-value {
+    white-space: nowrap;
+  }
+
+  .tips-row .total-points-cell::before,
+  .tips-row .tip-pill::before {
+    content: none;
   }
 }
 

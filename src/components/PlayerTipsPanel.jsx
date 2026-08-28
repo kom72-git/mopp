@@ -1,16 +1,19 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { getTeamDisplayName } from '../data/teamLogos'
 
 function formatMatchDateTime(value) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return value
-  return new Intl.DateTimeFormat('cs-CZ', {
+  const formattedDate = new Intl.DateTimeFormat('cs-CZ', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
+  }).format(date)
+  const formattedTime = new Intl.DateTimeFormat('cs-CZ', {
     hour: '2-digit',
     minute: '2-digit',
   }).format(date)
+  return `${formattedDate} (${formattedTime})`
 }
 
 function buildMatchGroups(matches) {
@@ -54,6 +57,7 @@ export default function PlayerTipsPanel({ selectedTournamentId, scheduleRefreshK
   const [upcomingSelectionRounds, setUpcomingSelectionRounds] = useState([])
   const [scheduleMessage, setScheduleMessage] = useState('')
   const [tipsMode, setTipsMode] = useState('mine')
+  const autoSaveTimers = useRef({})
 
   useEffect(() => {
     let cancelled = false
@@ -106,18 +110,36 @@ export default function PlayerTipsPanel({ selectedTournamentId, scheduleRefreshK
     return () => { cancelled = true }
   }, [selectedTournamentId, scheduleRefreshKey])
 
+  useEffect(() => () => {
+    Object.values(autoSaveTimers.current).forEach((timerId) => window.clearTimeout(timerId))
+  }, [])
+
   const updateScore = (matchId, field, value) => {
-    setValues((current) => ({ ...current, [matchId]: { ...current[matchId], [field]: value } }))
+    const nextTip = { ...values[matchId], [field]: value }
+    setValues((current) => ({ ...current, [matchId]: nextTip }))
+    const hasCompleteScore = nextTip.homeScore !== '' && nextTip.awayScore !== ''
+      && Number.isInteger(Number(nextTip.homeScore)) && Number.isInteger(Number(nextTip.awayScore))
+      && Number(nextTip.homeScore) >= 0 && Number(nextTip.homeScore) <= 99
+      && Number(nextTip.awayScore) >= 0 && Number(nextTip.awayScore) <= 99
+
+    window.clearTimeout(autoSaveTimers.current[matchId])
+    if (hasCompleteScore) {
+      setTipMessage(matchId, 'Čekám na potvrzení…', false)
+      autoSaveTimers.current[matchId] = window.setTimeout(() => saveTip(matchId, nextTip), 500)
+    } else if (nextTip.homeScore !== '' || nextTip.awayScore !== '') {
+      setTipMessage(matchId, 'Doplň i druhé skóre', false, true)
+    }
   }
 
-  const setTipMessage = (matchId, text, isError) => {
-    setTipMessages((current) => ({ ...current, [matchId]: { text, isError } }))
+  const setTipMessage = (matchId, text, isError, isPending = false) => {
+    setTipMessages((current) => ({ ...current, [matchId]: { text, isError, isPending } }))
+    if (text === 'Uloženo') return
     window.setTimeout(() => {
       setTipMessages((current) => (current[matchId]?.text === text ? { ...current, [matchId]: null } : current))
     }, 4000)
   }
 
-  const saveTip = async (matchId) => {
+  const saveTip = async (matchId, tipValues = values[matchId]) => {
     setBusyMatchId(matchId)
     setTipMessages((current) => ({ ...current, [matchId]: null }))
     const startedAt = Date.now()
@@ -127,10 +149,11 @@ export default function PlayerTipsPanel({ selectedTournamentId, scheduleRefreshK
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(values[matchId]),
+        body: JSON.stringify(tipValues),
       })
       const payload = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(payload.message || 'Tip se nepodařilo uložit')
+      setTipMessage(matchId, 'Uloženo', false)
       onTipUpdated?.(payload.tip)
     } catch (error) {
       setTipMessage(matchId, error.message, true)
@@ -275,16 +298,20 @@ export default function PlayerTipsPanel({ selectedTournamentId, scheduleRefreshK
               {group.matches.map((match) => (
                 <div className="player-tip-row" key={match._id}>
                   <div>
-                    <strong>{formatMatchDateTime(match.startsAt)}</strong>
-                    <span>{match.home} – {match.away} · Bank {match.bank == null ? 'čeká na výsledek předchozího zápasu' : `${match.bank} Kč`}</span>
+                    <span className="player-tip-date">{formatMatchDateTime(match.startsAt)}</span>
+                    <strong className="player-tip-match">{match.home} – {match.away}</strong>
+                    <span className="player-tip-meta">Bank {match.bank == null ? 'čeká na výsledek předchozího zápasu' : `${match.bank} Kč`}</span>
                   </div>
                   <div className="player-tip-score">
-                    <input type="number" min="0" max="99" value={values[match._id]?.homeScore ?? ''} onChange={(event) => updateScore(match._id, 'homeScore', event.target.value)} aria-label={`Tip domácího týmu ${match.home}`} />
-                    <span>:</span>
-                    <input type="number" min="0" max="99" value={values[match._id]?.awayScore ?? ''} onChange={(event) => updateScore(match._id, 'awayScore', event.target.value)} aria-label={`Tip hostujícího týmu ${match.away}`} />
-                    <button type="button" className="auth-submit" onClick={() => saveTip(match._id)} disabled={busyMatchId === match._id}>{busyMatchId === match._id ? 'Ukládám…' : 'Uložit tip'}</button>
+                    <div className="player-tip-score-controls">
+                      <input type="number" min="0" max="99" value={values[match._id]?.homeScore ?? ''} onChange={(event) => updateScore(match._id, 'homeScore', event.target.value)} aria-label={`Tip domácího týmu ${match.home}`} />
+                      <span>:</span>
+                      <input type="number" min="0" max="99" value={values[match._id]?.awayScore ?? ''} onChange={(event) => updateScore(match._id, 'awayScore', event.target.value)} aria-label={`Tip hostujícího týmu ${match.away}`} />
+                    </div>
+                    <span className={`player-tip-save-status${tipMessages[match._id]?.isError ? ' is-error' : tipMessages[match._id]?.isPending ? ' is-pending' : ''}`} aria-live="polite">
+                      {busyMatchId === match._id ? 'Ukládám…' : tipMessages[match._id]?.text || (match.tip ? 'Uloženo' : '')}
+                    </span>
                   </div>
-                  {tipMessages[match._id] ? <p className={`player-tip-row-message${tipMessages[match._id].isError ? ' is-error' : ' is-success'}`} role="alert">{tipMessages[match._id].text}</p> : null}
                 </div>
               ))}
             </div>

@@ -158,12 +158,14 @@ function parseStartsAtDisplay(startsAt, matchId, round, tournamentYear) {
     const date = new Date(startsAt)
     if (!Number.isNaN(date.getTime())) {
       const weekday = ['neděle', 'pondělí', 'úterý', 'středa', 'čtvrtek', 'pátek', 'sobota'][date.getDay()]
+      const weekdayShort = ['ne', 'po', 'út', 'st', 'čt', 'pá', 'so'][date.getDay()]
       const pad = (n) => String(n).padStart(2, '0')
       return {
         roundLabel: Number.isFinite(Number(round)) ? `${round}.` : '',
         matchNo: '',
         dayName: weekday,
-        rest: `${date.getDate()}.${date.getMonth() + 1}.${date.getFullYear()} ${pad(date.getHours())}:${pad(date.getMinutes())}`,
+        dayShort: weekdayShort,
+        rest: `${date.getDate()}.${date.getMonth() + 1}.${date.getFullYear()} (${pad(date.getHours())}:${pad(date.getMinutes())})`,
       }
     }
   }
@@ -207,15 +209,28 @@ function parseStartsAtDisplay(startsAt, matchId, round, tournamentYear) {
   }
 
   const dayName = dayNames[dayToken] ?? dayRaw
+  const dayShort = {
+    pondělí: 'po',
+    úterý: 'út',
+    středa: 'st',
+    čtvrtek: 'čt',
+    pátek: 'pá',
+    sobota: 'so',
+    neděle: 'ne',
+  }[dayName] ?? dayName
   const restDate = restRaw.trimStart().match(/^(\d{1,2}\.\d{1,2}\.)(.*)$/)
   const rest = restDate && tournamentYear
-    ? `${Number(restDate[1].split('.')[0])}.${Number(restDate[1].split('.')[1])}.${tournamentYear}${restDate[2]}`
+    ? (() => {
+      const time = restDate[2].trim()
+      return `${Number(restDate[1].split('.')[0])}.${Number(restDate[1].split('.')[1])}.${tournamentYear}${time ? ` (${time})` : ''}`
+    })()
     : restRaw.trimStart()
   const matchNo = ''
   return {
     roundLabel,
     matchNo,
     dayName,
+    dayShort,
     rest,
   }
 }
@@ -226,9 +241,9 @@ function StartsAtLabel({ startsAt, matchId, round, tournamentYear }) {
 
   return (
     <span className="starts-at-label">
-      <span>{parts.roundLabel}</span>
+      <strong className="starts-at-round">{parts.roundLabel}</strong>
       {' '}
-      <span className="starts-at-day">({parts.dayName})</span>
+    <span className="starts-at-day">{parts.dayShort}</span>
       <span className="starts-at-date">{parts.rest}</span>
     </span>
   )
@@ -270,7 +285,7 @@ function createCroppedAvatar(source, cropArea) {
   })
 }
 
-function AuthPanel({ selectedTournamentId, onTournamentUpdated, onMatchesChanged, onTipUpdated }) {
+function AuthPanel({ selectedTournamentId, selectedTournament, onTournamentUpdated, onMatchesChanged, onTipUpdated }) {
   const [user, setUser] = useState(null)
   const [mode, setMode] = useState('login')
   const [isOpen, setIsOpen] = useState(false)
@@ -288,6 +303,17 @@ function AuthPanel({ selectedTournamentId, onTournamentUpdated, onMatchesChanged
   const [hasSelectionNotification, setHasSelectionNotification] = useState(false)
   const [pendingAccountNotificationCount, setPendingAccountNotificationCount] = useState(0)
   const [scheduleRefreshKey, setScheduleRefreshKey] = useState(0)
+  const authPanelRef = useRef(null)
+
+  useEffect(() => {
+    const closePanelOnOutsideClick = (event) => {
+      if (activePanel && !authPanelRef.current?.contains(event.target)) {
+        setActivePanel('')
+      }
+    }
+    document.addEventListener('pointerdown', closePanelOnOutsideClick)
+    return () => document.removeEventListener('pointerdown', closePanelOnOutsideClick)
+  }, [activePanel])
 
   const refreshSelectionNotification = async () => {
     if (!user || !selectedTournamentId) {
@@ -535,8 +561,25 @@ function AuthPanel({ selectedTournamentId, onTournamentUpdated, onMatchesChanged
     await onTipUpdated?.()
   }
 
+  const updateCurrentUserEntryFee = (entryFeePaid) => {
+    setUser((current) => (current ? { ...current, entryFeePaid: Boolean(entryFeePaid) } : current))
+  }
+
+  const paymentSummary = useMemo(() => {
+    const plannedRounds = Number(selectedTournament?.plannedMatchCount ?? selectedTournament?.seasonMatchesCount ?? selectedTournament?.selectionMatchCount ?? 0)
+    const entryFeePerMatch = Number(selectedTournament?.entryFee ?? selectedTournament?.entryFeePerMatch ?? 0)
+    const longTermContribution = Number(selectedTournament?.longTermContribution ?? selectedTournament?.longTermBankContribution ?? 0)
+    const total = plannedRounds * entryFeePerMatch + longTermContribution
+
+    if (!Number.isFinite(plannedRounds) || !Number.isFinite(entryFeePerMatch) || !Number.isFinite(longTermContribution) || total <= 0) {
+      return null
+    }
+
+    return { plannedRounds, entryFeePerMatch, longTermContribution, total }
+  }, [selectedTournament])
+
   return (
-    <div className={`auth-panel ${user ? 'is-authenticated' : 'is-guest'}`}>
+    <div ref={authPanelRef} className={`auth-panel ${user ? 'is-authenticated' : 'is-guest'}`}>
       {user ? (
         <>
           <span className="auth-user">
@@ -549,13 +592,13 @@ function AuthPanel({ selectedTournamentId, onTournamentUpdated, onMatchesChanged
             {user.role === 'admin' ? <button type="button" className={`auth-button auth-admin-button ${activePanel === 'admin' ? 'is-active' : ''}`} onClick={() => setActivePanel((current) => current === 'admin' ? '' : 'admin')}>Admin{pendingAccountNotificationCount > 0 ? <span className="admin-notification-badge" title={`${pendingAccountNotificationCount} nových hráčů`}><img className="notification-bell admin-notification-bell" src="/icons/notifikace.png" alt="" /><span>{pendingAccountNotificationCount}</span></span> : null}</button> : null}
           </div>
           <button type="button" className="auth-button auth-logout" onClick={logout}>Odhlásit</button>
-          {activePanel === 'admin' && user.role === 'admin' ? <AdminPanel selectedTournamentId={selectedTournamentId} accountNotificationCount={pendingAccountNotificationCount} onAccountNotificationsRead={markAccountNotificationsRead} onTournamentMembershipChanged={handleTournamentMembershipChanged} onTournamentUpdated={onTournamentUpdated} onMatchesChanged={onMatchesChanged} onClose={() => setActivePanel('')} /> : null}
+          {activePanel === 'admin' && user.role === 'admin' ? <AdminPanel selectedTournamentId={selectedTournamentId} accountNotificationCount={pendingAccountNotificationCount} onAccountNotificationsRead={markAccountNotificationsRead} onTournamentMembershipChanged={handleTournamentMembershipChanged} onTournamentUpdated={onTournamentUpdated} onMatchesChanged={onMatchesChanged} onEntryFeeChanged={updateCurrentUserEntryFee} onClose={() => setActivePanel('')} /> : null}
           {activePanel === 'tips' ? <PlayerTipsPanel selectedTournamentId={selectedTournamentId} scheduleRefreshKey={scheduleRefreshKey} hasSelectionNotification={hasSelectionNotification} onSelectionUpdated={() => setHasSelectionNotification(false)} onTipUpdated={onTipUpdated} onClose={() => setActivePanel('')} /> : null}
           {activePanel === 'account' ? (
             <div className="auth-form auth-account-form">
               <button type="button" className="panel-close-button" onClick={() => setActivePanel('')} aria-label="Zavřít panel" title="Zavřít">×</button>
               <form onSubmit={saveAccountProfile}>
-                <h3>Profil</h3>
+                <h3>Můj profil</h3>
                 <div className="avatar-editor">
                   {accountForm.avatar ? <img className="user-avatar user-avatar-preview" src={accountForm.avatar} alt="Náhled profilového obrázku" /> : <span className="user-avatar user-avatar-preview is-placeholder" aria-hidden="true">{(accountForm.displayName || user.username).slice(0, 1).toUpperCase()}</span>}
                   <div className="avatar-editor-actions">
@@ -563,9 +606,33 @@ function AuthPanel({ selectedTournamentId, onTournamentUpdated, onMatchesChanged
                     {accountForm.avatar ? <button type="button" className="auth-button" onClick={() => setAccountForm((current) => ({ ...current, avatar: '' }))}>Odstranit</button> : null}
                   </div>
                 </div>
-                <input name="displayName" value={accountForm.displayName} onChange={updateAccountField} placeholder="Zobrazované jméno" maxLength={60} required />
+                <label className="account-name-field">
+                  <span>Změna jména</span>
+                  <input name="displayName" value={accountForm.displayName} onChange={updateAccountField} placeholder="Zobrazované jméno" maxLength={60} required />
+                </label>
                 <button type="submit" className="auth-submit" disabled={isBusy}>Uložit profil</button>
                 {profileMessage ? <p className="auth-message" role="alert">{profileMessage}</p> : null}
+              </form>
+              <form>
+                <h3>Vstupné</h3>
+                <div className="account-payment-status">
+                  <div className="account-payment-status-head">
+                    <span className="account-payment-status-label">Stav</span>
+                    <span className={`player-entry-fee-badge${user?.entryFeePaid ? '' : ' is-pending'}`}>
+                      {user?.entryFeePaid ? 'Uhrazeno' : 'Neuhrazeno'}
+                    </span>
+                  </div>
+                  {paymentSummary ? (
+                    <div className="payment-summary-grid" aria-live="polite">
+                      <span><strong>Počet kol:</strong> {paymentSummary.plannedRounds}</span>
+                      <span><strong>Vklad / kolo:</strong> {paymentSummary.entryFeePerMatch} Kč</span>
+                      <span><strong>Dlouhodobý bank:</strong> {paymentSummary.longTermContribution} Kč</span>
+                      <span><strong>Celkem:</strong> {paymentSummary.total} Kč</span>
+                    </div>
+                  ) : (
+                    <p className="account-payment-status-note">Žádné údaje o turnaji zatím nejsou k dispozici.</p>
+                  )}
+                </div>
               </form>
               <form onSubmit={changeAccountPassword}>
                 <h3>Změna hesla</h3>
@@ -573,8 +640,8 @@ function AuthPanel({ selectedTournamentId, onTournamentUpdated, onMatchesChanged
                 <input name="newPassword" type="password" value={accountForm.newPassword} onChange={updateAccountField} placeholder="Nové heslo" autoComplete="new-password" required />
                 <input name="confirmPassword" type="password" value={accountForm.confirmPassword} onChange={updateAccountField} placeholder="Nové heslo znovu" autoComplete="new-password" required />
                 <button type="submit" className="auth-submit" disabled={isBusy}>Změnit heslo</button>
+                {message ? <p className="auth-message" role="alert">{message}</p> : null}
               </form>
-              {message ? <p className="auth-message" role="alert">{message}</p> : null}
               {avatarCropSource ? (
                 <div className="avatar-crop-dialog" role="dialog" aria-modal="true" aria-label="Upravit profilový obrázek">
                   <div className="avatar-crop-card">
@@ -1623,6 +1690,7 @@ function App() {
     const selectedStanding = standings.find((player) => player.id === effectiveSelectedPlayerId)
     if (!selectedStanding) return null
 
+    const entryFeePaid = Boolean(selectedStanding.entryFeePaid)
     const timeline = matches
       .map((match) => {
         const tip = (match.tips ?? []).find((item) => item.playerId === effectiveSelectedPlayerId)
@@ -1867,12 +1935,17 @@ function App() {
       const vsMiddle = Math.round((recentAverage - middleAverage) * 100) / 100
 
       const currentPoints = Number(selectedStanding.points ?? 0)
-      const thirdPoints = Number(standings[2]?.points ?? currentPoints)
-      const fourthPoints = Number(standings[3]?.points ?? currentPoints)
-      const top3GapLabel = selectedRank <= 3 ? 'Náskok na 4. místo' : 'Ztráta na 3. místo'
-      const top3GapValue = selectedRank <= 3
-        ? Math.max(0, currentPoints - fourthPoints)
-        : Math.max(0, thirdPoints - currentPoints)
+      const paidPlaces = [...payoutByPlace.keys()].filter((place) => place >= 1).sort((a, b) => a - b)
+      const lastPaidPlace = paidPlaces[paidPlaces.length - 1] ?? 0
+      const comparisonPlace = lastPaidPlace + 1
+      const previousPlace = Math.max(1, comparisonPlace - 1)
+      const comparisonPoints = Number(standings[comparisonPlace - 1]?.points ?? currentPoints)
+      const previousPoints = Number(standings[previousPlace - 1]?.points ?? currentPoints)
+      const isInsidePaidPlaces = lastPaidPlace > 0 && selectedRank <= lastPaidPlace
+      const top3GapLabel = isInsidePaidPlaces ? `Náskok na ${comparisonPlace}. místo` : `Ztráta na ${previousPlace}. místo`
+      const top3GapValue = isInsidePaidPlaces
+        ? Math.max(0, currentPoints - comparisonPoints)
+        : Math.max(0, previousPoints - currentPoints)
 
       return {
         percentile,
@@ -2289,8 +2362,20 @@ function App() {
     let cancelled = false
 
     const loadLiveData = async () => {
+      if (activeProduct === 'tips') setIsLiveLoading(true)
       try {
-        const nextData = await fetchLiveData(selectedTournamentId)
+        let nextData
+        let lastError
+        for (let attempt = 0; attempt < 2; attempt += 1) {
+          try {
+            nextData = await fetchLiveData(selectedTournamentId)
+            break
+          } catch (error) {
+            lastError = error
+            if (attempt === 0) await new Promise((resolve) => window.setTimeout(resolve, 500))
+          }
+        }
+        if (!nextData) throw lastError || new Error('Živá data nejsou dostupná')
         if (!cancelled) {
           setData(nextData)
         }
@@ -2310,7 +2395,7 @@ function App() {
     return () => {
       cancelled = true
     }
-  }, [selectedTournamentId])
+  }, [activeProduct, selectedTournamentId])
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined
@@ -2550,7 +2635,7 @@ function App() {
               Fantasy
             </button>
           </div>
-          <AuthPanel selectedTournamentId={selectedTournamentId} onTournamentUpdated={handleTournamentUpdated} onMatchesChanged={handleMatchesChanged} onTipUpdated={handleTipUpdated} />
+          <AuthPanel selectedTournamentId={selectedTournamentId} selectedTournament={selectedTournament} onTournamentUpdated={handleTournamentUpdated} onMatchesChanged={handleMatchesChanged} onTipUpdated={handleTipUpdated} />
         </div>
       </nav>
 
@@ -2810,6 +2895,11 @@ function App() {
                   <span>Statistika hráče</span>
                   <span className="player-focus-separator" aria-hidden="true">|</span>
                   <span className="player-focus-player-name">{selectedPlayerProfile.name}</span>
+                  {selectedPlayerProfile.entryFeePaid ? (
+                    <span className="player-entry-fee-badge" title="Vstupné uhrazeno">✓ Uhrazeno</span>
+                  ) : (
+                    <span className="player-entry-fee-badge is-pending" title="Vstupné neuhrazeno">• Neuhrazeno</span>
+                  )}
                 </h2>
                 <button
                   type="button"

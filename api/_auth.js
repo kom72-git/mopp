@@ -19,6 +19,7 @@ function publicUser(user) {
     role: user.role,
     status: user.status,
     avatar: user.avatar || "",
+    entryFeePaid: Boolean(user.entryFeePaid),
   };
 }
 
@@ -302,6 +303,7 @@ function createAuthRoutes({ app, getDb }) {
         passwordHash: await bcrypt.hash(password, 12),
         role: "player",
         status: "pending",
+        entryFeePaid: false,
         createdAt: now,
         updatedAt: now,
       };
@@ -376,6 +378,7 @@ function createAuthRoutes({ app, getDb }) {
     try {
       const displayName = String(req.body?.displayName ?? "").trim();
       const avatar = String(req.body?.avatar ?? "").trim();
+      const entryFeePaid = req.body?.entryFeePaid === true || req.body?.entryFeePaid === "true";
       if (displayName.length < 1 || displayName.length > 60) {
         return res.status(400).json({ ok: false, message: "Zobrazované jméno musí mít 1 až 60 znaků." });
       }
@@ -384,7 +387,7 @@ function createAuthRoutes({ app, getDb }) {
       }
       const result = await getDb().collection("users").findOneAndUpdate(
         { _id: new ObjectId(req.session.sub), status: "active" },
-        { $set: { displayName, avatar, updatedAt: new Date() } },
+        { $set: { displayName, avatar, entryFeePaid, updatedAt: new Date() } },
         { returnDocument: "after" },
       );
       if (!result) return res.status(404).json({ ok: false, message: "Účet nebyl nalezen." });
@@ -681,7 +684,7 @@ function createAuthRoutes({ app, getDb }) {
     try {
       const db = getDb();
       const [userDocuments, tournaments, matches, tips, tipBreakdown, adminUser] = await Promise.all([
-        db.collection("users").find({}, { projection: { username: 1, displayName: 1, role: 1, status: 1, createdAt: 1 } }).sort({ createdAt: 1 }).toArray(),
+        db.collection("users").find({}, { projection: { username: 1, displayName: 1, avatar: 1, role: 1, status: 1, entryFeePaid: 1, createdAt: 1 } }).sort({ createdAt: 1 }).toArray(),
         db.collection("tournaments").countDocuments(),
         db.collection("matches").countDocuments(),
         db.collection("tips").countDocuments(),
@@ -717,6 +720,23 @@ function createAuthRoutes({ app, getDb }) {
       return res.json({ ok: true });
     } catch {
       return res.status(500).json({ ok: false, message: "Notifikace se nepodařilo označit jako přečtené" });
+    }
+  });
+
+  app.patch("/api/admin/users/:id/entry-fee", requireJwt, requireRole("admin"), async (req, res) => {
+    try {
+      const userId = String(req.params.id ?? "").trim();
+      if (!ObjectId.isValid(userId)) return res.status(400).json({ ok: false, message: "Neplatné ID uživatele." });
+      const entryFeePaid = req.body?.entryFeePaid === true || req.body?.entryFeePaid === "true";
+      const result = await getDb().collection("users").findOneAndUpdate(
+        { _id: new ObjectId(userId) },
+        { $set: { entryFeePaid, updatedAt: new Date() } },
+        { returnDocument: "after", projection: { username: 1, displayName: 1, entryFeePaid: 1 } },
+      );
+      if (!result) return res.status(404).json({ ok: false, message: "Účet nebyl nalezen." });
+      return res.json({ ok: true, user: publicUser(result), message: entryFeePaid ? "Vstupné je označeno jako uhrazené." : "Vstupné je označeno jako neuhrazené." });
+    } catch {
+      return res.status(500).json({ ok: false, message: "Vstupné se nepodařilo upravit." });
     }
   });
 

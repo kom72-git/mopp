@@ -12,13 +12,13 @@ const fantasyPlayers = [
 
 const periods = [
   { id: 'all', label: 'Celkem' },
-  { id: '9', label: 'Září' },
-  { id: '10', label: 'Říjen' },
-  { id: '11', label: 'Listopad' },
-  { id: '12', label: 'Prosinec' },
-  { id: '1', label: 'Leden' },
-  { id: '2', label: 'Únor' },
-  { id: '3', label: 'Březen' },
+  { id: '9', label: 'Září', months: ['9'] },
+  { id: '10', label: 'Říjen', months: ['10'] },
+  { id: '11', label: 'Listopad', months: ['11'] },
+  { id: '12', label: 'Prosinec', months: ['12'] },
+  { id: '1', label: 'Leden', months: ['1'] },
+  { id: '2', label: 'Únor', months: ['2'] },
+  { id: '3', label: 'Březen', months: ['3'] },
 ]
 
 const fantasyRounds = [
@@ -105,7 +105,7 @@ const fantasyRounds = [
   ['6.3', [78, 75, 97, 52, 53]],
 ]
 
-function rankPlayers(rounds) {
+function rankPlayers(rounds, lastRound = rounds.at(-1)) {
   return fantasyPlayers
     .map((player, playerIndex) => {
       const scores = rounds.map((round) => round[1][playerIndex])
@@ -116,7 +116,7 @@ function rankPlayers(rounds) {
         playerIndex,
         points,
         average: rounds.length ? Math.round(points / rounds.length) : 0,
-        last: scores.at(-1),
+        last: lastRound?.[1][playerIndex],
       }
     })
     .sort((first, second) => second.points - first.points || second.average - first.average || first.playerIndex - second.playerIndex)
@@ -130,29 +130,80 @@ function buildXAxisTickIndexes(length, maxLabels = 12) {
   return indexes
 }
 
+function getPlayerStats(rounds, player) {
+  const scores = rounds.map((round) => round[1][player.playerIndex])
+  const playedScores = scores.filter(Number.isFinite)
+  const awards = rounds.reduce((total, round) => {
+    const roundScores = round[1].filter(Number.isFinite)
+    const score = round[1][player.playerIndex]
+    if (!Number.isFinite(score) || roundScores.length === 0) return total
+    return {
+      best: total.best + (score === Math.max(...roundScores) ? 1 : 0),
+      worst: total.worst + (score === Math.min(...roundScores) ? 1 : 0),
+    }
+  }, { best: 0, worst: 0 })
+  return {
+    averageLastFive: playedScores.length ? Math.round(playedScores.slice(-5).reduce((total, score) => total + score, 0) / Math.min(5, playedScores.length)) : 0,
+    bestScore: playedScores.length ? Math.max(...playedScores) : null,
+    worstScore: playedScores.length ? Math.min(...playedScores) : null,
+    missed: scores.length - playedScores.length,
+    awards,
+  }
+}
+
+function getMetricValue(player, key) {
+  if (key === 'awards.best') return player.awards.best
+  if (key === 'awards.worst') return player.awards.worst
+  return player[key]
+}
+
 function FantasyOverview() {
   const [periodId, setPeriodId] = useState('all')
   const [selectedRoundIndex, setSelectedRoundIndex] = useState(null)
   const [sort, setSort] = useState({ key: 'points', direction: 'desc' })
+  const [statView, setStatView] = useState('standings')
+  const [selectedPlayerNick, setSelectedPlayerNick] = useState('')
   const [visiblePlayerNicks, setVisiblePlayerNicks] = useState(() => fantasyPlayers.map((player) => player.nick))
   const [hoveredPlayerNick, setHoveredPlayerNick] = useState('')
   const touchLegendHandledRef = useRef(false)
   const period = periods.find((item) => item.id === periodId) ?? periods[0]
-  const periodRounds = useMemo(() => periodId === 'all' ? fantasyRounds : fantasyRounds.filter(([date]) => date.split('.')[1] === periodId), [periodId])
+  const periodRounds = useMemo(() => periodId === 'all' ? fantasyRounds : fantasyRounds.filter(([date]) => period.months.includes(date.split('.')[1])), [period, periodId])
   const visibleRounds = selectedRoundIndex === null ? periodRounds : periodRounds.slice(0, selectedRoundIndex + 1)
-  const standings = rankPlayers(visibleRounds)
+  const selectedRound = selectedRoundIndex === null ? null : periodRounds[selectedRoundIndex]
+  const selectedTournamentRoundIndex = selectedRound ? fantasyRounds.indexOf(selectedRound) : fantasyRounds.indexOf(visibleRounds.at(-1))
+  const lastRound = selectedRound ?? (periodId === 'all' ? visibleRounds.at(-1) : visibleRounds.at(-2))
+  const standings = rankPlayers(visibleRounds, lastRound)
   const previousStandings = rankPlayers(visibleRounds.slice(0, -1))
   const rankByPlayer = new Map(standings.map((player, index) => [player.name, index + 1]))
   const previousRankByPlayer = new Map(previousStandings.map((player, index) => [player.name, index + 1]))
-  const selectedRound = selectedRoundIndex === null ? null : periodRounds[selectedRoundIndex]
-  const displayedStandings = useMemo(() => [...standings].sort((first, second) => {
-    const firstHasValue = Number.isFinite(first[sort.key])
-    const secondHasValue = Number.isFinite(second[sort.key])
+  const standingsWithStats = useMemo(() => standings.map((player) => ({ ...player, ...getPlayerStats(visibleRounds, player) })), [standings, visibleRounds])
+  const displayedStandings = useMemo(() => [...standingsWithStats].sort((first, second) => {
+    const firstValue = getMetricValue(first, sort.key)
+    const secondValue = getMetricValue(second, sort.key)
+    const firstHasValue = Number.isFinite(firstValue)
+    const secondHasValue = Number.isFinite(secondValue)
     if (firstHasValue !== secondHasValue) return firstHasValue ? -1 : 1
-    const comparison = first[sort.key] - second[sort.key]
+    const comparison = firstValue - secondValue
     if (comparison !== 0) return sort.direction === 'asc' ? comparison : -comparison
     return second.points - first.points || first.playerIndex - second.playerIndex
-  }), [sort, standings])
+  }), [sort, standingsWithStats])
+  const selectedPlayer = standings.find((player) => player.nick === selectedPlayerNick) ?? null
+  const selectedPlayerStats = useMemo(() => {
+    if (!selectedPlayer) return null
+    const stats = getPlayerStats(visibleRounds, selectedPlayer)
+    const scores = visibleRounds.map((round) => round[1][selectedPlayer.playerIndex])
+    const playedScores = scores.filter(Number.isFinite)
+    const ranks = visibleRounds.map((_, index) => rankPlayers(visibleRounds.slice(0, index + 1)).findIndex((player) => player.nick === selectedPlayer.nick) + 1)
+    return {
+      rounds: playedScores.length,
+      averageLastFive: stats.averageLastFive,
+      best: stats.bestScore,
+      worst: stats.worstScore,
+      missed: stats.missed,
+      bestRank: ranks.length ? Math.min(...ranks) : null,
+      awards: stats.awards,
+    }
+  }, [selectedPlayer, visibleRounds])
   const rankTimeline = useMemo(() => {
     const ranksByRound = periodRounds.map((_, roundIndex) => {
       const rankedPlayers = rankPlayers(periodRounds.slice(0, roundIndex + 1))
@@ -179,6 +230,12 @@ function FantasyOverview() {
   }
 
   const sortLabel = (key, label) => `${label}, ${sort.key === key ? (sort.direction === 'desc' ? 'sestupně' : 'vzestupně') : 'seřadit'}`
+  const statViews = {
+    standings: [['average', 'Průměr'], ['last', selectedRound ? 'V kole' : 'Poslední'], ['points', 'Body']],
+    performance: [['bestScore', 'Nejlepší'], ['worstScore', 'Nejhorší'], ['averageLastFive', 'Forma 5']],
+    awards: [['awards.best', 'Borec kola'], ['awards.worst', 'Kopyto kola'], ['missed', 'Netipováno']],
+  }
+  const columns = statViews[statView]
 
   return (
     <div className="fantasy-preview">
@@ -217,7 +274,7 @@ function FantasyOverview() {
                   setSelectedRoundIndex(index)
                   setSort({ key: 'points', direction: 'desc' })
                 }}>
-                  <span className="round-tab-label">{index + 1}. kolo</span>
+                  <span className="round-tab-label">{fantasyRounds.indexOf(periodRounds[index]) + 1}. kolo</span>
                   <small>{date}.</small>
                 </button>
               ))}
@@ -229,7 +286,7 @@ function FantasyOverview() {
       <section className="panel fantasy-one-table">
         <div className="panel-head">
           <div>
-            <span className="fantasy-eyebrow">{selectedRound ? `Průběžné pořadí po ${selectedRoundIndex + 1}. kole` : 'Konečné pořadí období'}</span>
+            <span className="fantasy-eyebrow">{periodId === 'all' ? 'Celkové pořadí turnaje' : selectedRound ? `Průběžné pořadí po ${selectedTournamentRoundIndex + 1}. kole turnaje` : 'Konečné pořadí období'}</span>
             <h2>Pořadí · {period.label}{selectedRound ? ` · ${selectedRound[0]}.` : ''}</h2>
           </div>
           <span className="fantasy-round-count">{visibleRounds.length} kol</span>
@@ -248,35 +305,67 @@ function FantasyOverview() {
           ))}
         </div>
 
+        <div className="fantasy-stat-view" role="tablist" aria-label="Porovnání hráčů">
+          {[['standings', 'Pořadí'], ['performance', 'Výkon'], ['awards', 'Ocenění']].map(([key, label]) => (
+            <button key={key} type="button" role="tab" aria-selected={statView === key} className={`player-window-tab ${statView === key ? 'is-active' : ''}`} onClick={() => {
+              setStatView(key)
+              setSort({ key: statViews[key][0][0], direction: 'desc' })
+            }}>{label}</button>
+          ))}
+        </div>
+
         <div className="fantasy-table-head">
           <span>#</span>
           <span>±</span>
           <span>Hráč</span>
-          <button type="button" className={sort.key === 'average' ? 'is-active' : ''} aria-label={sortLabel('average', 'Průměr')} onClick={() => changeSort('average')}>Průměr<span aria-hidden="true">{sort.key === 'average' ? (sort.direction === 'desc' ? ' ↓' : ' ↑') : ''}</span></button>
-          <button type="button" className={sort.key === 'last' ? 'is-active' : ''} aria-label={sortLabel('last', selectedRound ? 'V kole' : 'Poslední')} onClick={() => changeSort('last')}>{selectedRound ? 'V kole' : 'Poslední'}<span aria-hidden="true">{sort.key === 'last' ? (sort.direction === 'desc' ? ' ↓' : ' ↑') : ''}</span></button>
-          <button type="button" className={sort.key === 'points' ? 'is-active' : ''} aria-label={sortLabel('points', 'Body')} onClick={() => changeSort('points')}>Body<span aria-hidden="true">{sort.key === 'points' ? (sort.direction === 'desc' ? ' ↓' : ' ↑') : ''}</span></button>
+          {columns.map(([key, label]) => <button key={key} type="button" className={sort.key === key ? 'is-active' : ''} aria-label={sortLabel(key, label)} onClick={() => changeSort(key)}>{label}<span aria-hidden="true">{sort.key === key ? (sort.direction === 'desc' ? ' ↓' : ' ↑') : ''}</span></button>)}
         </div>
         <div className="standings-list">
           {displayedStandings.map((player) => {
             const rank = rankByPlayer.get(player.name)
             const shift = visibleRounds.length > 1 ? (previousRankByPlayer.get(player.name) ?? rank) - rank : 0
             return (
-              <article className="stand-card fantasy-table-row" key={player.name}>
+              <article className={`stand-card fantasy-table-row ${selectedPlayerNick === player.nick ? 'is-selected' : ''}`} key={player.name} role="button" tabIndex={0} onClick={() => setSelectedPlayerNick(player.nick)} onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') setSelectedPlayerNick(player.nick)
+              }}>
                 <span className={`fantasy-rank is-rank-${rank}`}>{rank}</span>
                 <span className={`fantasy-rank-shift ${shift > 0 ? 'is-up' : shift < 0 ? 'is-down' : 'is-flat'}`} aria-label={shift > 0 ? `posun nahoru o ${shift}` : shift < 0 ? `posun dolů o ${Math.abs(shift)}` : 'beze změny'}>
                   {shift > 0 ? `↑${shift}` : shift < 0 ? `↓${Math.abs(shift)}` : '–'}
                 </span>
                 <span className="fantasy-player-name"><span>{player.name}</span><small>{player.nick}</small></span>
                 <span className="fantasy-row-metrics">
-                  <span className={`fantasy-cell fantasy-cell-average ${sort.key === 'average' ? 'is-active-sort' : ''}`}><small>Průměr</small>{player.average}</span>
-                  <span className={`fantasy-cell fantasy-cell-last ${sort.key === 'last' ? 'is-active-sort' : ''}`}><small>{selectedRound ? 'V kole' : 'Poslední'}</small>{Number.isFinite(player.last) ? <><span>{player.last}</span><span className="fantasy-points-unit"> b</span></> : 'N'}</span>
+                  {columns.slice(0, 2).map(([key, label]) => <span key={key} className={`fantasy-cell ${sort.key === key ? 'is-active-sort' : ''}`}><small>{label}</small>{Number.isFinite(getMetricValue(player, key)) ? getMetricValue(player, key) : 'N'}</span>)}
                 </span>
-                <span className={`fantasy-points ${sort.key === 'points' ? 'is-active-sort' : ''}`}><span>{player.points.toLocaleString('cs-CZ')}</span><span className="fantasy-points-unit"> b</span></span>
+                <span className={`fantasy-points ${sort.key === columns[2][0] ? 'is-active-sort' : ''}`}>{Number.isFinite(getMetricValue(player, columns[2][0])) ? getMetricValue(player, columns[2][0]) : 'N'}</span>
               </article>
             )
           })}
         </div>
       </section>
+
+      {selectedPlayer && selectedPlayerStats ? (
+        <section className="panel fantasy-player-detail">
+          <div className="panel-head">
+            <div>
+              <span className="fantasy-eyebrow">Statistiky hráče · {period.label}</span>
+              <h2>{selectedPlayer.name}</h2>
+            </div>
+            <button type="button" className="panel-close-button" onClick={() => setSelectedPlayerNick('')} aria-label="Zavřít statistiky hráče" title="Zavřít">×</button>
+          </div>
+          <div className="fantasy-stat-grid">
+            <div><span>Body</span><strong>{selectedPlayer.points.toLocaleString('cs-CZ')} b</strong></div>
+            <div><span>Odehraná kola</span><strong>{selectedPlayerStats.rounds}</strong></div>
+            <div><span>Průměr</span><strong>{selectedPlayer.average} b</strong></div>
+            <div><span>Průměr za 5 kol</span><strong>{selectedPlayerStats.averageLastFive} b</strong></div>
+            <div><span>Nejlepší výkon</span><strong>{selectedPlayerStats.best ?? 'N'} b</strong></div>
+            <div><span>Nejhorší výkon</span><strong>{selectedPlayerStats.worst ?? 'N'} b</strong></div>
+            <div><span>Netipováno</span><strong>{selectedPlayerStats.missed}×</strong></div>
+            <div><span>Borec kola</span><strong>{selectedPlayerStats.awards.best}×</strong></div>
+            <div><span>Kopyto kola</span><strong>{selectedPlayerStats.awards.worst}×</strong></div>
+            <div><span>Nejlepší pořadí</span><strong>{selectedPlayerStats.bestRank ? `${selectedPlayerStats.bestRank}.` : 'N'}</strong></div>
+          </div>
+        </section>
+      ) : null}
 
       <section className="panel rank-chart-panel fantasy-rank-chart-panel">
         <div className="panel-head">

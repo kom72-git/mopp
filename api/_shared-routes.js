@@ -40,17 +40,17 @@ async function loadMongoTournamentData(getDb, tournamentId, session) {
   const tournament = await database.collection("tournaments").findOne({ _id: new ObjectId(rawId) });
   if (!tournament) throw new Error("Mongo tournament not found");
 
-  const participantUserIds = (tournament.participantUserIds || []).filter((id) => ObjectId.isValid(id)).map((id) => new ObjectId(id));
-  const userQuery = participantUserIds.length > 0
-    ? { _id: { $in: participantUserIds }, status: "active" }
-    : { status: "active" };
+  const hasRoster = Array.isArray(tournament.tournamentPlayers);
+  const roster = hasRoster ? tournament.tournamentPlayers : [];
+  const participantUserIds = (hasRoster ? roster.map((player) => player?.userId) : tournament.participantUserIds || []).filter((id) => ObjectId.isValid(id)).map((id) => new ObjectId(id));
+  const userQuery = { _id: { $in: participantUserIds }, status: "active" };
   const users = await database.collection("users")
     .find(userQuery, { projection: { username: 1, displayName: 1, avatar: 1, entryFeePaid: 1 } })
     .sort({ createdAt: 1 })
     .toArray();
   const allowedUserIds = new Set(users.map((user) => user._id.toString()));
   const usersById = new Map(users.map((user) => [user._id.toString(), user]));
-  const longTermBankTotal = users.length * (Number(tournament.longTermContribution) || 0);
+  const displayNameForUser = (user) => roster.find((player) => player.userId === user._id.toString())?.name || user.displayName || user.username;
   const longTermBankPayouts = tournament.payouts || [];
   const matches = await database.collection("matches")
     .find({ tournamentId: tournament._id })
@@ -93,6 +93,14 @@ async function loadMongoTournamentData(getDb, tournamentId, session) {
     }
   }
 
+  const players = hasRoster
+    ? roster.map((player) => {
+      const user = usersById.get(player.userId);
+      return { id: player.id, userId: player.userId || null, name: player.name, avatar: user?.avatar || "", entryFeePaid: Boolean(player.entryFeePaid), points: pointsByUser.get(player.userId) || 0 };
+    })
+    : users.map((user) => ({ id: user._id.toString(), userId: user._id.toString(), name: displayNameForUser(user), avatar: user.avatar || "", entryFeePaid: Boolean(user.entryFeePaid), points: pointsByUser.get(user._id.toString()) || 0 }));
+  const longTermBankTotal = players.length * (Number(tournament.longTermContribution) || 0);
+
   return {
     tournament: {
       id: dbTournamentId(tournament._id),
@@ -115,9 +123,9 @@ async function loadMongoTournamentData(getDb, tournamentId, session) {
       source: "mongodb",
       logoSet: tournament.logoSet || null,
       favicon: tournament.favicon || "",
-      longTermBank: { totalAmount: longTermBankTotal, baseAmount: 0, contributionAmount: tournament.longTermContribution || 0, contributorCount: users.length, payouts: longTermBankPayouts, tieBreakHeading: "V případě shodného počtu bodů rozhoduje:", tieBreakRules: tournament.tieBreakRules?.length ? tournament.tieBreakRules : tieBreakRulesFor(tournament.tieBreakOrder || []) },
+      longTermBank: { totalAmount: longTermBankTotal, baseAmount: 0, contributionAmount: tournament.longTermContribution || 0, contributorCount: players.length, payouts: longTermBankPayouts, tieBreakHeading: "V případě shodného počtu bodů rozhoduje:", tieBreakRules: tournament.tieBreakRules?.length ? tournament.tieBreakRules : tieBreakRulesFor(tournament.tieBreakOrder || []) },
     },
-    players: users.map((user) => ({ id: user._id.toString(), name: user.displayName || user.username, avatar: user.avatar || "", entryFeePaid: Boolean(user.entryFeePaid), points: pointsByUser.get(user._id.toString()) || 0 })),
+    players,
     matches: matches.map((match) => ({
       id: match._id.toString(),
       round: match.round,
@@ -126,10 +134,9 @@ async function loadMongoTournamentData(getDb, tournamentId, session) {
       away: match.away,
       score: match.score || null,
       bank: match.bank ?? null,
-      selectedByName: usersById.get(String(match.selectedByUserId))?.displayName
-        || usersById.get(String(match.selectedByUserId))?.username
-        || match.selectedByUsername
-        || null,
+      selectedByName: usersById.has(String(match.selectedByUserId))
+        ? displayNameForUser(usersById.get(String(match.selectedByUserId)))
+        : match.selectedByUsername || null,
       updatedByAdminName: match.updatedByUsername || null,
       tipCount: eligibleTips.filter((tip) => tip.matchId.equals(match._id)).length,
       playerCount: users.length,
@@ -194,6 +201,7 @@ function registerSharedRoutes({ app, getDb, requireJwt, requireRole }) {
         roundLabel: tournament.roundLabel || "den",
         stageLabel: tournament.stageLabel || "",
         stages: tournament.stages || [],
+        tournamentPlayers: tournament.tournamentPlayers || [],
         scoring: tournament.scoring || { exact: 10, near: 5, winner: 3 },
         tieBreakOrder: tournament.tieBreakOrder || ["exact", "scored", "noBet"],
         heroLogo: tournament.heroLogo || "",
@@ -209,9 +217,9 @@ function registerSharedRoutes({ app, getDb, requireJwt, requireRole }) {
         status: tournament.status,
         longTermBank: (() => {
           const participantIds = (tournament.participantUserIds || []).map(String);
-          const contributorCount = participantIds.length > 0
-            ? activeUsers.filter((user) => participantIds.includes(user._id.toString())).length
-            : activeUsers.length;
+          const contributorCount = Array.isArray(tournament.tournamentPlayers)
+            ? tournament.tournamentPlayers.length
+            : activeUsers.filter((user) => participantIds.includes(user._id.toString())).length;
           const baseAmount = 0;
           const contributionAmount = Number(tournament.longTermContribution) || 0;
           return { totalAmount: baseAmount + contributorCount * contributionAmount, baseAmount, contributionAmount, contributorCount, payouts: tournament.payouts || [], tieBreakHeading: "V případě shodného počtu bodů rozhoduje:", tieBreakRules: tournament.tieBreakRules?.length ? tournament.tieBreakRules : tieBreakRulesFor(tournament.tieBreakOrder || []) };

@@ -187,7 +187,7 @@ async function importScheduleFromUrl(db, tournamentId, scheduleUrl) {
 }
 
 async function recalculateAutomaticBanks(db, tournamentId) {
-  const tournament = await db.collection("tournaments").findOne({ _id: tournamentId }, { projection: { participantUserIds: 1 } });
+  const tournament = await db.collection("tournaments").findOne({ _id: tournamentId }, { projection: { participantUserIds: 1, tournamentPlayers: 1 } });
   const matches = await db.collection("matches")
     .find({ tournamentId })
     .sort({ round: 1, startsAt: 1 })
@@ -206,11 +206,13 @@ async function recalculateAutomaticBanks(db, tournamentId) {
   }
 
   let carriedBank = 0;
-  const participantUserIds = (tournament?.participantUserIds ?? []).filter((id) => ObjectId.isValid(id));
-  const playerQuery = participantUserIds.length > 0
-    ? { _id: { $in: participantUserIds.map((id) => new ObjectId(id)) }, status: "active" }
-    : { status: "active" };
-  const playerCount = await db.collection("users").countDocuments(playerQuery);
+  const hasRoster = Array.isArray(tournament?.tournamentPlayers);
+  const participantUserIds = hasRoster
+    ? tournament.tournamentPlayers.map((player) => player?.userId).filter((id) => ObjectId.isValid(id))
+    : (tournament?.participantUserIds ?? []).filter((id) => ObjectId.isValid(id));
+  const playerCount = hasRoster
+    ? tournament.tournamentPlayers.length
+    : await db.collection("users").countDocuments({ _id: { $in: participantUserIds.map((id) => new ObjectId(id)) }, status: "active" });
 
   for (const match of matches) {
     if (match.bankSource === "manual") {
@@ -240,11 +242,15 @@ async function recalculateAutomaticBanks(db, tournamentId) {
 }
 
 async function getTournamentParticipants(db, tournament) {
-  const participantIds = (tournament.participantUserIds ?? []).filter((id) => ObjectId.isValid(String(id))).map(String);
-  const query = participantIds.length > 0
-    ? { _id: { $in: participantIds.map((id) => new ObjectId(id)) }, status: "active" }
-    : { status: "active" };
-  return db.collection("users").find(query, { projection: { username: 1, displayName: 1, createdAt: 1 } }).sort({ createdAt: 1 }).toArray();
+  const hasRoster = Array.isArray(tournament.tournamentPlayers);
+  const participantIds = hasRoster
+    ? tournament.tournamentPlayers.map((player) => player?.userId).filter((id) => ObjectId.isValid(String(id))).map(String)
+    : (tournament.participantUserIds ?? []).filter((id) => ObjectId.isValid(String(id))).map(String);
+  const query = { _id: { $in: participantIds.map((id) => new ObjectId(id)) }, status: "active" };
+  const users = await db.collection("users").find(query, { projection: { username: 1, displayName: 1, createdAt: 1 } }).toArray();
+  if (!hasRoster) return users.sort((first, second) => first.createdAt - second.createdAt);
+  const usersById = new Map(users.map((user) => [user._id.toString(), user]));
+  return participantIds.map((userId) => usersById.get(userId)).filter(Boolean);
 }
 
 async function createMatchesFromScheduleSelection(db, tournament, selection, participants) {
@@ -767,7 +773,7 @@ function createAuthRoutes({ app, getDb }) {
   app.get("/api/admin/tournaments", requireJwt, requireRole("admin"), async (req, res) => {
     try {
       const tournaments = await getDb().collection("tournaments")
-        .find({}, { projection: { name: 1, participantUserIds: 1, matchSelections: 1, subtitle: 1, shortLabel: 1, tabTitle: 1, season: 1, plannedMatchCount: 1, selectionMatchCount: 1, scheduleUrl: 1, status: 1, roundLabel: 1, startDate: 1, endDate: 1, stageLabel: 1, stages: 1, scoring: 1, tieBreakOrder: 1, tieBreakRules: 1, heroLogo: 1, logoSet: 1, favicon: 1, entryFee: 1, longTermContribution: 1, longTermBank: 1, payouts: 1, createdAt: 1 } })
+        .find({}, { projection: { name: 1, participantUserIds: 1, tournamentPlayers: 1, matchSelections: 1, subtitle: 1, shortLabel: 1, tabTitle: 1, season: 1, plannedMatchCount: 1, selectionMatchCount: 1, scheduleUrl: 1, status: 1, roundLabel: 1, startDate: 1, endDate: 1, stageLabel: 1, stages: 1, scoring: 1, tieBreakOrder: 1, tieBreakRules: 1, heroLogo: 1, logoSet: 1, favicon: 1, entryFee: 1, longTermContribution: 1, longTermBank: 1, payouts: 1, createdAt: 1 } })
         .sort({ createdAt: -1 })
         .toArray();
       return res.json({ ok: true, tournaments });
@@ -806,6 +812,10 @@ function createAuthRoutes({ app, getDb }) {
       const participantUserIds = Array.isArray(req.body?.participantUserIds)
         ? req.body.participantUserIds.filter((id) => ObjectId.isValid(String(id))).map((id) => String(id))
         : [];
+      const tournamentPlayers = Array.isArray(req.body?.tournamentPlayers)
+        ? req.body.tournamentPlayers.slice(0, 100).map((player) => ({ id: String(player?.id ?? "").trim(), userId: ObjectId.isValid(String(player?.userId ?? "")) ? String(player.userId) : "", name: String(player?.name ?? "").trim().slice(0, 60), entryFeePaid: Boolean(player?.entryFeePaid) })).filter((player) => player.id && player.name)
+        : [];
+      const rosterUserIds = tournamentPlayers.map((player) => player.userId).filter(Boolean);
       const matchSelections = Array.isArray(req.body?.matchSelections) ? req.body.matchSelections : [];
       const subtitle = String(req.body?.subtitle ?? "").trim();
       const shortLabel = String(req.body?.shortLabel ?? "").trim();
@@ -850,7 +860,7 @@ function createAuthRoutes({ app, getDb }) {
       if (duplicate) return res.status(409).json({ ok: false, message: "Turnaj se stejným názvem a sezónou už existuje." });
 
       const now = new Date();
-      const tournament = { name, participantUserIds, matchSelections, subtitle, shortLabel, tabTitle, season, plannedMatchCount, selectionMatchCount, scheduleUrl, status, roundLabel: roundLabel || "den", startDate, endDate, stageLabel, stages, scoring, tieBreakOrder, tieBreakRules, heroLogo, logoSet, favicon, entryFee, longTermContribution, longTermBank, payouts, createdAt: now, updatedAt: now };
+      const tournament = { name, participantUserIds: tournamentPlayers.length ? rosterUserIds : participantUserIds, tournamentPlayers, matchSelections, subtitle, shortLabel, tabTitle, season, plannedMatchCount, selectionMatchCount, scheduleUrl, status, roundLabel: roundLabel || "den", startDate, endDate, stageLabel, stages, scoring, tieBreakOrder, tieBreakRules, heroLogo, logoSet, favicon, entryFee, longTermContribution, longTermBank, payouts, createdAt: now, updatedAt: now };
       const result = await getDb().collection("tournaments").insertOne(tournament);
       return res.status(201).json({ ok: true, tournament: { ...tournament, _id: result.insertedId } });
     } catch {
@@ -865,6 +875,10 @@ function createAuthRoutes({ app, getDb }) {
       const participantUserIds = Array.isArray(req.body?.participantUserIds)
         ? req.body.participantUserIds.filter((id) => ObjectId.isValid(String(id))).map((id) => String(id))
         : [];
+      const tournamentPlayers = Array.isArray(req.body?.tournamentPlayers)
+        ? req.body.tournamentPlayers.slice(0, 100).map((player) => ({ id: String(player?.id ?? "").trim(), userId: ObjectId.isValid(String(player?.userId ?? "")) ? String(player.userId) : "", name: String(player?.name ?? "").trim().slice(0, 60), entryFeePaid: Boolean(player?.entryFeePaid) })).filter((player) => player.id && player.name)
+        : [];
+      const rosterUserIds = tournamentPlayers.map((player) => player.userId).filter(Boolean);
       const matchSelections = Array.isArray(req.body?.matchSelections) ? req.body.matchSelections : [];
       const subtitle = String(req.body?.subtitle ?? "").trim();
       const shortLabel = String(req.body?.shortLabel ?? "").trim();
@@ -900,8 +914,8 @@ function createAuthRoutes({ app, getDb }) {
 
       const result = await getDb().collection("tournaments").findOneAndUpdate(
         { _id: new ObjectId(tournamentId) },
-        { $set: { name, participantUserIds, matchSelections, subtitle, shortLabel, tabTitle, season, plannedMatchCount, selectionMatchCount, scheduleUrl, status, roundLabel, startDate, endDate, stageLabel, stages, scoring, tieBreakOrder, tieBreakRules, heroLogo, logoSet, favicon, entryFee, longTermContribution, longTermBank, payouts, updatedAt: new Date() } },
-        { returnDocument: "after", projection: { name: 1, participantUserIds: 1, matchSelections: 1, subtitle: 1, shortLabel: 1, tabTitle: 1, season: 1, plannedMatchCount: 1, selectionMatchCount: 1, scheduleUrl: 1, status: 1, roundLabel: 1, startDate: 1, endDate: 1, stageLabel: 1, stages: 1, scoring: 1, tieBreakOrder: 1, tieBreakRules: 1, heroLogo: 1, logoSet: 1, favicon: 1, entryFee: 1, longTermContribution: 1, longTermBank: 1, payouts: 1, createdAt: 1 } },
+        { $set: { name, participantUserIds: tournamentPlayers.length ? rosterUserIds : participantUserIds, tournamentPlayers, matchSelections, subtitle, shortLabel, tabTitle, season, plannedMatchCount, selectionMatchCount, scheduleUrl, status, roundLabel, startDate, endDate, stageLabel, stages, scoring, tieBreakOrder, tieBreakRules, heroLogo, logoSet, favicon, entryFee, longTermContribution, longTermBank, payouts, updatedAt: new Date() } },
+        { returnDocument: "after", projection: { name: 1, participantUserIds: 1, tournamentPlayers: 1, matchSelections: 1, subtitle: 1, shortLabel: 1, tabTitle: 1, season: 1, plannedMatchCount: 1, selectionMatchCount: 1, scheduleUrl: 1, status: 1, roundLabel: 1, startDate: 1, endDate: 1, stageLabel: 1, stages: 1, scoring: 1, tieBreakOrder: 1, tieBreakRules: 1, heroLogo: 1, logoSet: 1, favicon: 1, entryFee: 1, longTermContribution: 1, longTermBank: 1, payouts: 1, createdAt: 1 } },
       );
       if (!result) return res.status(404).json({ ok: false, message: "Turnaj nebyl nalezen." });
       await recalculateAutomaticBanks(getDb(), result._id);

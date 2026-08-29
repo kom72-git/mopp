@@ -45,7 +45,7 @@ function ManualDateInput({ value, onChange, ...props }) {
   return <ManualDateTimeInput {...props} dateOnly value={value ? `${value}T00:00` : ''} onChange={(nextValue) => onChange(nextValue ? nextValue.slice(0, 10) : '')} />
 }
 
-export default function AdminPanel({ selectedTournamentId: selectedTournamentKey, accountNotificationCount = 0, onAccountNotificationsRead, onTournamentMembershipChanged, onTournamentUpdated, onMatchesChanged, onEntryFeeChanged, onClose }) {
+export default function AdminPanel({ selectedTournamentId: selectedTournamentKey, accountNotificationCount = 0, onAccountNotificationsRead, onTournamentMembershipChanged, onTournamentUpdated, onMatchesChanged, onClose }) {
   const [counts, setCounts] = useState(null)
   const [users, setUsers] = useState([])
   const [tipBreakdown, setTipBreakdown] = useState([])
@@ -60,6 +60,8 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
   const [openSection, setOpenSection] = useState('')
   const [form, setForm] = useState({ name: '', subtitle: '', shortLabel: '', season: '', plannedMatchCount: '', selectionMatchCount: '1', scheduleUrl: '', status: 'draft', roundLabel: '', startDate: '', heroLogo: '', logoSet: 'elh', favicon: '', entryFee: '10', longTermContribution: '' })
   const [participantUserIds, setParticipantUserIds] = useState([])
+  const [tournamentPlayers, setTournamentPlayers] = useState([])
+  const [isAccountPickerOpen, setIsAccountPickerOpen] = useState(false)
   const [matchSelections, setMatchSelections] = useState([])
   const [stages, setStages] = useState([])
   const [scoring, setScoring] = useState({ exact: '10', near: '5', winner: '3' })
@@ -183,6 +185,7 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
             longTermContribution: String(activeTournament.longTermContribution ?? ''),
           })
           setParticipantUserIds(activeTournament.participantUserIds?.map(String) ?? [])
+          setTournamentPlayers(activeTournament.tournamentPlayers ?? (activeTournament.participantUserIds?.map((userId) => ({ id: String(userId), userId: String(userId), name: '' })) ?? []))
           setMatchSelections(activeTournament.matchSelections ?? [])
           setStages(activeTournament.stages || [])
           setScoring({ exact: String(activeTournament.scoring?.exact ?? 10), near: String(activeTournament.scoring?.near ?? 5), winner: String(activeTournament.scoring?.winner ?? 3) })
@@ -234,8 +237,14 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
     })
   }
 
-  const saveParticipantIds = async (nextParticipantUserIds, changedUserId = '') => {
+  const saveTournamentPlayers = async (nextTournamentPlayers, changedPlayerId = '') => {
     if (!editingTournamentId) return
+    const normalizedTournamentPlayers = nextTournamentPlayers.map((player) => ({
+      ...player,
+      name: player.name || users.find((user) => String(user._id) === player.userId)?.displayName || users.find((user) => String(user._id) === player.userId)?.username || '',
+    }))
+    const nextParticipantUserIds = normalizedTournamentPlayers.map((player) => player.userId).filter(Boolean)
+    setTournamentPlayers(normalizedTournamentPlayers)
     setParticipantUserIds(nextParticipantUserIds)
     setIsBusy(true)
     setMessage('')
@@ -244,19 +253,19 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ ...form, participantUserIds: nextParticipantUserIds, matchSelections, stages, scoring, tieBreakOrder, tieBreakRules, payouts }),
+        body: JSON.stringify({ ...form, participantUserIds: nextParticipantUserIds, tournamentPlayers: normalizedTournamentPlayers, matchSelections, stages, scoring, tieBreakOrder, tieBreakRules, payouts }),
       })
       const payload = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(payload.message || 'Členství se nepodařilo uložit')
       setTournaments((current) => current.map((tournament) => tournament._id === editingTournamentId ? payload.tournament : tournament))
       await onTournamentUpdated?.({ ...payload.tournament, id: `db:${payload.tournament._id}` })
       onTournamentMembershipChanged?.()
-      if (changedUserId) {
-        setParticipantMessages((current) => ({ ...current, [changedUserId]: { text: 'Uloženo', isError: false } }))
-        window.setTimeout(() => setParticipantMessages((current) => ({ ...current, [changedUserId]: null })), 2500)
+      if (changedPlayerId) {
+        setParticipantMessages((current) => ({ ...current, [changedPlayerId]: { text: 'Uloženo', isError: false } }))
+        window.setTimeout(() => setParticipantMessages((current) => ({ ...current, [changedPlayerId]: null })), 2500)
       }
     } catch (error) {
-      if (changedUserId) setParticipantMessages((current) => ({ ...current, [changedUserId]: { text: error.message, isError: true } }))
+      if (changedPlayerId) setParticipantMessages((current) => ({ ...current, [changedPlayerId]: { text: error.message, isError: true } }))
       else setMessage(error.message)
     } finally {
       setIsBusy(false)
@@ -264,37 +273,26 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
   }
 
   const toggleParticipant = (userId) => {
-    const activeIds = users.filter((item) => item.status === 'active').map((item) => String(item._id))
-    const selectedIds = participantUserIds.length === 0 ? activeIds : participantUserIds
-    const next = selectedIds.includes(userId)
-      ? selectedIds.filter((id) => id !== userId)
-      : [...selectedIds, userId]
-    const finalIds = next.length === activeIds.length ? [] : next
+    const user = users.find((item) => String(item._id) === userId)
+    const currentPlayer = tournamentPlayers.find((player) => player.userId === userId)
+    const nextTournamentPlayers = currentPlayer
+      ? tournamentPlayers.filter((player) => player.id !== currentPlayer.id)
+      : [...tournamentPlayers, { id: userId, userId, name: user?.displayName || user?.username || '', entryFeePaid: false }]
     setParticipantMessages((current) => ({ ...current, [userId]: { text: 'Ukládám…', isError: false } }))
-    saveParticipantIds(finalIds, userId)
+    saveTournamentPlayers(nextTournamentPlayers, userId)
   }
 
-  const toggleEntryFeePaid = async (user) => {
-    const nextValue = !Boolean(user.entryFeePaid)
-    setIsBusy(true)
-    setMessage('')
-    try {
-      const response = await fetch(`/api/admin/users/${encodeURIComponent(user._id)}/entry-fee`, {
-        method: 'PATCH',
-        headers: { 'content-type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ entryFeePaid: nextValue }),
-      })
-      const payload = await response.json().catch(() => ({}))
-      if (!response.ok) throw new Error(payload.message || 'Vstupné se nepodařilo upravit')
-      setUsers((current) => current.map((item) => item._id === user._id ? { ...item, entryFeePaid: nextValue } : item))
-      onEntryFeeChanged?.(nextValue)
-      setMessage(payload.message)
-    } catch (error) {
-      setMessage(error.message)
-    } finally {
-      setIsBusy(false)
-    }
+  const updateTournamentPlayer = (playerId, changes) => {
+    setTournamentPlayers((current) => current.map((player) => player.id === playerId ? { ...player, ...changes } : player))
+  }
+
+  const moveTournamentPlayer = (playerId, direction) => {
+    const index = tournamentPlayers.findIndex((player) => player.id === playerId)
+    const nextIndex = index + direction
+    if (index < 0 || nextIndex < 0 || nextIndex >= tournamentPlayers.length) return
+    const nextTournamentPlayers = [...tournamentPlayers]
+    ;[nextTournamentPlayers[index], nextTournamentPlayers[nextIndex]] = [nextTournamentPlayers[nextIndex], nextTournamentPlayers[index]]
+    saveTournamentPlayers(nextTournamentPlayers)
   }
 
   const deleteAccount = async (user) => {
@@ -330,7 +328,7 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ ...form, participantUserIds, matchSelections: nextSelections, stages, scoring, tieBreakOrder, tieBreakRules, payouts }),
+        body: JSON.stringify({ ...form, participantUserIds, tournamentPlayers, matchSelections: nextSelections, stages, scoring, tieBreakOrder, tieBreakRules, payouts }),
       })
       const payload = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(payload.message || 'Výběr se nepodařilo uložit')
@@ -354,7 +352,7 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
         method: editingTournamentId ? 'PATCH' : 'POST',
         headers: { 'content-type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ ...form, participantUserIds, stages, scoring, tieBreakOrder, tieBreakRules, payouts }),
+        body: JSON.stringify({ ...form, participantUserIds, tournamentPlayers, stages, scoring, tieBreakOrder, tieBreakRules, payouts }),
       })
       const payload = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(payload.message || 'Turnaj se nepodařilo založit')
@@ -366,6 +364,7 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
       }
       setForm({ name: '', subtitle: '', shortLabel: '', season: '', plannedMatchCount: '', selectionMatchCount: '1', scheduleUrl: '', status: 'draft', roundLabel: '', startDate: '', heroLogo: '', logoSet: 'elh', favicon: '', entryFee: '10', longTermContribution: '' })
       setParticipantUserIds([])
+      setTournamentPlayers([])
       setStages([])
       setPayouts(['', '', '', '', ''])
       setScoring({ exact: '10', near: '5', winner: '3' })
@@ -503,6 +502,7 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
       longTermContribution: String(tournament.longTermContribution ?? ''),
     })
     setParticipantUserIds(tournament.participantUserIds?.map(String) ?? [])
+    setTournamentPlayers(tournament.tournamentPlayers ?? (tournament.participantUserIds?.map((userId) => ({ id: String(userId), userId: String(userId), name: '' })) ?? []))
     setMatchSelections(tournament.matchSelections ?? [])
     setStages(tournament.stages || [])
     setScoring({ exact: String(tournament.scoring?.exact ?? 10), near: String(tournament.scoring?.near ?? 5), winner: String(tournament.scoring?.winner ?? 3) })
@@ -515,6 +515,7 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
   const startNewTournament = () => {
     setEditingTournamentId('')
     setParticipantUserIds([])
+    setTournamentPlayers([])
     setForm({ name: '', subtitle: '', shortLabel: '', season: '', plannedMatchCount: '', selectionMatchCount: '1', scheduleUrl: '', status: 'draft', roundLabel: '', startDate: '', heroLogo: '', logoSet: 'elh', favicon: '', entryFee: '10', longTermContribution: '' })
     setScoring({ exact: '10', near: '5', winner: '3' })
     setTieBreakOrder(['exact', 'scored', 'noBet'])
@@ -544,7 +545,7 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
         <span>Zápasy <strong>{counts.matches}</strong></span>
         <span>Tipy <strong>{counts.tips}</strong></span>
       </div>
-      <div className="admin-section">
+      <div className="admin-section admin-basics-section">
         {sectionButton('basics', 'Základ turnaje')}
         {openSection === 'basics' ? (
           <>
@@ -777,13 +778,70 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
           </div>
         ) : null}
       </div>
+      <div className="admin-section admin-roster-section">
+        {sectionButton('roster', 'Soupiska turnaje')}
+        {openSection === 'roster' ? (
+          <div className="admin-tournament-list">
+            <p className="admin-panel-note">Pořadí v soupisce určuje, kdo vybírá zápas. Hráči bez propojeného účtu se do střídání nezařadí.</p>
+            {tournamentPlayers.length > 0 ? <div className="admin-roster-labels"><span>Jméno v turnaji</span><span>Poplatek</span></div> : null}
+            {tournamentPlayers.map((player, index) => {
+              const account = users.find((user) => String(user._id) === player.userId)
+              const displayName = player.name || account?.displayName || account?.username || ''
+              return (
+                <div className="admin-roster-item" key={player.id}>
+                  <div className="admin-roster-order-actions">
+                    {index > 0 ? <button type="button" className="admin-roster-order-button" onClick={() => moveTournamentPlayer(player.id, -1)} aria-label={`Posunout ${displayName} výš`} title="Posunout výš">↑</button> : <span aria-hidden="true" />}
+                    {index < tournamentPlayers.length - 1 ? <button type="button" className="admin-roster-order-button" onClick={() => moveTournamentPlayer(player.id, 1)} aria-label={`Posunout ${displayName} níž`} title="Posunout níž">↓</button> : <span aria-hidden="true" />}
+                  </div>
+                  <div className="admin-tournament-row admin-roster-player">
+                    <span className="admin-roster-position">{index + 1}.</span>
+                    {account?.avatar ? <img className="user-avatar user-avatar-admin" src={account.avatar} alt="" /> : <span className="user-avatar user-avatar-admin is-placeholder" aria-hidden="true">{displayName.slice(0, 1).toUpperCase() || '?'}</span>}
+                    <div className="admin-field">
+                      <input value={displayName} onChange={(event) => updateTournamentPlayer(player.id, { name: event.target.value })} onBlur={() => saveTournamentPlayers(tournamentPlayers)} aria-label={`Jméno v turnaji pro ${displayName || `hráče ${index + 1}`}`} maxLength={60} />
+                    </div>
+                    <label className="admin-member-checkbox">
+                      <input type="checkbox" checked={Boolean(player.entryFeePaid)} onChange={(event) => {
+                        const nextTournamentPlayers = tournamentPlayers.map((item) => item.id === player.id ? { ...item, entryFeePaid: event.target.checked } : item)
+                        saveTournamentPlayers(nextTournamentPlayers)
+                      }} />
+                      <span className={`admin-roster-payment${player.entryFeePaid ? ' is-paid' : ''}`}>{player.entryFeePaid ? 'Uhrazeno' : 'Neuhrazeno'}</span>
+                    </label>
+                    <button type="button" className="admin-roster-remove" onClick={() => saveTournamentPlayers(tournamentPlayers.filter((item) => item.id !== player.id))} aria-label={`Odebrat ${displayName} ze soupisky`} title="Odebrat ze soupisky">×</button>
+                  </div>
+                </div>
+              )
+            })}
+            <div className="admin-form-actions">
+              <div className="admin-roster-picker">
+                <button type="button" className="auth-button" onClick={() => setIsAccountPickerOpen((current) => !current)} disabled={!editingTournamentId}>+ existující účet</button>
+                {isAccountPickerOpen ? (
+                  <div className="admin-roster-picker-list">
+                    {users.filter((user) => user.status === 'active' && !tournamentPlayers.some((player) => player.userId === String(user._id))).map((user) => (
+                      <button key={user._id} type="button" className="admin-roster-picker-option" onClick={() => {
+                        toggleParticipant(String(user._id))
+                        setIsAccountPickerOpen(false)
+                      }}>
+                        {user.avatar ? <img className="user-avatar user-avatar-admin" src={user.avatar} alt="" /> : <span className="user-avatar user-avatar-admin is-placeholder" aria-hidden="true">{(user.displayName || user.username).slice(0, 1).toUpperCase()}</span>}
+                        <span>{user.displayName || user.username}</span>
+                      </button>
+                    ))}
+                    {users.every((user) => user.status !== 'active' || tournamentPlayers.some((player) => player.userId === String(user._id))) ? <span className="admin-panel-note">Žádný další účet není k dispozici.</span> : null}
+                  </div>
+                ) : null}
+              </div>
+              <button type="button" className="auth-button" onClick={() => saveTournamentPlayers([...tournamentPlayers, { id: `guest-${Date.now()}-${tournamentPlayers.length}`, userId: '', name: 'Nový hráč', entryFeePaid: false }])} disabled={!editingTournamentId}>+ hráč bez účtu</button>
+            </div>
+            {!editingTournamentId ? <p className="admin-panel-note">Nejdřív založ nebo vyber MongoDB turnaj.</p> : null}
+          </div>
+        ) : null}
+      </div>
       <div className="admin-section">
         {sectionButton('selections', 'Kdo vybírá zápas')}
         {openSection === 'selections' ? (
           <div className="admin-tournament-form">
             <p className="admin-field-help">Pořadí vychází z aktivních členů. Až hráč pošle výběr, založ zápas v sekci Zápasy; tady se pak automaticky zobrazí u příslušného kola.</p>
             {(() => {
-              const activeUsers = users.filter((user) => user.status === 'active' && (participantUserIds.length === 0 || participantUserIds.includes(String(user._id))))
+              const activeUsers = participantUserIds.map((userId) => users.find((user) => String(user._id) === userId)).filter((user) => user?.status === 'active')
               const rounds = [...new Set(matches.map((match) => Number(match.round)).filter(Number.isFinite))].sort((a, b) => a - b)
               if (activeUsers.length === 0) return <p className="admin-panel-note">Nejdřív vyber členy turnaje.</p>
               const displayedRounds = rounds.length > 0 ? rounds : [1]
@@ -806,37 +864,17 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
           </div>
         ) : null}
       </div>
-      <div className="admin-section">
+      <div className="admin-section admin-accounts-section">
         {sectionButton('users', 'Účty')}
         {openSection === 'users' ? (
           <div className="admin-tournament-list">
-            <p className="admin-panel-note">Zaškrtni hráče, kteří hrají právě vybraný turnaj. Výběr ovlivní počet hráčů a bank.</p>
+            <p className="admin-panel-note">Globální účty slouží pro přihlášení. Hráče a úhrady pro turnaj spravuj v soupisce turnaje.</p>
             {users.map((user) => (
               <div className="admin-tournament-row" key={user._id}>
                 {user.avatar ? <img className="user-avatar user-avatar-admin" src={user.avatar} alt="" /> : <span className="user-avatar user-avatar-admin is-placeholder" aria-hidden="true">{(user.displayName || user.username).slice(0, 1).toUpperCase()}</span>}
                 <strong>{user.displayName || user.username}</strong>
                 {participantMessages[String(user._id)] ? <span className={`admin-member-message${participantMessages[String(user._id)].isError ? ' is-error' : ''}`}>{participantMessages[String(user._id)].text}</span> : null}
-                <span>{user.role === 'admin' ? 'admin' : 'hráč'} · {user.status} · {tipBreakdown.find((item) => item.username === user.username)?.count ?? 0} tipů</span>
-                {user.status === 'active' ? (
-                  <label className="admin-member-checkbox">
-                    <input
-                      type="checkbox"
-                      checked={participantUserIds.length === 0 || participantUserIds.includes(String(user._id))}
-                      onChange={() => toggleParticipant(String(user._id))}
-                    />
-                    <span>Hraje</span>
-                  </label>
-                ) : null}
-                {user.status === 'active' ? (
-                  <label className="admin-member-checkbox">
-                    <input
-                      type="checkbox"
-                      checked={Boolean(user.entryFeePaid)}
-                      onChange={() => toggleEntryFeePaid(user)}
-                    />
-                    <span>Uhrazeno</span>
-                  </label>
-                ) : null}
+                <span>{user.role === 'admin' ? 'admin' : 'hráč'}{user.status !== 'active' ? ' · čeká na ověření' : ''}</span>
                 <button type="button" className="auth-button is-danger" onClick={() => deleteAccount(user)} disabled={isBusy}>Smazat účet</button>
               </div>
             ))}

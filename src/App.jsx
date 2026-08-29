@@ -561,22 +561,20 @@ function AuthPanel({ selectedTournamentId, selectedTournament, onTournamentUpdat
     await onTipUpdated?.()
   }
 
-  const updateCurrentUserEntryFee = (entryFeePaid) => {
-    setUser((current) => (current ? { ...current, entryFeePaid: Boolean(entryFeePaid) } : current))
-  }
-
   const paymentSummary = useMemo(() => {
     const plannedRounds = Number(selectedTournament?.plannedMatchCount ?? selectedTournament?.seasonMatchesCount ?? selectedTournament?.selectionMatchCount ?? 0)
     const entryFeePerMatch = Number(selectedTournament?.entryFee ?? selectedTournament?.entryFeePerMatch ?? 0)
     const longTermContribution = Number(selectedTournament?.longTermContribution ?? selectedTournament?.longTermBankContribution ?? 0)
     const total = plannedRounds * entryFeePerMatch + longTermContribution
 
-    if (!Number.isFinite(plannedRounds) || !Number.isFinite(entryFeePerMatch) || !Number.isFinite(longTermContribution) || total <= 0) {
-      return null
-    }
-
+    if (!Number.isFinite(plannedRounds) || !Number.isFinite(entryFeePerMatch) || !Number.isFinite(longTermContribution) || total <= 0) return null
     return { plannedRounds, entryFeePerMatch, longTermContribution, total }
   }, [selectedTournament])
+
+  const tournamentMembership = useMemo(
+    () => selectedTournament?.tournamentPlayers?.find((player) => player.userId === user?.id) ?? null,
+    [selectedTournament, user?.id],
+  )
 
   return (
     <div ref={authPanelRef} className={`auth-panel ${user ? 'is-authenticated' : 'is-guest'}`}>
@@ -592,7 +590,7 @@ function AuthPanel({ selectedTournamentId, selectedTournament, onTournamentUpdat
             {user.role === 'admin' ? <button type="button" className={`auth-button auth-admin-button ${activePanel === 'admin' ? 'is-active' : ''}`} onClick={() => setActivePanel((current) => current === 'admin' ? '' : 'admin')}>Admin{pendingAccountNotificationCount > 0 ? <span className="admin-notification-badge" title={`${pendingAccountNotificationCount} nových hráčů`}><img className="notification-bell admin-notification-bell" src="/icons/notifikace.png" alt="" /><span>{pendingAccountNotificationCount}</span></span> : null}</button> : null}
           </div>
           <button type="button" className="auth-button auth-logout" onClick={logout}>Odhlásit</button>
-          {activePanel === 'admin' && user.role === 'admin' ? <AdminPanel selectedTournamentId={selectedTournamentId} accountNotificationCount={pendingAccountNotificationCount} onAccountNotificationsRead={markAccountNotificationsRead} onTournamentMembershipChanged={handleTournamentMembershipChanged} onTournamentUpdated={onTournamentUpdated} onMatchesChanged={onMatchesChanged} onEntryFeeChanged={updateCurrentUserEntryFee} onClose={() => setActivePanel('')} /> : null}
+          {activePanel === 'admin' && user.role === 'admin' ? <AdminPanel selectedTournamentId={selectedTournamentId} accountNotificationCount={pendingAccountNotificationCount} onAccountNotificationsRead={markAccountNotificationsRead} onTournamentMembershipChanged={handleTournamentMembershipChanged} onTournamentUpdated={onTournamentUpdated} onMatchesChanged={onMatchesChanged} onClose={() => setActivePanel('')} /> : null}
           {activePanel === 'tips' ? <PlayerTipsPanel selectedTournamentId={selectedTournamentId} scheduleRefreshKey={scheduleRefreshKey} hasSelectionNotification={hasSelectionNotification} onSelectionUpdated={() => setHasSelectionNotification(false)} onTipUpdated={onTipUpdated} onClose={() => setActivePanel('')} /> : null}
           {activePanel === 'account' ? (
             <div className="auth-form auth-account-form">
@@ -613,27 +611,27 @@ function AuthPanel({ selectedTournamentId, selectedTournament, onTournamentUpdat
                 <button type="submit" className="auth-submit" disabled={isBusy}>Uložit profil</button>
                 {profileMessage ? <p className="auth-message" role="alert">{profileMessage}</p> : null}
               </form>
-              <form>
-                <h3>Vstupné</h3>
-                <div className="account-payment-status">
-                  <div className="account-payment-status-head">
-                    <span className="account-payment-status-label">Stav</span>
-                    <span className={`player-entry-fee-badge${user?.entryFeePaid ? '' : ' is-pending'}`}>
-                      {user?.entryFeePaid ? 'Uhrazeno' : 'Neuhrazeno'}
-                    </span>
-                  </div>
-                  {paymentSummary ? (
-                    <div className="payment-summary-grid" aria-live="polite">
-                      <span><strong>Počet kol:</strong> {paymentSummary.plannedRounds}</span>
-                      <span><strong>Vklad / kolo:</strong> {paymentSummary.entryFeePerMatch} Kč</span>
-                      <span><strong>Dlouhodobý bank:</strong> {paymentSummary.longTermContribution} Kč</span>
-                      <span><strong>Celkem:</strong> {paymentSummary.total} Kč</span>
+              {String(selectedTournamentId ?? '').startsWith('db:') ? (
+                <form>
+                  <h3>Vstupné</h3>
+                  <div className="account-payment-status">
+                    <div className="account-payment-status-head">
+                      <span className="account-payment-status-label">{selectedTournament?.title || selectedTournament?.label || 'Vybraný turnaj'}</span>
+                      <span className={`player-entry-fee-badge${tournamentMembership?.entryFeePaid ? '' : ' is-pending'}`}>
+                        {tournamentMembership ? (tournamentMembership.entryFeePaid ? 'Uhrazeno' : 'Neuhrazeno') : 'Nejsi v soupisce'}
+                      </span>
                     </div>
-                  ) : (
-                    <p className="account-payment-status-note">Žádné údaje o turnaji zatím nejsou k dispozici.</p>
-                  )}
-                </div>
-              </form>
+                    {paymentSummary ? (
+                      <div className="payment-summary-grid" aria-live="polite">
+                        <span><strong>Počet kol:</strong> {paymentSummary.plannedRounds}</span>
+                        <span><strong>Vklad / kolo:</strong> {paymentSummary.entryFeePerMatch} Kč</span>
+                        <span><strong>Dlouhodobý bank:</strong> {paymentSummary.longTermContribution} Kč</span>
+                        <span><strong>Celkem:</strong> {paymentSummary.total} Kč</span>
+                      </div>
+                    ) : null}
+                  </div>
+                </form>
+              ) : null}
               <form onSubmit={changeAccountPassword}>
                 <h3>Změna hesla</h3>
                 <input name="currentPassword" type="password" value={accountForm.currentPassword} onChange={updateAccountField} placeholder="Současné heslo" autoComplete="current-password" required />

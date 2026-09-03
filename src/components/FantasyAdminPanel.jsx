@@ -19,7 +19,7 @@ export default function FantasyAdminPanel({ onImported, onClose }) {
   const [tournaments, setTournaments] = useState([])
   const [tournamentLogos, setTournamentLogos] = useState([])
   const [selectedTournamentId, setSelectedTournamentId] = useState('')
-  const [form, setForm] = useState({ name: 'Fantasy ELH 2026/27', season: '2026/27', fantasyMonths: '', status: 'draft', heroLogo: '/fantasy.png', favicon: '', fantasyPeriodRankLabel: 'Měsíční', fantasyMoneyRules: { entryFee: '', periodPayouts: '500;200', longTermPool: '', longTermPayouts: '' }, tieBreakRules: [] })
+  const [form, setForm] = useState({ name: 'Fantasy ELH 2026/27', season: '2026/27', startDate: '', fantasyMonths: '', status: 'draft', heroLogo: '/fantasy.png', favicon: '', fantasyPeriodRankLabel: 'Měsíční', fantasyMoneyRules: { entryFee: '', periodPayouts: '500;200', longTermPool: '', longTermPayouts: '' }, tieBreakRules: [] })
   const [playersText, setPlayersText] = useState('')
   const [periodsText, setPeriodsText] = useState('Září;9\nŘíjen;10\nListopad;11\nProsinec;12\nLeden;1\nÚnor;2\nBřezen;3')
   const [rounds, setRounds] = useState([])
@@ -56,7 +56,7 @@ export default function FantasyAdminPanel({ onImported, onClose }) {
 
   useEffect(() => {
     if (!selectedTournament) return
-    setForm({ name: selectedTournament.name || '', season: selectedTournament.season || '', status: selectedTournament.status || 'draft', fantasyMonths: selectedTournament.fantasyMonths ?? '', heroLogo: selectedTournament.heroLogo || '/fantasy.png', favicon: selectedTournament.favicon || '', fantasyPeriodRankLabel: selectedTournament.fantasyPeriodRankLabel || 'Měsíční', fantasyMoneyRules: { entryFee: selectedTournament.fantasyMoneyRules?.entryFee ?? '', periodPayouts: selectedTournament.fantasyMoneyRules?.periodPayouts ?? '500;200', longTermPool: selectedTournament.fantasyMoneyRules?.longTermPool ?? '', longTermPayouts: selectedTournament.fantasyMoneyRules?.longTermPayouts ?? '' }, tieBreakRules: selectedTournament.tieBreakRules || [] })
+    setForm({ name: selectedTournament.name || '', season: selectedTournament.season || '', startDate: selectedTournament.startDate || '', fantasyMonths: selectedTournament.fantasyMonths ?? '', status: selectedTournament.status || 'draft', heroLogo: selectedTournament.heroLogo || '/fantasy.png', favicon: selectedTournament.favicon || '', fantasyPeriodRankLabel: selectedTournament.fantasyPeriodRankLabel || 'Měsíční', fantasyMoneyRules: { entryFee: selectedTournament.fantasyMoneyRules?.entryFee ?? '', periodPayouts: selectedTournament.fantasyMoneyRules?.periodPayouts ?? '500;200', longTermPool: selectedTournament.fantasyMoneyRules?.longTermPool ?? '', longTermPayouts: selectedTournament.fantasyMoneyRules?.longTermPayouts ?? '' }, tieBreakRules: selectedTournament.tieBreakRules || [] })
   }, [selectedTournament?._id])
 
   useEffect(() => {
@@ -325,6 +325,7 @@ export default function FantasyAdminPanel({ onImported, onClose }) {
         <form className="admin-tournament-form" onSubmit={createTournament}>
           <label className="admin-field"><span className="admin-field-label">Název</span><input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} required /></label>
           <label className="admin-field"><span className="admin-field-label">Sezóna</span><input value={form.season} onChange={(event) => setForm((current) => ({ ...current, season: event.target.value }))} /></label>
+          <label className="admin-field"><span className="admin-field-label">Začátek turnaje</span><input type="date" value={form.startDate} onChange={(event) => setForm((current) => ({ ...current, startDate: event.target.value }))} /></label>
           <label className="admin-field"><span className="admin-field-label">Počet herních měsíců</span><input type="number" min="1" value={form.fantasyMonths} onChange={(event) => setForm((current) => ({ ...current, fantasyMonths: event.target.value }))} /></label>
           <div className="admin-tournament-form-row">
             <label className="admin-field"><span className="admin-field-label">Logo turnaje</span><select value={form.heroLogo} onChange={(event) => setForm((current) => ({ ...current, heroLogo: event.target.value }))}><option value="">Bez loga</option><option value="/fantasy.png">Fantasy</option>{tournamentLogos.map((logo) => <option key={logo.path} value={logo.path}>{logo.name}</option>)}</select></label>

@@ -332,7 +332,7 @@ function registerSharedRoutes({ app, getDb, requireJwt, requireRole }) {
   app.get("/api/fantasy/tournaments", async (req, res) => {
     try {
       const tournaments = await getDb().collection("tournaments").find({ productType: "fantasy" }).sort({ createdAt: -1 }).toArray();
-      return res.json({ ok: true, tournaments: tournaments.map((tournament) => ({ _id: tournament._id.toString(), name: tournament.name, shortLabel: tournament.shortLabel || tournament.name, season: tournament.season, status: tournament.status, fantasyMonths: tournament.fantasyMonths || null, heroLogo: tournament.heroLogo || "", favicon: tournament.favicon || "", fantasyPeriodRankLabel: tournament.fantasyPeriodRankLabel || "Měsíční", fantasyMoneyRules: tournament.fantasyMoneyRules || null, tieBreakRules: tournament.tieBreakRules || [] })) });
+      return res.json({ ok: true, tournaments: tournaments.map((tournament) => ({ _id: tournament._id.toString(), name: tournament.name, shortLabel: tournament.shortLabel || tournament.name, season: tournament.season, status: tournament.status, startDate: tournament.startDate || "", fantasyMonths: tournament.fantasyMonths || null, heroLogo: tournament.heroLogo || "", favicon: tournament.favicon || "", fantasyPeriodRankLabel: tournament.fantasyPeriodRankLabel || "Měsíční", fantasyMoneyRules: tournament.fantasyMoneyRules || null, tieBreakRules: tournament.tieBreakRules || [] })) });
     } catch {
       return res.status(500).json({ ok: false, message: "Fantasy turnaje se nepodařilo načíst." });
     }
@@ -342,6 +342,7 @@ function registerSharedRoutes({ app, getDb, requireJwt, requireRole }) {
     try {
       const name = String(req.body?.name ?? "").trim();
       const season = String(req.body?.season ?? "").trim();
+      const startDate = String(req.body?.startDate ?? "").trim();
       const fantasyMonths = Math.max(0, Number(req.body?.fantasyMonths) || 0);
       const heroLogo = String(req.body?.heroLogo ?? "").trim();
       const favicon = String(req.body?.favicon ?? "").trim();
@@ -350,7 +351,7 @@ function registerSharedRoutes({ app, getDb, requireJwt, requireRole }) {
       const tieBreakRules = Array.isArray(req.body?.tieBreakRules) ? req.body.tieBreakRules.map((rule) => String(rule ?? "").trim()).filter(Boolean).slice(0, 5) : [];
       if (name.length < 2 || name.length > 100) return res.status(400).json({ ok: false, message: "Název turnaje musí mít 2 až 100 znaků." });
       const now = new Date();
-      const tournament = { name, shortLabel: name, tabTitle: name, subtitle: "Fantasy", season, status: "draft", productType: "fantasy", fantasyMonths, heroLogo, favicon, fantasyPeriodRankLabel, fantasyMoneyRules, tieBreakRules, roundLabel: "kolo", createdAt: now, updatedAt: now };
+      const tournament = { name, shortLabel: name, tabTitle: name, subtitle: "Fantasy", season, startDate, status: "draft", productType: "fantasy", fantasyMonths, heroLogo, favicon, fantasyPeriodRankLabel, fantasyMoneyRules, tieBreakRules, roundLabel: "kolo", createdAt: now, updatedAt: now };
       const result = await getDb().collection("tournaments").insertOne(tournament);
       return res.status(201).json({ ok: true, tournament: { ...tournament, _id: result.insertedId.toString() }, message: "Fantasy turnaj byl založen." });
     } catch {
@@ -363,6 +364,7 @@ function registerSharedRoutes({ app, getDb, requireJwt, requireRole }) {
       const rawTournamentId = String(req.params.id ?? "").trim();
       const name = String(req.body?.name ?? "").trim();
       const season = String(req.body?.season ?? "").trim();
+      const startDate = String(req.body?.startDate ?? "").trim();
       const fantasyMonths = Math.max(0, Number(req.body?.fantasyMonths) || 0);
       const heroLogo = String(req.body?.heroLogo ?? "").trim();
       const favicon = String(req.body?.favicon ?? "").trim();
@@ -375,7 +377,7 @@ function registerSharedRoutes({ app, getDb, requireJwt, requireRole }) {
       if (!["draft", "active", "finished"].includes(status)) return res.status(400).json({ ok: false, message: "Neplatný stav turnaje." });
       const result = await getDb().collection("tournaments").findOneAndUpdate(
         { _id: new ObjectId(rawTournamentId), productType: "fantasy" },
-        { $set: { name, shortLabel: name, tabTitle: name, season, status, fantasyMonths, heroLogo, favicon, fantasyPeriodRankLabel, fantasyMoneyRules, tieBreakRules, updatedAt: new Date() } },
+        { $set: { name, shortLabel: name, tabTitle: name, subtitle: "Fantasy", season, status, startDate, fantasyMonths, heroLogo, favicon, fantasyPeriodRankLabel, fantasyMoneyRules, tieBreakRules, updatedAt: new Date() } },
         { returnDocument: "after" },
       );
       if (!result) return res.status(404).json({ ok: false, message: "Fantasy turnaj nebyl nalezen." });

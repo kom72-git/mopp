@@ -42,6 +42,7 @@ function getStoredTournamentId() {
     const queryTournamentId = new URLSearchParams(window.location.search).get('tournament')
     if (queryTournamentId) return queryTournamentId
     const storedTournamentId = window.localStorage.getItem('mopp-selected-tournament')
+    if (String(storedTournamentId ?? '').startsWith('db:')) return defaultTournamentId
     if (/^db:[a-f0-9]{24}$/i.test(String(storedTournamentId ?? ''))) return storedTournamentId
     return getTournamentById(storedTournamentId)?.id ?? defaultTournamentId
   } catch {
@@ -1105,6 +1106,7 @@ async function fetchFantasyTournamentCatalog() {
     status: tournament.status,
     productType: 'fantasy',
     season: tournament.season,
+    startDate: tournament.startDate || '',
     fantasyMonths: tournament.fantasyMonths || 0,
     heroLogo: tournament.heroLogo || '',
     favicon: tournament.favicon || '',
@@ -1217,7 +1219,7 @@ function App() {
   const [isTournamentMenuOpen, setIsTournamentMenuOpen] = useState(false)
   const [isTournamentMenuHovered, setIsTournamentMenuHovered] = useState(false)
   const [tournamentMenuProduct, setTournamentMenuProduct] = useState('tips')
-  const [activeProduct, setActiveProduct] = useState(() => initialTournamentId.startsWith('db:') ? 'fantasy' : 'tips')
+  const [activeProduct, setActiveProduct] = useState('tips')
   const [fantasyRefreshKey, setFantasyRefreshKey] = useState(0)
   const [viewStateByTournament, setViewStateByTournament] = useState({})
   useEffect(() => {
@@ -1288,6 +1290,15 @@ function App() {
       .then((nextTournaments) => {
         if (cancelled) return
         setAvailableTournaments(nextTournaments)
+        const hasExplicitTournament = new URLSearchParams(window.location.search).has('tournament')
+        setSelectedTournamentId((current) => {
+          if (hasExplicitTournament) return current
+          const activeTipsTournament = nextTournaments.find((tournament) => tournament.productType === 'tips' && tournament.status === 'active')
+            ?? nextTournaments.find((tournament) => tournament.productType === 'tips' && tournament.status !== 'finished')
+          if (activeTipsTournament && (current === defaultTournamentId || !nextTournaments.some((tournament) => tournament.id === current && tournament.productType === 'tips'))) return activeTipsTournament.id
+          if (nextTournaments.some((tournament) => tournament.id === current)) return current
+          return activeTipsTournament?.id || defaultTournamentId
+        })
       })
       .catch(() => {})
         fetchFantasyTournamentCatalog()

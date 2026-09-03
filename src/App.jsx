@@ -286,7 +286,7 @@ function createCroppedAvatar(source, cropArea) {
   })
 }
 
-function AuthPanel({ activeProduct, selectedTournamentId, selectedTournament, onFantasyUpdated, onTournamentUpdated, onMatchesChanged, onTipUpdated }) {
+function AuthPanel({ activeProduct, selectedTournamentId, selectedTournament, selectedFantasyTournament, fantasyRefreshKey = 0, onFantasyUpdated, onTournamentUpdated, onMatchesChanged, onTipUpdated }) {
   const [user, setUser] = useState(null)
   const [mode, setMode] = useState('login')
   const [isOpen, setIsOpen] = useState(false)
@@ -304,6 +304,7 @@ function AuthPanel({ activeProduct, selectedTournamentId, selectedTournament, on
   const [hasSelectionNotification, setHasSelectionNotification] = useState(false)
   const [pendingAccountNotificationCount, setPendingAccountNotificationCount] = useState(0)
   const [scheduleRefreshKey, setScheduleRefreshKey] = useState(0)
+  const [fantasyAccountPlayer, setFantasyAccountPlayer] = useState(null)
   const authPanelRef = useRef(null)
 
   useEffect(() => {
@@ -577,6 +578,23 @@ function AuthPanel({ activeProduct, selectedTournamentId, selectedTournament, on
     [selectedTournament, user?.id],
   )
 
+  useEffect(() => {
+    if (activeProduct !== 'fantasy' || !user || !selectedTournamentId?.startsWith('db:') || selectedFantasyTournament?.status === 'finished') {
+      setFantasyAccountPlayer(null)
+      return
+    }
+    let cancelled = false
+    fetch(`/api/fantasy/data?tournamentId=${encodeURIComponent(selectedTournamentId)}`)
+      .then((response) => response.ok ? response.json() : null)
+      .then((payload) => {
+        if (cancelled || !payload?.ok) return
+        const names = [user.username, user.displayName].map((value) => String(value || '').trim().toLowerCase()).filter(Boolean)
+        setFantasyAccountPlayer((payload.players || []).find((player) => names.includes(String(player.nick || '').toLowerCase()) || names.includes(String(player.name || '').toLowerCase())) || null)
+      })
+      .catch(() => setFantasyAccountPlayer(null))
+    return () => { cancelled = true }
+  }, [activeProduct, fantasyRefreshKey, selectedFantasyTournament?.status, selectedTournamentId, user?.displayName, user?.id, user?.username])
+
   return (
     <div ref={authPanelRef} className={`auth-panel ${user ? 'is-authenticated' : 'is-guest'}`}>
       {user ? (
@@ -613,7 +631,7 @@ function AuthPanel({ activeProduct, selectedTournamentId, selectedTournament, on
                 <button type="submit" className="auth-submit" disabled={isBusy}>Uložit profil</button>
                 {profileMessage ? <p className="auth-message" role="alert">{profileMessage}</p> : null}
               </form>
-              {String(selectedTournamentId ?? '').startsWith('db:') ? (
+              {activeProduct === 'tips' && String(selectedTournamentId ?? '').startsWith('db:') ? (
                 <form>
                   <h3>Vstupné</h3>
                   <div className="account-payment-status">
@@ -631,6 +649,17 @@ function AuthPanel({ activeProduct, selectedTournamentId, selectedTournament, on
                         <span><strong>Celkem:</strong> {paymentSummary.total} Kč</span>
                       </div>
                     ) : null}
+                  </div>
+                </form>
+              ) : null}
+              {activeProduct === 'fantasy' && fantasyAccountPlayer ? (
+                <form>
+                  <h3>Vstupné</h3>
+                  <div className="account-payment-status">
+                    <div className="account-payment-status-head">
+                      <span className="account-payment-status-label">{selectedFantasyTournament?.title || selectedFantasyTournament?.label || 'Fantasy turnaj'}</span>
+                      <span className={`player-entry-fee-badge${fantasyAccountPlayer.entryFeePaid ? '' : ' is-pending'}`}>{fantasyAccountPlayer.entryFeePaid ? 'Uhrazeno' : 'Neuhrazeno'}</span>
+                    </div>
                   </div>
                 </form>
               ) : null}
@@ -1076,7 +1105,11 @@ async function fetchFantasyTournamentCatalog() {
     status: tournament.status,
     productType: 'fantasy',
     season: tournament.season,
+    fantasyMonths: tournament.fantasyMonths || 0,
+    heroLogo: tournament.heroLogo || '',
+    favicon: tournament.favicon || '',
     fantasyPeriodRankLabel: tournament.fantasyPeriodRankLabel || 'Měsíční',
+    fantasyMoneyRules: tournament.fantasyMoneyRules || null,
   }))
   const hasArchivedSeason = dbTournaments.some((tournament) => tournament.season === '2024/25' || tournament.shortLabel === 'ELH 2024/25')
   return sortTournamentsBySchedule([...(hasArchivedSeason ? [] : fallbackFantasyTournaments), ...dbTournaments])
@@ -1204,6 +1237,7 @@ function App() {
     () => availableFantasyTournaments.find((tournament) => tournament.id === selectedTournamentId) ?? availableFantasyTournaments[0] ?? null,
     [availableFantasyTournaments, selectedTournamentId],
   )
+  const activeFantasyTournamentId = selectedFantasyTournament?.id ?? selectedTournamentId
   const roundLabel = selectedTournament?.roundLabel ?? 'den'
   const longTermBank = selectedTournament?.longTermBank ?? null
   const remainderRecipientByMatchId = useMemo(
@@ -1212,10 +1246,11 @@ function App() {
   )
 
   useEffect(() => {
-    const faviconHref = selectedTournament?.favicon
+    const activeTournament = activeProduct === 'fantasy' ? selectedFantasyTournament : selectedTournament
+    const faviconHref = activeTournament?.favicon
     if (!faviconHref || typeof document === 'undefined') return
 
-    const cacheBustedHref = `${faviconHref}?t=${encodeURIComponent(selectedTournament?.id ?? '')}`
+    const cacheBustedHref = `${faviconHref}?t=${encodeURIComponent(activeTournament?.id ?? '')}`
     const rels = ['icon', 'shortcut icon']
 
     for (const rel of rels) {
@@ -1226,17 +1261,18 @@ function App() {
         document.head.appendChild(link)
       }
     }
-  }, [selectedTournament?.favicon, selectedTournament?.id])
+  }, [activeProduct, selectedFantasyTournament?.favicon, selectedFantasyTournament?.id, selectedTournament?.favicon, selectedTournament?.id])
 
   useEffect(() => {
     if (typeof document === 'undefined') return
     if (activeProduct === 'fantasy') {
-      document.title = 'MOPP | Fantasy | ELH 2024/25'
+      const suffix = selectedFantasyTournament?.shortLabel ?? selectedFantasyTournament?.title ?? selectedFantasyTournament?.label ?? 'Fantasy'
+      document.title = `MOPP | Fantasy | ${suffix}`
       return
     }
     const suffix = selectedTournament?.shortLabel ?? selectedTournament?.title ?? selectedTournament?.label ?? 'MOPP'
     document.title = `MOPP | Tipovačka | ${suffix}`
-  }, [activeProduct, selectedTournament])
+  }, [activeProduct, selectedFantasyTournament, selectedTournament])
 
   useEffect(() => {
     const closeTournamentMenu = (event) => {
@@ -2611,7 +2647,7 @@ function App() {
 
         <figure className="hero-logo-wrap">
           {activeProduct === 'fantasy' ? (
-            <img className="hero-logo fantasy-hero-logo" src="/fantasy.png" alt="Tipsport Fantasy" />
+            <img className="hero-logo fantasy-hero-logo" src={selectedFantasyTournament?.heroLogo || '/fantasy.png'} alt={`Logo turnaje ${selectedFantasyTournament?.title ?? selectedFantasyTournament?.label ?? 'Fantasy'}`} />
           ) : (
             <button type="button" className="hero-logo-button" onClick={handleLogoClick}>
               <img
@@ -2707,11 +2743,11 @@ function App() {
               ) : null}
             </div>
           </div>
-          <AuthPanel activeProduct={activeProduct} selectedTournamentId={selectedTournamentId} selectedTournament={selectedTournament} onFantasyUpdated={async () => { await refreshFantasyTournaments(); setFantasyRefreshKey((current) => current + 1) }} onTournamentUpdated={handleTournamentUpdated} onMatchesChanged={handleMatchesChanged} onTipUpdated={handleTipUpdated} />
+          <AuthPanel activeProduct={activeProduct} selectedTournamentId={activeProduct === 'fantasy' ? activeFantasyTournamentId : selectedTournamentId} selectedTournament={selectedTournament} selectedFantasyTournament={selectedFantasyTournament} fantasyRefreshKey={fantasyRefreshKey} onFantasyUpdated={async (nextTournamentId) => { await refreshFantasyTournaments(); if (nextTournamentId) { setSelectedTournamentId(nextTournamentId); setActiveProduct('fantasy') }; setFantasyRefreshKey((current) => current + 1) }} onTournamentUpdated={handleTournamentUpdated} onMatchesChanged={handleMatchesChanged} onTipUpdated={handleTipUpdated} />
         </div>
       </nav>
 
-      {activeProduct === 'fantasy' ? <FantasyOverview selectedTournamentId={selectedTournamentId} refreshKey={fantasyRefreshKey} /> : (
+      {activeProduct === 'fantasy' ? <FantasyOverview selectedTournamentId={activeFantasyTournamentId} selectedTournament={selectedFantasyTournament} refreshKey={fantasyRefreshKey} /> : (
       <>
       <section className="panel controls-panel">
         <div className="panel-head">

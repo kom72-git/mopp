@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react'
 
 function parsePlayers(text) {
   return text.split('\n').map((line) => {
-    const [name, nick] = line.split(';').map((part) => part?.trim())
-    return { name, nick: nick || name }
+    const [name, nick, paid] = line.split(';').map((part) => part?.trim())
+    return { name, nick: nick || name, entryFeePaid: paid === '1' || String(paid).toLowerCase() === 'ano' }
   }).filter((player) => player.name)
 }
 
@@ -17,8 +17,9 @@ function parsePeriods(text) {
 
 export default function FantasyAdminPanel({ onImported, onClose }) {
   const [tournaments, setTournaments] = useState([])
+  const [tournamentLogos, setTournamentLogos] = useState([])
   const [selectedTournamentId, setSelectedTournamentId] = useState('')
-  const [form, setForm] = useState({ name: 'Fantasy ELH 2026/27', season: '2026/27', status: 'draft', fantasyPeriodRankLabel: 'Měsíční' })
+  const [form, setForm] = useState({ name: 'Fantasy ELH 2026/27', season: '2026/27', fantasyMonths: '', status: 'draft', heroLogo: '/fantasy.png', favicon: '', fantasyPeriodRankLabel: 'Měsíční', fantasyMoneyRules: { entryFee: '', periodPayouts: '500;200', longTermPool: '', longTermPayouts: '' }, tieBreakRules: [] })
   const [playersText, setPlayersText] = useState('')
   const [periodsText, setPeriodsText] = useState('Září;9\nŘíjen;10\nListopad;11\nProsinec;12\nLeden;1\nÚnor;2\nBřezen;3')
   const [rounds, setRounds] = useState([])
@@ -47,11 +48,15 @@ export default function FantasyAdminPanel({ onImported, onClose }) {
 
   useEffect(() => {
     loadTournaments().catch((error) => setMessage(error.message))
+    fetch('/api/admin/assets/tournament-logos', { credentials: 'include' })
+      .then((response) => response.ok ? response.json() : null)
+      .then((payload) => setTournamentLogos(payload?.logos ?? []))
+      .catch(() => setTournamentLogos([]))
   }, [])
 
   useEffect(() => {
     if (!selectedTournament) return
-    setForm({ name: selectedTournament.name || '', season: selectedTournament.season || '', status: selectedTournament.status || 'draft', fantasyPeriodRankLabel: selectedTournament.fantasyPeriodRankLabel || 'Měsíční' })
+    setForm({ name: selectedTournament.name || '', season: selectedTournament.season || '', status: selectedTournament.status || 'draft', fantasyMonths: selectedTournament.fantasyMonths ?? '', heroLogo: selectedTournament.heroLogo || '/fantasy.png', favicon: selectedTournament.favicon || '', fantasyPeriodRankLabel: selectedTournament.fantasyPeriodRankLabel || 'Měsíční', fantasyMoneyRules: { entryFee: selectedTournament.fantasyMoneyRules?.entryFee ?? '', periodPayouts: selectedTournament.fantasyMoneyRules?.periodPayouts ?? '500;200', longTermPool: selectedTournament.fantasyMoneyRules?.longTermPool ?? '', longTermPayouts: selectedTournament.fantasyMoneyRules?.longTermPayouts ?? '' }, tieBreakRules: selectedTournament.tieBreakRules || [] })
   }, [selectedTournament?._id])
 
   useEffect(() => {
@@ -60,7 +65,7 @@ export default function FantasyAdminPanel({ onImported, onClose }) {
       .then((response) => response.ok ? response.json() : null)
       .then((payload) => {
         if (!payload?.ok) return
-        setPlayersText((payload.players ?? []).map((player) => `${player.name};${player.nick}`).join('\n'))
+        setPlayersText((payload.players ?? []).map((player) => `${player.name};${player.nick};${player.entryFeePaid ? 1 : 0}`).join('\n'))
         const loadedPeriods = (payload.periods ?? []).filter((period) => period.id !== 'all')
         if (loadedPeriods.length > 0) setPeriodsText(loadedPeriods.map((period) => `${period.label};${(period.months ?? []).join(',')}`).join('\n'))
         const activePeriodId = payoutPeriodId || periods[0]?.id || 'all'
@@ -112,7 +117,7 @@ export default function FantasyAdminPanel({ onImported, onClose }) {
       await loadTournaments()
       setSelectedTournamentId(payload.tournament._id)
       setMessage(payload.message)
-      onImported?.()
+      notifyUpdated(payload.tournament._id)
     } catch (error) {
       setMessage(error.message)
     } finally {
@@ -135,7 +140,7 @@ export default function FantasyAdminPanel({ onImported, onClose }) {
       if (!response.ok) throw new Error(payload.message || 'Turnaj se nepodařilo uložit')
       await loadTournaments()
       setMessage(payload.message)
-      onImported?.()
+      notifyUpdated()
     } catch (error) {
       setMessage(error.message)
     } finally {
@@ -154,7 +159,7 @@ export default function FantasyAdminPanel({ onImported, onClose }) {
       setSelectedTournamentId('')
       await loadTournaments()
       setMessage(payload.message)
-      onImported?.()
+      notifyUpdated('')
     } catch (error) {
       setMessage(error.message)
     } finally {
@@ -176,7 +181,7 @@ export default function FantasyAdminPanel({ onImported, onClose }) {
       const payload = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(payload.message || 'Hráče se nepodařilo uložit')
       setMessage(payload.message)
-      onImported?.()
+      notifyUpdated()
     } catch (error) {
       setMessage(error.message)
     } finally {
@@ -198,7 +203,7 @@ export default function FantasyAdminPanel({ onImported, onClose }) {
       const payload = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(payload.message || 'Období se nepodařilo uložit')
       setMessage(payload.message)
-      onImported?.()
+      notifyUpdated()
     } catch (error) {
       setMessage(error.message)
     } finally {
@@ -223,7 +228,7 @@ export default function FantasyAdminPanel({ onImported, onClose }) {
       const roundsPayload = await roundsResponse.json().catch(() => ({}))
       if (roundsResponse.ok) setRounds(roundsPayload.rounds ?? [])
       setMessage(payload.message)
-      onImported?.()
+      notifyUpdated()
     } catch (error) {
       setMessage(error.message)
     } finally {
@@ -244,7 +249,7 @@ export default function FantasyAdminPanel({ onImported, onClose }) {
       if (roundsResponse.ok) setRounds(roundsPayload.rounds ?? [])
       selectRound('new')
       setMessage(payload.message)
-      onImported?.()
+      notifyUpdated()
     } catch (error) {
       setMessage(error.message)
     } finally {
@@ -266,7 +271,7 @@ export default function FantasyAdminPanel({ onImported, onClose }) {
       const payload = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(payload.message || 'Výplaty se nepodařilo uložit')
       setMessage(payload.message)
-      onImported?.()
+      notifyUpdated()
     } catch (error) {
       setMessage(error.message)
     } finally {
@@ -288,7 +293,7 @@ export default function FantasyAdminPanel({ onImported, onClose }) {
       const payload = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(payload.message || 'Bank se nepodařilo uložit')
       setMessage(payload.message)
-      onImported?.()
+      notifyUpdated()
     } catch (error) {
       setMessage(error.message)
     } finally {
@@ -302,6 +307,9 @@ export default function FantasyAdminPanel({ onImported, onClose }) {
       <span aria-hidden="true">{openSection === section ? '−' : '+'}</span>
     </button>
   )
+
+  const notifyUpdated = (tournamentId = selectedTournamentId) => onImported?.(tournamentId ? `db:${tournamentId}` : undefined)
+  const updateMoneyRule = (key, value) => setForm((current) => ({ ...current, fantasyMoneyRules: { ...current.fantasyMoneyRules, [key]: value } }))
 
   return (
     <section className="admin-panel" aria-label="Fantasy admin prostředí">
@@ -317,6 +325,12 @@ export default function FantasyAdminPanel({ onImported, onClose }) {
         <form className="admin-tournament-form" onSubmit={createTournament}>
           <label className="admin-field"><span className="admin-field-label">Název</span><input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} required /></label>
           <label className="admin-field"><span className="admin-field-label">Sezóna</span><input value={form.season} onChange={(event) => setForm((current) => ({ ...current, season: event.target.value }))} /></label>
+          <label className="admin-field"><span className="admin-field-label">Počet herních měsíců</span><input type="number" min="1" value={form.fantasyMonths} onChange={(event) => setForm((current) => ({ ...current, fantasyMonths: event.target.value }))} /></label>
+          <div className="admin-tournament-form-row">
+            <label className="admin-field"><span className="admin-field-label">Logo turnaje</span><select value={form.heroLogo} onChange={(event) => setForm((current) => ({ ...current, heroLogo: event.target.value }))}><option value="">Bez loga</option><option value="/fantasy.png">Fantasy</option>{tournamentLogos.map((logo) => <option key={logo.path} value={logo.path}>{logo.name}</option>)}</select></label>
+            <label className="admin-field"><span className="admin-field-label">Favicon (ikona v záložce)</span><select value={form.favicon} onChange={(event) => setForm((current) => ({ ...current, favicon: event.target.value }))}><option value="">Výchozí</option><option value="/icons/puck.svg">Hokejový puk</option><option value="/icons/ball.svg">Fotbalový míč</option></select></label>
+          </div>
+          {form.heroLogo ? <img className="admin-tournament-logo-preview" src={form.heroLogo} alt="Náhled loga Fantasy turnaje" /> : null}
           <label className="admin-field"><span className="admin-field-label">Stav</span><select value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}><option value="draft">Připravuje se</option><option value="active">Probíhá</option><option value="finished">Ukončeno</option></select></label>
           <label className="admin-field"><span className="admin-field-label">Popisek období Tipsportu</span><select value={form.fantasyPeriodRankLabel} onChange={(event) => setForm((current) => ({ ...current, fantasyPeriodRankLabel: event.target.value }))}><option value="Měsíční">Měsíční</option><option value="Týdenní">Týdenní</option></select></label>
           <div className="admin-form-actions">
@@ -325,11 +339,46 @@ export default function FantasyAdminPanel({ onImported, onClose }) {
             <button type="button" className="auth-button is-danger" onClick={deleteTournament} disabled={isBusy || !selectedTournamentId}>Smazat vybraný</button>
           </div>
           <label className="admin-field"><span className="admin-field-label">Fantasy turnaj</span><select value={selectedTournamentId} onChange={(event) => setSelectedTournamentId(event.target.value)}>{tournaments.map((tournament) => <option key={tournament._id} value={tournament._id}>{tournament.shortLabel || tournament.name}</option>)}</select></label>
-          <label className="admin-field"><span className="admin-field-label">Hráči</span><textarea value={playersText} onChange={(event) => setPlayersText(event.target.value)} rows="5" placeholder="Jméno;nick" /></label>
+          <label className="admin-field"><span className="admin-field-label">Hráči</span><textarea value={playersText} onChange={(event) => setPlayersText(event.target.value)} rows="5" placeholder="Jméno;nick;zaplaceno 0/1" /><small>Formát: Jméno;nick;0 nebo 1.</small></label>
           <button type="button" className="auth-submit" onClick={savePlayers} disabled={isBusy || !selectedTournamentId}>Uložit hráče</button>
-          <label className="admin-field"><span className="admin-field-label">Období</span><textarea value={periodsText} onChange={(event) => setPeriodsText(event.target.value)} rows="4" placeholder="Únor & březen;2,3" /><small>Formát: název;měsíce. Sloučení dvou měsíců: Únor & březen;2,3.</small></label>
+          <label className="admin-field"><span className="admin-field-label">Měsíc</span><textarea value={periodsText} onChange={(event) => setPeriodsText(event.target.value)} rows="4" placeholder="Únor & březen;2,3" /><small>Formát: název;měsíce. Sloučení dvou měsíců: Únor & březen;2,3.</small></label>
           <button type="button" className="auth-submit" onClick={savePeriods} disabled={isBusy || !selectedTournamentId}>Uložit období</button>
         </form>
+        ) : null}
+      </div>
+      <div className="admin-section">
+        {sectionButton('money', 'Peníze a bank')}
+        {openSection === 'money' ? (
+        <div className="admin-tournament-form">
+          <p className="admin-field-help">Částky výplat piš podle pořadí a odděl středníkem, např. 500;200.</p>
+          <div className="admin-tournament-form-row">
+            <label className="admin-field"><span className="admin-field-label">Měsíční příspěvek hráče</span><input type="number" min="0" value={form.fantasyMoneyRules.entryFee} onChange={(event) => updateMoneyRule('entryFee', event.target.value)} /></label>
+            <label className="admin-field"><span className="admin-field-label">Vyplácené částky za měsíc</span><input value={form.fantasyMoneyRules.periodPayouts} onChange={(event) => updateMoneyRule('periodPayouts', event.target.value)} placeholder="500;200" /></label>
+          </div>
+          <div className="admin-tournament-form-row">
+            <label className="admin-field"><span className="admin-field-label">Měsíční příspěvek do dlouhodobého banku</span><input type="number" min="0" value={form.fantasyMoneyRules.longTermPool} onChange={(event) => updateMoneyRule('longTermPool', event.target.value)} /></label>
+            <label className="admin-field"><span className="admin-field-label">Výplaty z dlouhodobého banku</span><input value={form.fantasyMoneyRules.longTermPayouts} onChange={(event) => updateMoneyRule('longTermPayouts', event.target.value)} placeholder="1100;500" /></label>
+          </div>
+          <button type="button" className="auth-submit" onClick={saveTournament} disabled={isBusy || !selectedTournamentId}>Uložit peníze a bank</button>
+        </div>
+        ) : null}
+      </div>
+      <div className="admin-section">
+        {sectionButton('rules', 'Pravidla')}
+        {openSection === 'rules' ? (
+          <div className="admin-tournament-form">
+            <p className="admin-field-help">Textová pravidla se zobrazí na stránce Fantasy. Maximálně pět pravidel pro jeden turnaj.</p>
+            {(form.tieBreakRules || []).map((rule, index) => (
+              <div className="admin-stage-row" key={`fantasy-rule-${index}`}>
+                <input value={rule} onChange={(event) => setForm((current) => ({ ...current, tieBreakRules: current.tieBreakRules.map((item, itemIndex) => itemIndex === index ? event.target.value : item) }))} placeholder={`Pravidlo ${index + 1}`} aria-label={`Pravidlo ${index + 1}`} />
+                <button type="button" className="auth-button is-danger" onClick={() => setForm((current) => ({ ...current, tieBreakRules: current.tieBreakRules.filter((_, itemIndex) => itemIndex !== index) }))}>Smazat</button>
+              </div>
+            ))}
+            <div className="admin-form-actions">
+              <button type="button" className="auth-button" onClick={() => setForm((current) => ({ ...current, tieBreakRules: current.tieBreakRules.length < 5 ? [...current.tieBreakRules, ''] : current.tieBreakRules }))} disabled={(form.tieBreakRules || []).length >= 5}>Přidat pravidlo</button>
+              <button type="button" className="auth-submit" onClick={saveTournament} disabled={isBusy || !selectedTournamentId}>Uložit pravidla</button>
+            </div>
+          </div>
         ) : null}
       </div>
       <div className="admin-section">

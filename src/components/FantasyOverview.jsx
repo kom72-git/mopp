@@ -94,24 +94,38 @@ function formatFantasyDate(date) {
   return `${Number(day)}.${Number(month)}.2026`
 }
 
-function FantasyOverview({ selectedTournamentId = '', refreshKey = 0 }) {
+function parseFantasyPayouts(value) {
+  return String(value || '').split(';').map((amount, index) => ({ place: index + 1, amount: Number(amount.trim()) || 0 })).filter((item) => item.amount > 0)
+}
+
+function FantasyOverview({ selectedTournamentId = '', selectedTournament = null, refreshKey = 0 }) {
   const [fantasyData, setFantasyData] = useState(null)
+  const isDbFantasy = selectedTournamentId?.startsWith('db:')
   const [periodId, setPeriodId] = useState('all')
   const [selectedRoundIndex, setSelectedRoundIndex] = useState(null)
   const [sort, setSort] = useState({ key: 'points', direction: 'desc' })
   const [statView, setStatView] = useState('standings')
   const [selectedPlayerNick, setSelectedPlayerNick] = useState('')
+  const [expandedFantasyBank, setExpandedFantasyBank] = useState(null)
   const [visiblePlayerNicks, setVisiblePlayerNicks] = useState(() => fantasyPlayers.map((player) => player.nick))
   const [hoveredPlayerNick, setHoveredPlayerNick] = useState('')
   const touchLegendHandledRef = useRef(false)
-  const activeFantasyPlayers = fantasyData?.players ?? fantasyPlayers
-  const activePeriodsRaw = fantasyData?.periods?.length ? fantasyData.periods : periods
-  const activeFantasyRounds = fantasyData?.rounds ?? fantasyRounds
-  const activeSeasonStats = fantasyData?.seasonStats ?? fantasySeasonStats
-  const activePrizeMoneyByPeriod = fantasyData?.prizeMoneyByPeriod ?? fantasyPrizeMoneyByPeriod
-  const activeLongTermBankByPeriod = fantasyData?.longTermBankByPeriod ?? fantasyLongTermBankByPeriod
+  const activeFantasyPlayers = fantasyData?.players ?? (isDbFantasy ? [] : fantasyPlayers)
+  const activePeriodsRaw = fantasyData?.periods?.length ? fantasyData.periods : (isDbFantasy ? [{ id: 'all', label: 'Celkem' }] : periods)
+  const activeFantasyRounds = fantasyData?.rounds ?? (isDbFantasy ? [] : fantasyRounds)
+  const activeSeasonStats = fantasyData?.seasonStats ?? (isDbFantasy ? {} : fantasySeasonStats)
+  const activePrizeMoneyByPeriod = fantasyData?.prizeMoneyByPeriod ?? (isDbFantasy ? {} : fantasyPrizeMoneyByPeriod)
+  const activeLongTermBankByPeriod = fantasyData?.longTermBankByPeriod ?? (isDbFantasy ? {} : fantasyLongTermBankByPeriod)
   const activeTipsportStatsByPeriod = fantasyData?.tipsportStatsByPeriod ?? {}
+  const fantasyMonths = Number(fantasyData?.fantasyMonths) || 0
   const fantasyPeriodRankLabel = fantasyData?.fantasyPeriodRankLabel ?? 'Měsíční'
+  const fantasyMoneyRules = fantasyData?.fantasyMoneyRules ?? {}
+  const fantasyRules = fantasyData?.tieBreakRules ?? []
+  const fantasyShortBankAmount = (Number(fantasyMoneyRules.entryFee) || 0) * activeFantasyPlayers.length
+  const fantasyShortBankPayouts = parseFantasyPayouts(fantasyMoneyRules.periodPayouts)
+  const fantasyBankAmount = (Number(fantasyMoneyRules.longTermPool) || 0) * fantasyMonths
+  const fantasyBankPayouts = parseFantasyPayouts(fantasyMoneyRules.longTermPayouts)
+  const seasonLabel = selectedTournament?.season ? `Sezóna ${selectedTournament.season}` : 'Základní část 2024/25'
   const activePeriods = activePeriodsRaw.filter((item) => item.id === 'all' || activeFantasyRounds.some(([date]) => item.months?.includes(date.split('.')[1])))
   const period = activePeriods.find((item) => item.id === periodId) ?? activePeriods[0]
   const periodRounds = useMemo(() => periodId === 'all' ? activeFantasyRounds : activeFantasyRounds.filter(([date]) => period.months.includes(date.split('.')[1])), [activeFantasyRounds, period, periodId])
@@ -125,7 +139,7 @@ function FantasyOverview({ selectedTournamentId = '', refreshKey = 0 }) {
   const previousRankByPlayer = new Map(previousStandings.map((player, index) => [player.name, index + 1]))
   useEffect(() => {
     setFantasyData(null)
-    if (!selectedTournamentId?.startsWith('db:')) return
+    if (!isDbFantasy) return
     let cancelled = false
     fetch(`/api/fantasy/data?tournamentId=${encodeURIComponent(selectedTournamentId)}`)
       .then((response) => response.ok ? response.json() : null)
@@ -134,7 +148,7 @@ function FantasyOverview({ selectedTournamentId = '', refreshKey = 0 }) {
       })
       .catch(() => {})
     return () => { cancelled = true }
-  }, [refreshKey, selectedTournamentId])
+  }, [isDbFantasy, refreshKey, selectedTournamentId])
   const standingsWithStats = useMemo(() => standings.map((player) => ({ ...player, ...getPlayerStats(visibleRounds, player, periodId, activeSeasonStats, activePrizeMoneyByPeriod, activeLongTermBankByPeriod, activeTipsportStatsByPeriod) })), [activeLongTermBankByPeriod, activePrizeMoneyByPeriod, activeSeasonStats, activeTipsportStatsByPeriod, periodId, standings, visibleRounds])
   const displayedStandings = useMemo(() => [...standingsWithStats].sort((first, second) => {
     const firstValue = sort.key === 'prizeMoney' ? getDisplayedPrizeMoney(first, periodId) : getMetricValue(first, sort.key)
@@ -202,7 +216,7 @@ function FantasyOverview({ selectedTournamentId = '', refreshKey = 0 }) {
     <div className="fantasy-preview">
       <section className="panel fantasy-filter-panel">
         <div>
-          <span className="fantasy-eyebrow">Základní část 2024/25</span>
+          <span className="fantasy-eyebrow">{seasonLabel}</span>
           <h2>Fantasy liga</h2>
         </div>
         <div className="fantasy-period-tabs" role="tablist" aria-label="Vyhodnocovací období">
@@ -305,6 +319,61 @@ function FantasyOverview({ selectedTournamentId = '', refreshKey = 0 }) {
           })}
         </div>
       </section>
+
+      {isDbFantasy && fantasyData ? (
+        <section className="panel long-term-bank-panel" aria-label="Banky Fantasy">
+          <article className={`long-term-bank-card ${expandedFantasyBank === 'short' ? 'is-open' : ''}`.trim()}>
+            <button type="button" className="long-term-bank-toggle" aria-expanded={expandedFantasyBank === 'short'} onClick={() => setExpandedFantasyBank((current) => current === 'short' ? null : 'short')}>
+              <span className="long-term-bank-toggle-label">
+                <span className="bank-icon" aria-hidden="true">💰</span>
+                <span>Krátkodobý bank</span>
+              </span>
+              <span className="long-term-bank-toggle-summary">
+                <strong className="long-term-bank-toggle-value">{fantasyShortBankAmount.toLocaleString('cs-CZ')} Kč</strong>
+                {fantasyShortBankAmount > 0 ? <small>{activeFantasyPlayers.length} × {Number(fantasyMoneyRules.entryFee).toLocaleString('cs-CZ')} Kč měsíčně</small> : null}
+              </span>
+              <span className="long-term-bank-toggle-hint">{expandedFantasyBank === 'short' ? 'Skrýt detail' : 'Zobrazit detail'}</span>
+            </button>
+            {expandedFantasyBank === 'short' ? (
+              <div className="long-term-bank-info">
+                <p className="long-term-bank-summary">Vyplácené částky za měsíc:</p>
+                <ol className="long-term-bank-payouts">
+                  {fantasyShortBankPayouts.map((item) => <li key={item.place} className={`long-term-bank-place ${item.place === 1 ? 'is-exact' : item.place === 2 ? 'is-near' : 'is-win'}`}><strong>{item.place}.</strong><span className="long-term-bank-amount">{item.amount.toLocaleString('cs-CZ')} Kč</span></li>)}
+                </ol>
+                <div className="long-term-bank-rules">
+                  <h3>V případě shodného počtu bodů rozhoduje:</h3>
+                  {fantasyRules.length > 0 ? <ol>{fantasyRules.map((rule) => <li key={rule}>{rule}</li>)}</ol> : <p>Pravidla zatím nejsou vyplněná.</p>}
+                </div>
+              </div>
+            ) : null}
+          </article>
+          <article className={`long-term-bank-card ${expandedFantasyBank === 'long' ? 'is-open' : ''}`.trim()}>
+            <button type="button" className="long-term-bank-toggle" aria-expanded={expandedFantasyBank === 'long'} onClick={() => setExpandedFantasyBank((current) => current === 'long' ? null : 'long')}>
+            <span className="long-term-bank-toggle-label">
+              <span className="bank-icon" aria-hidden="true">💰</span>
+              <span>Dlouhodobý bank</span>
+            </span>
+            <span className="long-term-bank-toggle-summary">
+              <strong className="long-term-bank-toggle-value">{fantasyBankAmount.toLocaleString('cs-CZ')} Kč</strong>
+                {fantasyBankAmount > 0 ? <small>{Number(fantasyMoneyRules.longTermPool).toLocaleString('cs-CZ')} Kč měsíčně × {fantasyMonths} měsíců</small> : null}
+            </span>
+            <span className="long-term-bank-toggle-hint">{expandedFantasyBank === 'long' ? 'Skrýt detail' : 'Zobrazit detail'}</span>
+            </button>
+            {expandedFantasyBank === 'long' ? (
+            <div className="long-term-bank-info">
+                <p className="long-term-bank-summary">Dlouhodobý bank se rozdělí takto:</p>
+              <ol className="long-term-bank-payouts">
+                {fantasyBankPayouts.map((item) => <li key={item.place} className={`long-term-bank-place ${item.place === 1 ? 'is-exact' : item.place === 2 ? 'is-near' : 'is-win'}`}><strong>{item.place}.</strong><span className="long-term-bank-amount">{item.amount.toLocaleString('cs-CZ')} Kč</span></li>)}
+              </ol>
+              <div className="long-term-bank-rules">
+                <h3>V případě shodného počtu bodů rozhoduje:</h3>
+                {fantasyRules.length > 0 ? <ol>{fantasyRules.map((rule) => <li key={rule}>{rule}</li>)}</ol> : <p>Pravidla zatím nejsou vyplněná.</p>}
+              </div>
+            </div>
+            ) : null}
+          </article>
+        </section>
+      ) : null}
 
       {selectedPlayer && selectedPlayerStats ? (
         <section className="panel fantasy-player-detail">

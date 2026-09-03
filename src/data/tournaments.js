@@ -95,5 +95,5 @@ export const tournaments = [
 export const defaultTournamentId = tournaments[0]?.id ?? ''
 
 export function getTournamentById(tournamentId) {
-  return tournaments.find((tournament) => tournament.id === tournamentId) ?? tournaments[0] ?? null
+  return tournaments.find((tournament) => tournament.id === tournamentId) ?? null
 }

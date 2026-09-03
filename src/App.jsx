@@ -36,18 +36,20 @@ const chartColors = ['#2563eb', '#0ea5e9', '#06b6d4', '#14b8a6', '#22c55e', '#84
 const emptyData = { players: [], matches: [] }
 
 function getStoredTournamentId() {
-  if (typeof window === 'undefined') return defaultTournamentId
+  if (typeof window === 'undefined') return ''
 
   try {
     const queryTournamentId = new URLSearchParams(window.location.search).get('tournament')
     if (queryTournamentId) return queryTournamentId
-    const storedTournamentId = window.localStorage.getItem('mopp-selected-tournament')
-    if (String(storedTournamentId ?? '').startsWith('db:')) return defaultTournamentId
-    if (/^db:[a-f0-9]{24}$/i.test(String(storedTournamentId ?? ''))) return storedTournamentId
-    return getTournamentById(storedTournamentId)?.id ?? defaultTournamentId
+    return ''
   } catch {
-    return defaultTournamentId
+    return ''
   }
+}
+
+function getProductFromPath() {
+  if (typeof window === 'undefined') return 'tips'
+  return window.location.pathname.toLowerCase().startsWith('/fantasy') ? 'fantasy' : 'tips'
 }
 
 function formatCount(count, one, few, many) {
@@ -1219,7 +1221,7 @@ function App() {
   const [isTournamentMenuOpen, setIsTournamentMenuOpen] = useState(false)
   const [isTournamentMenuHovered, setIsTournamentMenuHovered] = useState(false)
   const [tournamentMenuProduct, setTournamentMenuProduct] = useState('tips')
-  const [activeProduct, setActiveProduct] = useState('tips')
+  const [activeProduct, setActiveProduct] = useState(getProductFromPath)
   const [fantasyRefreshKey, setFantasyRefreshKey] = useState(0)
   const [viewStateByTournament, setViewStateByTournament] = useState({})
   useEffect(() => {
@@ -1295,9 +1297,9 @@ function App() {
           if (hasExplicitTournament) return current
           const activeTipsTournament = nextTournaments.find((tournament) => tournament.productType === 'tips' && tournament.status === 'active')
             ?? nextTournaments.find((tournament) => tournament.productType === 'tips' && tournament.status !== 'finished')
-          if (activeTipsTournament && (current === defaultTournamentId || !nextTournaments.some((tournament) => tournament.id === current && tournament.productType === 'tips'))) return activeTipsTournament.id
+          if (activeTipsTournament && !nextTournaments.some((tournament) => tournament.id === current && tournament.productType === 'tips')) return activeTipsTournament.id
           if (nextTournaments.some((tournament) => tournament.id === current)) return current
-          return activeTipsTournament?.id || defaultTournamentId
+          return activeTipsTournament?.id || ''
         })
       })
       .catch(() => {})
@@ -1306,7 +1308,7 @@ function App() {
             if (cancelled) return
             setAvailableFantasyTournaments(nextTournaments)
               setSelectedTournamentId((current) => {
-                if (!current.startsWith('db:') || nextTournaments.some((tournament) => tournament.id === current) || !nextTournaments[0]?.id) return current
+                if (!window.location.pathname.toLowerCase().startsWith('/fantasy') || !current.startsWith('db:') || nextTournaments.some((tournament) => tournament.id === current) || !nextTournaments[0]?.id) return current
                 const nextId = nextTournaments[0].id
                 const url = new URL(window.location.href)
                 url.searchParams.set('tournament', nextId)
@@ -2616,6 +2618,7 @@ function App() {
     setIsTournamentMenuOpen(false)
     setIsTournamentMenuHovered(false)
     const url = new URL(window.location.href)
+    url.pathname = '/tipovacka/'
     url.searchParams.set('tournament', nextTournamentId)
     window.history.replaceState({}, '', url)
   }
@@ -2628,6 +2631,7 @@ function App() {
     setIsTournamentMenuHovered(false)
     setFantasyRefreshKey((current) => current + 1)
     const url = new URL(window.location.href)
+    url.pathname = '/fantasy/'
     url.searchParams.set('tournament', nextTournamentId)
     window.history.replaceState({}, '', url)
   }
@@ -2701,7 +2705,7 @@ function App() {
               }}
             >
               <div className="product-tournament-buttons">
-                <button type="button" aria-pressed={activeProduct === 'tips'} className={`product-tab product-tips-tab${activeProduct === 'tips' ? ' is-active' : ''}`} onClick={() => setActiveProduct('tips')}>
+                <button type="button" aria-pressed={activeProduct === 'tips'} className={`product-tab product-tips-tab${activeProduct === 'tips' ? ' is-active' : ''}`} onClick={() => { setActiveProduct('tips'); window.history.replaceState({}, '', `/tipovacka/${window.location.search}`) }}>
                   Tipovačka
                 </button>
                 <button
@@ -2745,6 +2749,7 @@ function App() {
                   setIsTournamentMenuOpen(false)
                   setIsTournamentMenuHovered(false)
                   setActiveProduct('fantasy')
+                  window.history.replaceState({}, '', `/fantasy/${window.location.search}`)
                 }}>Fantasy</button>
                 <button type="button" className={`product-tournament-toggle${activeProduct === 'fantasy' ? ' is-active' : ''}`} aria-label="Vybrat Fantasy turnaj" aria-haspopup="listbox" aria-expanded={isFantasyTournamentMenuVisible} onPointerUp={(event) => {
                   setTournamentMenuProduct('fantasy')

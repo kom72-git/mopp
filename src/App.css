@@ -646,12 +646,18 @@
 
 .fantasy-points {
   justify-self: stretch;
+  box-sizing: border-box;
+  padding-right: 0.65rem;
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
 .fantasy-points-unit {
   font-weight: 400;
+}
+
+.fantasy-points-label {
+  display: none;
 }
 
 .fantasy-money-cell {
@@ -813,7 +819,8 @@
     font-weight: 700;
   }
 
-  .fantasy-table-row {
+  .fantasy-table-row,
+  .fantasy-table-row.is-wide {
     grid-template-columns: 2rem 2.3rem minmax(0, 1fr) auto;
     grid-template-areas:
       'rank shift player points'
@@ -827,7 +834,7 @@
   .fantasy-table-row .fantasy-points { grid-area: points; }
 
   .fantasy-points {
-    padding-right: 0;
+    padding-right: 0.65rem;
   }
 
   .fantasy-row-metrics {
@@ -886,6 +893,39 @@
 
   .fantasy-row-meta {
     gap: 0.5rem;
+  }
+
+  .long-term-bank-toggle {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .long-term-bank-toggle-label,
+  .long-term-bank-toggle-summary,
+  .long-term-bank-toggle-hint {
+    min-width: 0;
+  }
+
+  .long-term-bank-toggle-summary {
+    grid-column: 1;
+    grid-row: auto;
+    justify-items: start;
+    margin-left: 1.18rem;
+  }
+
+  .long-term-bank-toggle-summary small,
+  .long-term-bank-rules h3,
+  .long-term-bank-rules li {
+    overflow-wrap: anywhere;
+  }
+
+  .rank-chart-wrap {
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  .rank-chart {
+    min-width: 0;
+    width: 100%;
   }
 }
 
@@ -3309,6 +3349,75 @@
   }
 }
 
+@media (max-width: 620px) {
+  .layout.is-fantasy,
+  .layout.is-fantasy .fantasy-preview,
+  .layout.is-fantasy .fantasy-preview > *,
+  .layout.is-fantasy .long-term-bank-panel,
+  .layout.is-fantasy .long-term-bank-card {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .layout.is-fantasy .rank-chart-wrap {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  .layout.is-fantasy .rank-chart {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .layout.is-fantasy .fantasy-one-table,
+  .layout.is-fantasy .fantasy-rank-chart-panel {
+    grid-template-columns: minmax(0, 1fr);
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .layout.is-fantasy .fantasy-table-row,
+  .layout.is-fantasy .fantasy-player-name,
+  .layout.is-fantasy .fantasy-row-metrics,
+  .layout.is-fantasy .fantasy-points {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .layout.is-fantasy .fantasy-player-name,
+  .layout.is-fantasy .fantasy-player-name > span,
+  .layout.is-fantasy .fantasy-player-name small {
+    overflow-wrap: anywhere;
+  }
+
+  .layout.is-fantasy .fantasy-row-metrics {
+    flex-wrap: wrap;
+    row-gap: 0.2rem;
+  }
+
+  .layout.is-fantasy .fantasy-money-cell {
+    padding-right: 0.45rem;
+  }
+
+  .layout.is-fantasy .fantasy-money-cell .fantasy-cell-label {
+    display: none;
+  }
+
+  .layout.is-fantasy .fantasy-money-cell small:not(.fantasy-cell-label) {
+    display: block;
+  }
+
+  .layout.is-fantasy .fantasy-points-label {
+    display: block;
+    color: #8496a4;
+    font-size: 0.64rem;
+    font-weight: 600;
+  }
+}
+
 @media (max-width: 700px) {
   .account-nav {
     display: flex;
@@ -3362,6 +3471,16 @@
   .account-nav > .auth-panel.is-authenticated .auth-panel-tabs {
     flex: 1 1 auto;
     flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 700px) {
+  .account-nav-main > .product-nav > .product-tournament-control:nth-child(2) .product-tournament-menu {
+    left: auto;
+    right: 0;
+    width: min(15rem, calc(100vw - 1rem));
+    min-width: 0;
+    max-width: calc(100vw - 1rem);
   }
 }
 

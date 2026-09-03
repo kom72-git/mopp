@@ -1217,7 +1217,7 @@ function App() {
   const [isTournamentMenuOpen, setIsTournamentMenuOpen] = useState(false)
   const [isTournamentMenuHovered, setIsTournamentMenuHovered] = useState(false)
   const [tournamentMenuProduct, setTournamentMenuProduct] = useState('tips')
-  const [activeProduct, setActiveProduct] = useState('tips')
+  const [activeProduct, setActiveProduct] = useState(() => initialTournamentId.startsWith('db:') ? 'fantasy' : 'tips')
   const [fantasyRefreshKey, setFantasyRefreshKey] = useState(0)
   const [viewStateByTournament, setViewStateByTournament] = useState({})
   useEffect(() => {
@@ -1294,6 +1294,14 @@ function App() {
           .then((nextTournaments) => {
             if (cancelled) return
             setAvailableFantasyTournaments(nextTournaments)
+              setSelectedTournamentId((current) => {
+                if (!current.startsWith('db:') || nextTournaments.some((tournament) => tournament.id === current) || !nextTournaments[0]?.id) return current
+                const nextId = nextTournaments[0].id
+                const url = new URL(window.location.href)
+                url.searchParams.set('tournament', nextId)
+                window.history.replaceState({}, '', url)
+                return nextId
+              })
           })
           .catch(() => {})
     return () => {
@@ -2608,6 +2616,9 @@ function App() {
     setIsTournamentMenuOpen(false)
     setIsTournamentMenuHovered(false)
     setFantasyRefreshKey((current) => current + 1)
+    const url = new URL(window.location.href)
+    url.searchParams.set('tournament', nextTournamentId)
+    window.history.replaceState({}, '', url)
   }
 
   const openTournamentMenuFromHover = (product) => {

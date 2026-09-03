@@ -353,7 +353,7 @@ export default function FantasyAdminPanel({ onImported, onClose }) {
           <p className="admin-field-help">Částky výplat piš podle pořadí a odděl středníkem, např. 500;200.</p>
           <div className="admin-tournament-form-row">
             <label className="admin-field"><span className="admin-field-label">Měsíční příspěvek hráče</span><input type="number" min="0" value={form.fantasyMoneyRules.entryFee} onChange={(event) => updateMoneyRule('entryFee', event.target.value)} /></label>
-            <label className="admin-field"><span className="admin-field-label">Vyplácené částky za měsíc</span><input value={form.fantasyMoneyRules.periodPayouts} onChange={(event) => updateMoneyRule('periodPayouts', event.target.value)} placeholder="500;200" /></label>
+            <label className="admin-field"><span className="admin-field-label">Vyplácené částky za období</span><input value={form.fantasyMoneyRules.periodPayouts} onChange={(event) => updateMoneyRule('periodPayouts', event.target.value)} placeholder="500;200" /></label>
           </div>
           <div className="admin-tournament-form-row">
             <label className="admin-field"><span className="admin-field-label">Měsíční příspěvek do dlouhodobého banku</span><input type="number" min="0" value={form.fantasyMoneyRules.longTermPool} onChange={(event) => updateMoneyRule('longTermPool', event.target.value)} /></label>

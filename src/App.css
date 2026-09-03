@@ -537,9 +537,14 @@
 .fantasy-table-head,
 .fantasy-table-row {
   display: grid;
-  grid-template-columns: 2rem 2.5rem minmax(160px, 1fr) 5rem 5rem 7rem;
+  grid-template-columns: 2rem 2.5rem minmax(170px, 1fr) repeat(3, minmax(5.4rem, 0.72fr));
   align-items: center;
   gap: 0.55rem;
+}
+
+.fantasy-table-head.is-wide,
+.fantasy-table-row.is-wide {
+  grid-template-columns: 2rem 2.5rem minmax(160px, 1fr) repeat(4, minmax(5.1rem, 0.68fr));
 }
 
 .fantasy-table-head {
@@ -556,14 +561,9 @@
   color: inherit;
   padding: 0;
   font: inherit;
-  text-align: left;
+  text-align: right;
   text-transform: inherit;
   cursor: pointer;
-}
-
-.fantasy-table-head button:last-child {
-  padding-right: 0.75rem;
-  text-align: right;
 }
 
 .fantasy-mobile-sort {
@@ -623,9 +623,12 @@
 }
 
 .fantasy-cell {
+  justify-self: stretch;
   color: #385a73;
   font-size: 0.84rem;
   font-weight: 400;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 .fantasy-cell small {
@@ -643,12 +646,24 @@
 
 .fantasy-points {
   justify-self: stretch;
-  padding-right: 0.75rem;
   text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 .fantasy-points-unit {
   font-weight: 400;
+}
+
+.fantasy-money-cell {
+  display: grid;
+  gap: 0.02rem;
+}
+
+.fantasy-money-cell small {
+  display: block;
+  color: #2f7a4a;
+  font-size: 0.64rem;
+  font-weight: 800;
 }
 
 .fantasy-player-detail {
@@ -4314,6 +4329,19 @@
   box-shadow: 0 8px 24px rgb(14 48 74 / 20%);
 }
 
+.admin-panel > * {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 900px), (max-height: 760px) {
+  .admin-panel {
+    top: 0.5rem;
+    bottom: 0.5rem;
+    width: min(52rem, calc(100vw - 1rem));
+    max-width: calc(100vw - 1rem);
+  }
+}
+
 .admin-panel-heading {
   position: relative;
   display: flex;
@@ -4590,6 +4618,21 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.8fr);
   gap: 0.35rem;
+}
+
+.admin-fantasy-payout-row {
+  display: grid;
+  grid-template-columns: minmax(7rem, 1fr) repeat(4, minmax(4.8rem, 0.55fr));
+  align-items: end;
+  gap: 0.35rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid #e1ebf3;
+}
+
+.admin-fantasy-payout-row strong {
+  align-self: center;
+  color: #174c73;
+  font-size: 0.76rem;
 }
 
 .admin-form-actions,
@@ -4914,6 +4957,14 @@
 
   .admin-tournament-form-row {
     grid-template-columns: 1fr;
+  }
+
+  .admin-fantasy-payout-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-fantasy-payout-row strong {
+    grid-column: 1 / -1;
   }
 
   .admin-tournament-row {

@@ -8,6 +8,16 @@ function dbTournamentId(id) {
   return `db:${id.toString()}`;
 }
 
+function sanitizeEntryFeePaidByPeriod(value) {
+  if (!value || typeof value !== "object") return {};
+  return Object.fromEntries(
+    Object.entries(value)
+      .filter(([key]) => typeof key === "string" && key.trim())
+      .slice(0, 24)
+      .map(([key, paid]) => [key.trim().slice(0, 40), Boolean(paid)]),
+  );
+}
+
 function tieBreakRulesFor(order = []) {
   const labels = {
     exact: "Počet přesných výsledků za 10 bodů.",
@@ -417,7 +427,7 @@ function registerSharedRoutes({ app, getDb, requireJwt, requireRole }) {
         playerKey: String(player?.nick || player?.name || `p${index + 1}`).trim(),
         nick: String(player?.nick || player?.name || `p${index + 1}`).trim(),
         name: String(player?.name || player?.nick || `Hráč ${index + 1}`).trim(),
-        entryFeePaid: Boolean(player?.entryFeePaid),
+        entryFeePaidByPeriod: sanitizeEntryFeePaidByPeriod(player?.entryFeePaidByPeriod),
         order: index + 1,
       })).filter((player) => player.name && player.nick).slice(0, 100);
       const db = getDb();
@@ -546,7 +556,7 @@ function registerSharedRoutes({ app, getDb, requireJwt, requireRole }) {
       const generatedPeriods = [{ id: "all", label: "Celkem" }, ...[...new Set(rounds.map((round) => String(round.date).split('.')[1]).filter(Boolean))].map((month) => ({ id: month, label: monthLabels[month] || month, months: [month] }))];
       return res.json({
         ok: true,
-        players: players.map((player) => ({ name: player.name, nick: player.nick || player.playerKey, entryFeePaid: Boolean(player.entryFeePaid) })),
+        players: players.map((player) => ({ name: player.name, nick: player.nick || player.playerKey, entryFeePaidByPeriod: sanitizeEntryFeePaidByPeriod(player.entryFeePaidByPeriod) })),
         periods: (periods.length ? periods : generatedPeriods).map(({ id, label, months }) => ({ id, label, months })),
         rounds: rounds.map((round) => [round.date, playerKeys.map((key) => Object.prototype.hasOwnProperty.call(round.scores || {}, key) ? round.scores[key] : ''), round.awards || {}]),
         seasonStats: Object.fromEntries(seasonStats.map(({ playerKey, ...stats }) => [playerKey, { bestDailyRank: stats.bestDailyRank, bestPeriodRank: stats.bestPeriodRank, finalFantasyRank: stats.finalFantasyRank, fantasyNets: stats.fantasyNets }])),

@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react'
 
 function parsePlayers(text) {
   return text.split('\n').map((line) => {
-    const [name, nick, paid] = line.split(';').map((part) => part?.trim())
-    return { name, nick: nick || name, entryFeePaid: paid === '1' || String(paid).toLowerCase() === 'ano' }
+    const [name, nick] = line.split(';').map((part) => part?.trim())
+    return { name, nick: nick || name }
   }).filter((player) => player.name)
 }
 
@@ -21,6 +21,7 @@ export default function FantasyAdminPanel({ onImported, onClose }) {
   const [selectedTournamentId, setSelectedTournamentId] = useState('')
   const [form, setForm] = useState({ name: 'Fantasy ELH 2026/27', season: '2026/27', startDate: '', fantasyMonths: '', status: 'draft', heroLogo: '/fantasy.png', favicon: '', fantasyPeriodRankLabel: 'Měsíční', fantasyMoneyRules: { entryFee: '', periodPayouts: '500;200', longTermPool: '', longTermPayouts: '' }, tieBreakRules: [] })
   const [playersText, setPlayersText] = useState('')
+  const [entryFeePaidByPeriod, setEntryFeePaidByPeriod] = useState({})
   const [periodsText, setPeriodsText] = useState('Září;9\nŘíjen;10\nListopad;11\nProsinec;12\nLeden;1\nÚnor;2\nBřezen;3')
   const [rounds, setRounds] = useState([])
   const [selectedRoundId, setSelectedRoundId] = useState('new')
@@ -65,7 +66,8 @@ export default function FantasyAdminPanel({ onImported, onClose }) {
       .then((response) => response.ok ? response.json() : null)
       .then((payload) => {
         if (!payload?.ok) return
-        setPlayersText((payload.players ?? []).map((player) => `${player.name};${player.nick};${player.entryFeePaid ? 1 : 0}`).join('\n'))
+        setPlayersText((payload.players ?? []).map((player) => `${player.name};${player.nick}`).join('\n'))
+        setEntryFeePaidByPeriod(Object.fromEntries((payload.players ?? []).map((player) => [player.nick, player.entryFeePaidByPeriod || {}])))
         const loadedPeriods = (payload.periods ?? []).filter((period) => period.id !== 'all')
         if (loadedPeriods.length > 0) setPeriodsText(loadedPeriods.map((period) => `${period.label};${(period.months ?? []).join(',')}`).join('\n'))
         const activePeriodId = payoutPeriodId || periods[0]?.id || 'all'
@@ -176,7 +178,7 @@ export default function FantasyAdminPanel({ onImported, onClose }) {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ players }),
+        body: JSON.stringify({ players: players.map((player) => ({ ...player, entryFeePaidByPeriod: entryFeePaidByPeriod[player.nick] || {} })) }),
       })
       const payload = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(payload.message || 'Hráče se nepodařilo uložit')
@@ -340,9 +342,9 @@ export default function FantasyAdminPanel({ onImported, onClose }) {
             <button type="button" className="auth-button is-danger" onClick={deleteTournament} disabled={isBusy || !selectedTournamentId}>Smazat vybraný</button>
           </div>
           <label className="admin-field"><span className="admin-field-label">Fantasy turnaj</span><select value={selectedTournamentId} onChange={(event) => setSelectedTournamentId(event.target.value)}>{tournaments.map((tournament) => <option key={tournament._id} value={tournament._id}>{tournament.shortLabel || tournament.name}</option>)}</select></label>
-          <label className="admin-field"><span className="admin-field-label">Hráči</span><textarea value={playersText} onChange={(event) => setPlayersText(event.target.value)} rows="5" placeholder="Jméno;nick;zaplaceno 0/1" /><small>Formát: Jméno;nick;0 nebo 1.</small></label>
+          <label className="admin-field"><span className="admin-field-label">Hráči</span><textarea value={playersText} onChange={(event) => setPlayersText(event.target.value)} rows="5" placeholder="Jméno;nick" /><small>Formát: Jméno;nick (jméno a přezdívka hráče, oddělené středníkem).</small></label>
           <button type="button" className="auth-submit" onClick={savePlayers} disabled={isBusy || !selectedTournamentId}>Uložit hráče</button>
-          <label className="admin-field"><span className="admin-field-label">Měsíc</span><textarea value={periodsText} onChange={(event) => setPeriodsText(event.target.value)} rows="4" placeholder="Únor & březen;2,3" /><small>Formát: název;měsíce. Sloučení dvou měsíců: Únor & březen;2,3.</small></label>
+          <label className="admin-field"><span className="admin-field-label">Měsíc</span><textarea value={periodsText} onChange={(event) => setPeriodsText(event.target.value)} rows="4" placeholder="Únor & březen;2,3" /><small>Formát: název;měsíce. Sloučení dvou měsíců do jednoho vyhodnocovacího období: Únor & březen;2,3.</small></label>
           <button type="button" className="auth-submit" onClick={savePeriods} disabled={isBusy || !selectedTournamentId}>Uložit období</button>
         </form>
         ) : null}
@@ -351,6 +353,31 @@ export default function FantasyAdminPanel({ onImported, onClose }) {
         {sectionButton('money', 'Peníze a bank')}
         {openSection === 'money' ? (
         <div className="admin-tournament-form">
+          {players.length > 0 && periods.length > 0 ? (
+            <div className="admin-field">
+              <span className="admin-field-label">Vstupné podle období</span>
+              <small>Zaškrtni období, za které má hráč uhrazené vstupné. Pokud jsou dva měsíce sloučené do jednoho období (viz pole Měsíc v sekci Základ turnaje), platí se za ně jedna společná platba.</small>
+              <div className="admin-entry-fee-grid">
+                {players.map((player) => (
+                  <div className="admin-entry-fee-row" key={`fee-${player.nick}`}>
+                    <strong>{player.name}</strong>
+                    {periods.map((period) => (
+                      <label className="admin-member-checkbox" key={`${player.nick}-${period.id}`}>
+                        <input
+                          type="checkbox"
+                          checked={Boolean(entryFeePaidByPeriod[player.nick]?.[period.id])}
+                          onChange={(event) => setEntryFeePaidByPeriod((current) => ({ ...current, [player.nick]: { ...current[player.nick], [period.id]: event.target.checked } }))}
+                        />
+                        <span>{period.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                ))}
+              </div>
+              <button type="button" className="auth-submit" onClick={savePlayers} disabled={isBusy || !selectedTournamentId}>Uložit vstupné</button>
+            </div>
+          ) : null}
+          <h3 className="admin-subsection-title">Vyplacené peníze</h3>
           <p className="admin-field-help">Částky výplat piš podle pořadí a odděl středníkem, např. 500;200.</p>
           <div className="admin-tournament-form-row">
             <label className="admin-field"><span className="admin-field-label">Měsíční příspěvek hráče</span><input type="number" min="0" value={form.fantasyMoneyRules.entryFee} onChange={(event) => updateMoneyRule('entryFee', event.target.value)} /></label>

@@ -3895,6 +3895,24 @@
   text-transform: uppercase;
 }
 
+.account-payment-status-periods {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.account-payment-status-period-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.account-payment-status-period-label {
+  color: #315d7c;
+  font-size: 0.73rem;
+  font-weight: 600;
+}
+
 .payment-summary-grid {
   display: grid;
   gap: 0.34rem;
@@ -4752,6 +4770,32 @@
   align-self: center;
   color: #174c73;
   font-size: 0.76rem;
+}
+
+.admin-entry-fee-grid {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.admin-entry-fee-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid #e1ebf3;
+}
+
+.admin-entry-fee-row strong {
+  min-width: 7rem;
+  color: #174c73;
+  font-size: 0.76rem;
+}
+
+.admin-subsection-title {
+  margin: 0.4rem 0 0;
+  color: #174c73;
+  font-size: 0.85rem;
 }
 
 .admin-form-actions,

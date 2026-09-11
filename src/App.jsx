@@ -308,6 +308,7 @@ function AuthPanel({ activeProduct, selectedTournamentId, selectedTournament, se
   const [pendingAccountNotificationCount, setPendingAccountNotificationCount] = useState(0)
   const [scheduleRefreshKey, setScheduleRefreshKey] = useState(0)
   const [fantasyAccountPlayer, setFantasyAccountPlayer] = useState(null)
+  const [fantasyAccountPeriods, setFantasyAccountPeriods] = useState([])
   const authPanelRef = useRef(null)
 
   useEffect(() => {
@@ -584,6 +585,7 @@ function AuthPanel({ activeProduct, selectedTournamentId, selectedTournament, se
   useEffect(() => {
     if (activeProduct !== 'fantasy' || !user || !selectedTournamentId?.startsWith('db:') || selectedFantasyTournament?.status === 'finished') {
       setFantasyAccountPlayer(null)
+      setFantasyAccountPeriods([])
       return
     }
     let cancelled = false
@@ -593,8 +595,9 @@ function AuthPanel({ activeProduct, selectedTournamentId, selectedTournament, se
         if (cancelled || !payload?.ok) return
         const names = [user.username, user.displayName].map((value) => String(value || '').trim().toLowerCase()).filter(Boolean)
         setFantasyAccountPlayer((payload.players || []).find((player) => names.includes(String(player.nick || '').toLowerCase()) || names.includes(String(player.name || '').toLowerCase())) || null)
+        setFantasyAccountPeriods((payload.periods || []).filter((period) => period.id !== 'all'))
       })
-      .catch(() => setFantasyAccountPlayer(null))
+      .catch(() => { setFantasyAccountPlayer(null); setFantasyAccountPeriods([]) })
     return () => { cancelled = true }
   }, [activeProduct, fantasyRefreshKey, selectedFantasyTournament?.status, selectedTournamentId, user?.displayName, user?.id, user?.username])
 
@@ -636,7 +639,7 @@ function AuthPanel({ activeProduct, selectedTournamentId, selectedTournament, se
               </form>
               {activeProduct === 'tips' && String(selectedTournamentId ?? '').startsWith('db:') ? (
                 <form>
-                  <h3>Vstupné</h3>
+                  <h3>Vstupné – Tipovačka</h3>
                   <div className="account-payment-status">
                     <div className="account-payment-status-head">
                       <span className="account-payment-status-label">{selectedTournament?.title || selectedTournament?.label || 'Vybraný turnaj'}</span>
@@ -657,12 +660,24 @@ function AuthPanel({ activeProduct, selectedTournamentId, selectedTournament, se
               ) : null}
               {activeProduct === 'fantasy' && fantasyAccountPlayer ? (
                 <form>
-                  <h3>Vstupné</h3>
+                  <h3>Vstupné – Fantasy soutěž</h3>
                   <div className="account-payment-status">
                     <div className="account-payment-status-head">
                       <span className="account-payment-status-label">{selectedFantasyTournament?.title || selectedFantasyTournament?.label || 'Fantasy turnaj'}</span>
-                      <span className={`player-entry-fee-badge${fantasyAccountPlayer.entryFeePaid ? '' : ' is-pending'}`}>{fantasyAccountPlayer.entryFeePaid ? 'Uhrazeno' : 'Neuhrazeno'}</span>
                     </div>
+                    {fantasyAccountPeriods.length > 0 ? (
+                      <div className="account-payment-status-periods">
+                        {fantasyAccountPeriods.map((period) => {
+                          const paid = Boolean(fantasyAccountPlayer.entryFeePaidByPeriod?.[period.id])
+                          return (
+                            <div className="account-payment-status-period-row" key={period.id}>
+                              <span className="account-payment-status-period-label">{period.label}</span>
+                              <span className={`player-entry-fee-badge${paid ? '' : ' is-pending'}`}>{paid ? 'Uhrazeno' : 'Neuhrazeno'}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    ) : <p className="auth-message">Vstupné se zatím eviduje bez rozdělení na období.</p>}
                   </div>
                 </form>
               ) : null}

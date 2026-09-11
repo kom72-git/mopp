@@ -2263,7 +2263,7 @@ function App() {
       remainderRecipientByMatchId,
     )
 
-    return selectedMatch.tips
+    const tipsWithRank = selectedMatch.tips
       .map((tip) => {
         const player = players.find((item) => item.id === tip.playerId)
         const rank =
@@ -2277,7 +2277,7 @@ function App() {
           ...tip,
           playerName: player?.name ?? tip.playerId,
           playerAvatar: player?.avatar ?? '',
-          tipNote: formatTipNote(tip.updatedAt, tip.updatedState, tip.updatedByUsername),
+          tipNote: tip.notSubmitted ? 'zatím netipoval' : formatTipNote(tip.updatedAt, tip.updatedState, tip.updatedByUsername),
           tipValueHidden: Boolean(tip.tipValueHidden),
           rank,
           rankDelta,
@@ -2285,7 +2285,21 @@ function App() {
           payout,
         }
       })
-      .sort((a, b) => a.rank - b.rank)
+
+    if (isMatchEvaluated) return tipsWithRank.sort((a, b) => a.rank - b.rank)
+
+    // Dokud neni vysledek zapasu vyplnen, radi se hraci podle casu ulozeni/editace tipu (nejstarsi prvni).
+    return tipsWithRank
+      .sort((a, b) => {
+        const aTime = toTipTimestampMs(a.updatedAt)
+        const bTime = toTipTimestampMs(b.updatedAt)
+        const aHasTime = Number.isFinite(aTime)
+        const bHasTime = Number.isFinite(bTime)
+        if (aHasTime && bHasTime) return aTime - bTime
+        if (aHasTime !== bHasTime) return aHasTime ? -1 : 1
+        return a.rank - b.rank
+      })
+      .map((tip, index) => ({ ...tip, rank: index + 1 }))
   }, [orderedMatches, players, rankSnapshotByMatchId, scoreboard, selectedMatch, remainderRecipientByMatchId])
 
   const [syncMessage, setSyncMessage] = useState('')
@@ -2897,7 +2911,7 @@ function App() {
                   </div>
                 </div>
 
-                <p className="match-item-sub">Bank {match.bank == null ? '? (čeká na výsledek předchozího zápasu)' : `${match.bank} Kč`} • <span className="ratio-help" title="Odevzdané tipy / Počet členů vybraného turnaje" aria-label="Odevzdané tipy / Počet členů vybraného turnaje">Tipy {submittedTips}/{match.playerCount ?? players.length}</span></p>
+                <p className="match-item-sub">Bank {match.bank == null ? '? (čeká na výsledek předchozího zápasu)' : <><strong>{match.bank}</strong> Kč</>} • <span className="ratio-help" title="Odevzdané tipy / Počet členů vybraného turnaje" aria-label="Odevzdané tipy / Počet členů vybraného turnaje">Tipy {submittedTips}/{match.playerCount ?? players.length}</span></p>
               </button>
             )
           })}
@@ -3569,7 +3583,7 @@ function App() {
                   </div>
                 </div>
                 <div className="selected-match-bottom">
-                  <p className="selected-match-bank">Bank {selectedMatch.bank == null ? '? (čeká na výsledek předchozího zápasu)' : `${selectedMatch.bank} Kč`}</p>
+                  <p className="selected-match-bank">Bank {selectedMatch.bank == null ? '? (čeká na výsledek předchozího zápasu)' : <><strong>{selectedMatch.bank}</strong> Kč</>}</p>
                   {selectedMatch.updatedByAdminName ? <p className="selected-match-admin-note">(Editoval admin)</p> : null}
                 </div>
               </header>

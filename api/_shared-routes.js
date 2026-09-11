@@ -82,24 +82,20 @@ async function loadMongoTournamentData(getDb, tournamentId, session) {
     tipsByMatch.get(tip.matchId.toString()).push({ ...tip, points, tipValueHidden: !hasStarted && !isOwnTip });
   }
 
-  // Hraci bez vlastniho tipu u jiz zahajeneho zapasu se zobrazi jako N/N misto uplneho chybeni z tabulky.
+  // Hraci bez vlastniho tipu se v tabulce zobrazi vzdy (N/N po zacatku zapasu, jinak jen "ceka na tip"),
+  // aby ve sloupci poradi nevznikaly mezery pro hrace, kteri v tabulce chybi.
   for (const match of matches) {
     const hasStarted = new Date(match.startsAt).getTime() <= now;
-    if (!hasStarted) continue;
     const matchKey = match._id.toString();
     const existingUserIds = new Set((tipsByMatch.get(matchKey) || []).map((tip) => tip.userId.toString()));
     for (const user of users) {
       if (existingUserIds.has(user._id.toString())) continue;
       if (!tipsByMatch.has(matchKey)) tipsByMatch.set(matchKey, []);
-      tipsByMatch.get(matchKey).push({
-        userId: user._id,
-        homeScore: "N",
-        awayScore: "N",
-        tipValueHidden: false,
-        points: 0,
-        updatedAt: null,
-        updatedState: "noBet",
-      });
+      tipsByMatch.get(matchKey).push(
+        hasStarted
+          ? { userId: user._id, homeScore: "N", awayScore: "N", tipValueHidden: false, points: 0, updatedAt: null, updatedState: "noBet" }
+          : { userId: user._id, homeScore: null, awayScore: null, tipValueHidden: false, points: null, updatedAt: null, updatedState: "pending", notSubmitted: true },
+      );
     }
   }
 
@@ -157,8 +153,9 @@ async function loadMongoTournamentData(getDb, tournamentId, session) {
       })() : null,
       tips: (tipsByMatch.get(match._id.toString()) || []).map((tip) => ({
         playerId: tip.userId.toString(),
-        pick: tip.tipValueHidden ? null : `${tip.homeScore}:${tip.awayScore}`,
+        pick: tip.notSubmitted ? null : (tip.tipValueHidden ? null : `${tip.homeScore}:${tip.awayScore}`),
         tipValueHidden: Boolean(tip.tipValueHidden),
+        notSubmitted: Boolean(tip.notSubmitted),
         points: tip.points,
         updatedAt: tip.updatedAt || null,
         updatedState: tip.updatedState || "updated",

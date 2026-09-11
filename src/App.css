@@ -229,6 +229,36 @@
   box-shadow: 0 1px 3px rgb(19 66 101 / 22%);
 }
 
+.product-tournament-control.is-coming-soon {
+  position: relative;
+}
+
+.product-tournament-control.is-coming-soon .product-tab,
+.product-tournament-control.is-coming-soon .product-tournament-toggle {
+  cursor: not-allowed;
+  color: #9db6c8;
+  background:
+    repeating-linear-gradient(-45deg, rgb(159 184 206 / 22%) 0, rgb(159 184 206 / 22%) 1px, transparent 1px, transparent 7px),
+    #eef4f9;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.product-tournament-control.is-coming-soon .product-tab:hover,
+.product-tournament-control.is-coming-soon .product-tab:focus-visible,
+.product-tournament-control.is-coming-soon .product-tournament-toggle:hover,
+.product-tournament-control.is-coming-soon .product-tournament-toggle:focus-visible {
+  background:
+    repeating-linear-gradient(-45deg, rgb(159 184 206 / 22%) 0, rgb(159 184 206 / 22%) 1px, transparent 1px, transparent 7px),
+    #eef4f9;
+  color: #9db6c8;
+}
+
+.product-tournament-control.is-coming-soon .tournament-menu-chevron {
+  border-color: #c3d5e2;
+}
+
 .product-tournament-menu {
   z-index: 30;
   top: calc(100% - 1px);

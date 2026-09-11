@@ -2798,6 +2798,26 @@ function App() {
                 </div>
               ) : null}
             </div>
+            <div className="product-tournament-control is-coming-soon">
+              <div className="product-tournament-buttons">
+                <button type="button" className="product-tab product-tips-tab" disabled aria-disabled="true" tabIndex={-1}>
+                  Bowling
+                </button>
+                <button type="button" className="product-tournament-toggle" disabled aria-disabled="true" tabIndex={-1}>
+                  <span className="tournament-menu-chevron" aria-hidden="true" />
+                </button>
+              </div>
+            </div>
+            <div className="product-tournament-control is-coming-soon">
+              <div className="product-tournament-buttons">
+                <button type="button" className="product-tab product-tips-tab" disabled aria-disabled="true" tabIndex={-1}>
+                  Šipky
+                </button>
+                <button type="button" className="product-tournament-toggle" disabled aria-disabled="true" tabIndex={-1}>
+                  <span className="tournament-menu-chevron" aria-hidden="true" />
+                </button>
+              </div>
+            </div>
           </div>
           <AuthPanel activeProduct={activeProduct} selectedTournamentId={activeProduct === 'fantasy' ? activeFantasyTournamentId : selectedTournamentId} selectedTournament={selectedTournament} selectedFantasyTournament={selectedFantasyTournament} fantasyRefreshKey={fantasyRefreshKey} onFantasyUpdated={async (nextTournamentId) => { await refreshFantasyTournaments(); if (nextTournamentId) { setSelectedTournamentId(nextTournamentId); setActiveProduct('fantasy') }; setFantasyRefreshKey((current) => current + 1) }} onTournamentUpdated={handleTournamentUpdated} onMatchesChanged={handleMatchesChanged} onTipUpdated={handleTipUpdated} />
         </div>

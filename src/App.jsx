@@ -2305,6 +2305,7 @@ function App() {
   const [syncMessage, setSyncMessage] = useState('')
   const [showSyncTooltip, setShowSyncTooltip] = useState(false)
   const [isSyncing, setIsSyncing] = useState(false)
+  const [showScoringInfo, setShowScoringInfo] = useState(false)
 
   const standingsMetricOptions = [
     { value: 'points', label: 'Vše' },
@@ -2947,6 +2948,16 @@ function App() {
                 <span className="heading-separator">·</span>
                 <span>{selectedStandingsMetricLabel}</span>
               </span>
+              <button
+                type="button"
+                className="scoring-info-toggle"
+                aria-expanded={showScoringInfo}
+                aria-label="Jak se bodují tipy"
+                title="Jak se bodují tipy"
+                onClick={() => setShowScoringInfo((current) => !current)}
+              >
+                ?
+              </button>
             </h2>
             <span className={`standings-metric-shell ${standingsMetric !== 'points' ? 'is-filtered' : ''}`.trim()}>
               <select
@@ -2963,6 +2974,28 @@ function App() {
               </select>
             </span>
           </div>
+
+          {showScoringInfo ? (
+            <div className="scoring-info-card" role="note">
+              <button type="button" className="panel-close-button" onClick={() => setShowScoringInfo(false)} aria-label="Zavřít nápovědu" title="Zavřít">×</button>
+              {standingsMetric === 'winnings' ? (
+                <p className="scoring-info-text">Peněžní výhry hráčů pouze za tipované výsledky.</p>
+              ) : standingsMetric === 'totalWinnings' ? (
+                <p className="scoring-info-text">Peněžní výhry hráčů za tipované výsledky + aktuální podíl z dlouhodobého banku dle pořadí.</p>
+              ) : (
+                <>
+                  <h3>Jak se bodují tipy</h3>
+                  <ul className="scoring-info-list">
+                    <li><span className="stat-pill is-exact"><span className="stat-label">10b</span></span> přesně trefený výsledek zápasu</li>
+                    <li><span className="stat-pill is-near"><span className="stat-label">5b</span></span> správný vítěz a přesný počet jeho gólů</li>
+                    <li><span className="stat-pill is-win"><span className="stat-label">3b</span></span> správně tipnutý vítěz zápasu</li>
+                    <li><span className="stat-pill is-miss"><span className="stat-label">0b</span></span> tip nevyšel</li>
+                    <li><span className="stat-pill is-miss"><span className="stat-label">N</span></span> tip nebyl odeslán před výkopem</li>
+                  </ul>
+                </>
+              )}
+            </div>
+          ) : null}
 
           <div className="standings-list">
             {displayedStandings.map((player, index) => {

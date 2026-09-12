@@ -1125,6 +1125,7 @@ async function fetchFantasyTournamentCatalog() {
     subtitle: tournament.subtitle || 'Fantasy soutěž',
     shortLabel: tournament.shortLabel || tournament.name,
     status: tournament.status,
+    published: tournament.published !== false,
     productType: 'fantasy',
     season: tournament.season,
     startDate: tournament.startDate || '',
@@ -2798,7 +2799,7 @@ function App() {
                 <div className="tournament-menu product-tournament-menu" role="listbox" aria-label="Výběr Fantasy turnaje" onMouseEnter={() => openTournamentMenuFromHover('fantasy')} onMouseLeave={closeTournamentMenuFromHover}>
                   {availableFantasyTournaments.map((tournament) => {
                     const status = getTournamentStatus(tournament)
-                    return <button type="button" role="option" aria-selected={tournament.id === selectedTournamentId} className={`tournament-menu-option is-${status.key}${tournament.id === selectedTournamentId ? ' is-selected' : ''}`} key={tournament.id} onClick={() => selectFantasyTournament(tournament.id)}><span>{tournament.shortLabel ?? tournament.title ?? tournament.label}</span><small>{status.key === 'finished' ? 'Archiv' : status.label}</small></button>
+                    return <button type="button" role="option" aria-selected={tournament.id === selectedTournamentId} className={`tournament-menu-option is-${status.key}${tournament.id === selectedTournamentId ? ' is-selected' : ''}`} key={tournament.id} onClick={() => selectFantasyTournament(tournament.id)}><span>{tournament.shortLabel ?? tournament.title ?? tournament.label}</span><small>{tournament.published === false ? 'Kontrola před publikací' : status.key === 'finished' ? 'Archiv' : status.label}</small></button>
                   })}
                   {availableFantasyTournaments.length === 0 ? <span className="tournament-menu-option">Zatím žádný Fantasy turnaj</span> : null}
                 </div>

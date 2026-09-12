@@ -4706,6 +4706,99 @@
   flex: 0 0 auto;
 }
 
+.admin-tournament-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.5rem 0 0.65rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid #d8e6f2;
+  border-radius: 8px;
+  background: #f7fbfe;
+}
+
+.admin-tournament-actions-label {
+  margin-right: 0.2rem;
+  color: #6c8399;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.admin-editing-publish {
+  margin-left: auto;
+  background: #fff6e8;
+  border-color: #f1d2a3;
+  color: #8c5620;
+}
+
+.admin-editing-delete {
+  margin-left: auto;
+}
+
+.admin-editing-publish + .admin-editing-delete {
+  margin-left: 0.35rem;
+}
+
+.admin-section-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 2.25rem;
+  padding: 0.35rem 0.75rem;
+  background: #d9ecfa;
+  color: #0d456d;
+}
+
+.admin-section-heading-row h3 {
+  margin: 0;
+  color: #174c73;
+  font-size: 0.9rem;
+}
+
+.admin-import-section .admin-section-heading-row .panel-close-button {
+  width: 1.35rem;
+  height: 1.35rem;
+  font-size: 1rem;
+}
+
+.admin-import-preview {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 0.55rem;
+  padding: 0.55rem;
+  border: 1px solid #d8e6f2;
+  border-radius: 8px;
+  background: #f2f8ff;
+  color: #33506a;
+  font-size: 0.75rem;
+}
+
+.admin-import-preview span {
+  line-height: 1.4;
+}
+
+.admin-import-preview-table {
+  display: grid;
+  gap: 0.2rem;
+  overflow-x: auto;
+  font-size: 0.68rem;
+}
+
+.admin-import-preview-table > div {
+  display: grid;
+  grid-template-columns: minmax(8rem, 1.4fr) minmax(7rem, 1fr) repeat(5, minmax(4.2rem, 0.7fr));
+  gap: 0.35rem;
+  min-width: 39rem;
+}
+
+.admin-import-preview-table > div > * {
+  padding: 0.16rem 0.2rem;
+  white-space: nowrap;
+}
+
 .admin-editing-status {
   border-radius: 999px;
   padding: 0.14rem 0.56rem;
@@ -5044,6 +5137,17 @@
   white-space: nowrap;
 }
 
+.fantasy-roster-player input,
+.fantasy-roster-row > input {
+  min-width: 0;
+  width: 100%;
+  border: 1px solid #c7d9e8;
+  border-radius: 5px;
+  padding: 0.28rem 0.4rem;
+  font: inherit;
+  font-size: 0.76rem;
+}
+
 .fantasy-roster-avatar {
   width: 1.7rem;
   height: 1.7rem;
@@ -5063,7 +5167,9 @@
 }
 
 .admin-subsection-title {
-  margin: 0.4rem 0 0;
+  margin: 0.8rem 0 0;
+  padding-top: 0.55rem;
+  border-top: 1px solid #dbe6ee;
   color: #174c73;
   font-size: 0.85rem;
 }

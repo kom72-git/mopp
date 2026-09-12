@@ -234,6 +234,99 @@ async function importFantasyArchiveTournament(db) {
   return { tournamentId, ...result };
 }
 
+function parseFantasySheetCsv(csvText, options = {}) {
+  const rows = [];
+  let row = [];
+  let cell = '';
+  let quoted = false;
+  for (let index = 0; index < csvText.length; index += 1) {
+    const character = csvText[index];
+    if (character === '"') {
+      if (quoted && csvText[index + 1] === '"') { cell += '"'; index += 1; } else quoted = !quoted;
+    } else if (character === ',' && !quoted) { row.push(cell); cell = ''; }
+    else if ((character === '\n' || character === '\r') && !quoted) {
+      if (character === '\r' && csvText[index + 1] === '\n') index += 1;
+      row.push(cell); rows.push(row); row = []; cell = '';
+    } else cell += character;
+  }
+  if (cell || row.length) { row.push(cell); rows.push(row); }
+
+  const columnIndex = (column) => {
+    let result = 0;
+    for (const character of String(column || '').toUpperCase()) result = result * 26 + character.charCodeAt(0) - 64;
+    return result - 1;
+  };
+  const headerRow = rows.findIndex((data) => data.some((value) => String(value).trim().toLowerCase() === 'hráč') && data.some((value) => String(value).trim().toLowerCase() === 'nick'));
+  if (headerRow < 0) throw new Error('V záložce se nepodařilo najít hlavní tabulku s hlavičkami Hráč a nick.');
+  const headers = rows[headerRow].map((value) => String(value || '').trim().toLowerCase());
+  const headerColumn = (value) => headers.findIndex((header) => header === value);
+  const playerNameColumn = headerColumn('hráč');
+  const nickColumn = headerColumn('nick');
+  const findHeaderAfter = (value, from = 0) => headers.findIndex((header, index) => index >= from && header === value);
+  const dailyColumn = findHeaderAfter('nej fantasy umístění');
+  const periodColumn = dailyColumn >= 0 ? dailyColumn + 1 : -1;
+  const finalRankColumn = headerColumn('konečné umístění');
+  const netsColumn = headerColumn('vyhrané nety');
+  const prizeColumn = headerColumn('vyhrané peníze');
+  const parseNumber = (value) => {
+    const clean = String(value ?? '').replace(/[^0-9-]/g, '');
+    return clean ? Number(clean) : null;
+  };
+  const players = rows.slice(headerRow + 1)
+    .map((data) => ({
+      name: String(data[playerNameColumn] || '').split('\n')[0].trim(),
+      nick: String(data[nickColumn] || '').trim(),
+      bestDailyRank: parseNumber(data[dailyColumn]),
+      bestPeriodRank: parseNumber(data[periodColumn]),
+      finalFantasyRank: parseNumber(data[finalRankColumn]),
+      fantasyNets: parseNumber(data[netsColumn]) || 0,
+      prizeMoney: parseNumber(data[prizeColumn]) || 0,
+    }))
+    .filter((player) => player.name && player.nick);
+  if (!players.length) throw new Error('V záložce se nepodařilo najít hráče ve sloupcích Hráč/nick.');
+  const playerRows = new Map(rows.slice(headerRow + 1).map((data) => [String(data[nickColumn] || '').trim(), data]));
+  const rounds = [];
+  const periodDates = new Map();
+  let currentPeriodLabel = '';
+  const roundStartColumn = columnIndex(options.roundStart || 'DC');
+  const roundEndColumn = columnIndex(options.roundEnd || 'EH');
+  if (roundStartColumn < 0 || roundEndColumn < roundStartColumn) throw new Error('Rozsah kol není platný. Zkontroluj první a poslední sloupec.');
+  for (let column = roundStartColumn; column <= roundEndColumn; column += 1) {
+    const date = String(rows[2]?.[column] || '').trim();
+    if (!/^\d{1,2}\.\d{1,2}\.$/.test(date)) continue;
+    const headerPeriod = String(rows[1]?.[column] || '').trim();
+    if (headerPeriod) currentPeriodLabel = headerPeriod;
+    const periodId = currentPeriodLabel ? `period-${currentPeriodLabel.toLowerCase().replace(/[^a-z0-9]+/g, '-')}` : 'all';
+    if (periodId !== 'all') {
+      if (!periodDates.has(periodId)) periodDates.set(periodId, { id: periodId, label: currentPeriodLabel, months: [], roundDates: [] });
+      periodDates.get(periodId).roundDates.push(date);
+    }
+    const scores = {};
+    let hasScore = false;
+    for (const player of players) {
+      const rawScore = String(playerRows.get(player.nick)?.[column] || '').trim();
+      if (!rawScore) { scores[player.nick] = ''; continue; }
+      if (rawScore.toUpperCase() === 'N') { scores[player.nick] = 'N'; hasScore = true; continue; }
+      const score = Number(rawScore.replace(/\s/g, ''));
+      scores[player.nick] = Number.isFinite(score) ? score : '';
+      hasScore = hasScore || Number.isFinite(score);
+    }
+    if (hasScore) rounds.push([date, players.map((player) => scores[player.nick]), {}]);
+  }
+  return { players, periods: [{ id: 'all', label: 'Celkem', months: [] }, ...periodDates.values()], rounds };
+}
+
+async function loadFantasySheetPreview(url, options = {}) {
+  const matched = String(url).match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+  if (!matched) throw new Error('Odkaz Google Sheetu nemá očekávaný formát.');
+  const gidMatch = String(url).match(/[?#&]gid=([0-9]+)/);
+  const exportUrl = `https://docs.google.com/spreadsheets/d/${matched[1]}/export?format=csv${gidMatch ? `&gid=${gidMatch[1]}` : ''}`;
+  const response = await fetch(exportUrl);
+  if (!response.ok) throw new Error('Google Sheet se nepodařilo načíst.');
+  const parsed = parseFantasySheetCsv(await response.text(), options);
+  return { ...parsed, sourceUrl: url, exportUrl };
+}
+
 function registerSharedRoutes({ app, getDb, requireJwt, requireRole }) {
   app.get("/health", (req, res) => {
     res.json({ ok: true, service: "mopp-api" });
@@ -340,6 +433,58 @@ function registerSharedRoutes({ app, getDb, requireJwt, requireRole }) {
     }
   });
 
+  app.post("/api/admin/fantasy/import-preview", requireJwt, requireRole("admin"), async (req, res) => {
+    try {
+      const url = String(req.body?.url || '').trim();
+      if (!/^https:\/\/docs\.google\.com\/spreadsheets\/d\//.test(url)) return res.status(400).json({ ok: false, message: 'Zadej odkaz na Google Sheet.' });
+      return res.json({ ok: true, ...(await loadFantasySheetPreview(url, { roundStart: req.body?.roundStart, roundEnd: req.body?.roundEnd })) });
+    } catch (error) {
+      return res.status(400).json({ ok: false, message: error.message || 'Náhled se nepodařilo načíst.' });
+    }
+  });
+
+  app.post("/api/admin/fantasy/import-confirm", requireJwt, requireRole("admin"), async (req, res) => {
+    try {
+      const name = String(req.body?.name || '').trim();
+      const season = String(req.body?.season || '').trim();
+      const sourceUrl = String(req.body?.sourceUrl || '').trim();
+      const imported = req.body?.data && typeof req.body.data === 'object' ? req.body.data : {};
+      const players = Array.isArray(imported.players) ? imported.players.slice(0, 100) : [];
+      if (name.length < 2 || players.length === 0) return res.status(400).json({ ok: false, message: 'Chybí název turnaje nebo hráči.' });
+      const db = getDb();
+      const now = new Date();
+      const existing = await db.collection('tournaments').findOne({ productType: 'fantasy', sourceUrl });
+      if (existing?.published !== false) return res.status(409).json({ ok: false, message: 'Archiv s tímto zdrojem už byl publikován nebo není ve stagingu.' });
+      const tournamentId = existing?._id || (await db.collection('tournaments').insertOne({ name, shortLabel: name, tabTitle: name, subtitle: 'Fantasy soutěž', season, status: 'finished', published: false, productType: 'fantasy', sourceUrl, createdAt: now, updatedAt: now })).insertedId;
+      await Promise.all([
+        db.collection('fantasyPlayers').deleteMany({ tournamentId }),
+        db.collection('fantasyPeriods').deleteMany({ tournamentId }),
+        db.collection('fantasyRounds').deleteMany({ tournamentId }),
+        db.collection('fantasySeasonStats').deleteMany({ tournamentId }),
+        db.collection('fantasyPayouts').deleteMany({ tournamentId }),
+      ]);
+      await db.collection('tournaments').updateOne({ _id: tournamentId }, { $set: { name, shortLabel: name, tabTitle: name, season, status: 'finished', published: false, productType: 'fantasy', sourceUrl, updatedAt: now } });
+      await db.collection('fantasyPlayers').insertMany(players.map((player, index) => ({ tournamentId, playerKey: String(player.nick).trim(), nick: String(player.nick).trim(), name: String(player.name).trim(), order: index + 1 })));
+      if (Array.isArray(imported.periods) && imported.periods.length > 0) await db.collection('fantasyPeriods').insertMany(imported.periods.map((period, index) => ({ tournamentId, id: String(period.id), label: String(period.label), months: Array.isArray(period.months) ? period.months : [], roundDates: Array.isArray(period.roundDates) ? period.roundDates : [], order: index + 1 })));
+      else await db.collection('fantasyPeriods').insertOne({ tournamentId, id: 'all', label: 'Celkem', months: [], order: 1 });
+      if (Array.isArray(imported.rounds) && imported.rounds.length > 0) await db.collection('fantasyRounds').insertMany(imported.rounds.map(([date, scores, awards], index) => ({ tournamentId, roundNumber: index + 1, date: String(date), scores: Object.fromEntries(players.map((player, playerIndex) => [String(player.nick).trim(), scores[playerIndex] ?? ''])), awards: awards || {} })));
+      await db.collection('fantasySeasonStats').insertMany(players.map((player) => ({ tournamentId, playerKey: String(player.nick).trim(), bestDailyRank: player.bestDailyRank ?? null, bestPeriodRank: player.bestPeriodRank ?? null, finalFantasyRank: player.finalFantasyRank ?? null, fantasyNets: Number(player.fantasyNets) || 0 })));
+      await db.collection('fantasyPayouts').insertMany(players.map((player) => ({ tournamentId, periodId: 'all', playerKey: String(player.nick).trim(), prizeMoney: Number(player.prizeMoney) || 0, longTermBank: 0, bestDailyRank: player.bestDailyRank ?? null, bestPeriodRank: player.bestPeriodRank ?? null, fantasyNets: Number(player.fantasyNets) || 0 })));
+      return res.status(201).json({ ok: true, tournamentId: dbTournamentId(tournamentId), message: 'Archiv byl importován jako neveřejný náhled. Zkontroluj ho v adminu a potom ho publikuj.' });
+    } catch (error) {
+      return res.status(500).json({ ok: false, message: error.message || 'Archiv se nepodařilo importovat.' });
+    }
+  });
+
+  app.post("/api/admin/fantasy/tournaments/:id/publish", requireJwt, requireRole("admin"), async (req, res) => {
+    try {
+      if (!ObjectId.isValid(String(req.params.id))) return res.status(400).json({ ok: false, message: 'Turnaj není platný.' });
+      const result = await getDb().collection('tournaments').updateOne({ _id: new ObjectId(req.params.id), productType: 'fantasy' }, { $set: { published: true, updatedAt: new Date() } });
+      if (!result.matchedCount) return res.status(404).json({ ok: false, message: 'Turnaj nebyl nalezen.' });
+      return res.json({ ok: true, message: 'Archiv byl publikován.' });
+    } catch { return res.status(500).json({ ok: false, message: 'Archiv se nepodařilo publikovat.' }); }
+  });
+
   app.get("/api/admin/fantasy/users", requireJwt, requireRole("admin"), async (req, res) => {
     try {
       const users = await getDb().collection("users")
@@ -354,8 +499,10 @@ function registerSharedRoutes({ app, getDb, requireJwt, requireRole }) {
 
   app.get("/api/fantasy/tournaments", async (req, res) => {
     try {
-      const tournaments = await getDb().collection("tournaments").find({ productType: "fantasy" }).sort({ createdAt: -1 }).toArray();
-      return res.json({ ok: true, tournaments: tournaments.map((tournament) => ({ _id: tournament._id.toString(), name: tournament.name, shortLabel: tournament.shortLabel || tournament.name, subtitle: tournament.subtitle || "Fantasy soutěž", season: tournament.season, status: tournament.status, startDate: tournament.startDate || "", endDate: tournament.endDate || "", fantasyMonths: tournament.fantasyMonths || null, heroLogo: tournament.heroLogo || "", favicon: tournament.favicon || "", fantasyPeriodRankLabel: tournament.fantasyPeriodRankLabel || "Měsíční", fantasyMoneyRules: tournament.fantasyMoneyRules || null, tieBreakRules: tournament.tieBreakRules || [] })) });
+      const canSeeStaged = getOptionalSession(req)?.role === "admin";
+      const query = canSeeStaged ? { productType: "fantasy" } : { productType: "fantasy", published: { $ne: false } };
+      const tournaments = await getDb().collection("tournaments").find(query).sort({ createdAt: -1 }).toArray();
+      return res.json({ ok: true, tournaments: tournaments.map((tournament) => ({ _id: tournament._id.toString(), name: tournament.name, shortLabel: tournament.shortLabel || tournament.name, subtitle: tournament.subtitle || "Fantasy soutěž", season: tournament.season, status: tournament.status, published: tournament.published !== false, startDate: tournament.startDate || "", endDate: tournament.endDate || "", fantasyMonths: tournament.fantasyMonths || null, heroLogo: tournament.heroLogo || "", favicon: tournament.favicon || "", fantasyPeriodRankLabel: tournament.fantasyPeriodRankLabel || "Měsíční", fantasyMoneyRules: tournament.fantasyMoneyRules || null, tieBreakRules: tournament.tieBreakRules || [] })) });
     } catch {
       return res.status(500).json({ ok: false, message: "Fantasy turnaje se nepodařilo načíst." });
     }
@@ -447,6 +594,7 @@ function registerSharedRoutes({ app, getDb, requireJwt, requireRole }) {
         playerKey: String(player?.nick || player?.name || `p${index + 1}`).trim(),
         nick: String(player?.nick || player?.name || `p${index + 1}`).trim(),
         name: String(player?.name || player?.nick || `Hráč ${index + 1}`).trim(),
+        nameOverride: Boolean(player?.nameOverride),
         entryFeePaidByPeriod: sanitizeEntryFeePaidByPeriod(player?.entryFeePaidByPeriod),
         order: index + 1,
       })).filter((player) => player.name && player.nick).slice(0, 100);
@@ -590,10 +738,10 @@ function registerSharedRoutes({ app, getDb, requireJwt, requireRole }) {
           const nick = player.nick || player.playerKey;
           const linkedUser = player.userId ? users.find((user) => user._id.toString() === String(player.userId)) : null;
           const avatar = linkedUser?.avatar || usersByIdentity.get(normalizeFantasyIdentity(nick)) || usersByIdentity.get(normalizeFantasyIdentity(player.name)) || '';
-          const name = linkedUser?.displayName || linkedUser?.username || player.name;
-          return { id: player._id?.toString() || player.playerKey, userId: player.userId || '', name, nick, avatar, entryFeePaidByPeriod: sanitizeEntryFeePaidByPeriod(player.entryFeePaidByPeriod) };
+          const name = player.nameOverride ? player.name : (linkedUser?.displayName || linkedUser?.username || player.name);
+          return { id: player._id?.toString() || player.playerKey, userId: player.userId || '', name, nameOverride: Boolean(player.nameOverride), nick, avatar, entryFeePaidByPeriod: sanitizeEntryFeePaidByPeriod(player.entryFeePaidByPeriod) };
         }),
-        periods: (periods.length ? periods : generatedPeriods).map(({ id, label, months }) => ({ id, label, months })),
+        periods: (periods.length ? periods : generatedPeriods).map(({ id, label, months, roundDates }) => ({ id, label, months, roundDates })),
         rounds: rounds.map((round) => [round.date, playerKeys.map((key) => Object.prototype.hasOwnProperty.call(round.scores || {}, key) ? round.scores[key] : ''), round.awards || {}]),
         seasonStats: Object.fromEntries(seasonStats.map(({ playerKey, ...stats }) => [playerKey, { bestDailyRank: stats.bestDailyRank, bestPeriodRank: stats.bestPeriodRank, finalFantasyRank: stats.finalFantasyRank, fantasyNets: stats.fantasyNets }])),
         prizeMoneyByPeriod,

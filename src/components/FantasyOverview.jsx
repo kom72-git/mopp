@@ -143,14 +143,21 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
   const fantasyPeriodRankLabel = fantasyData?.fantasyPeriodRankLabel ?? 'Měsíční'
   const fantasyMoneyRules = fantasyData?.fantasyMoneyRules ?? {}
   const fantasyRules = fantasyData?.tieBreakRules ?? []
-  const fantasyShortBankAmount = (Number(fantasyMoneyRules.entryFee) || 0) * activeFantasyPlayers.length
+  const entryFeeFrequency = fantasyMoneyRules.entryFeeFrequency || 'monthly'
+  const payoutMode = fantasyMoneyRules.payoutMode || 'period'
+  const longTermPoolFrequency = fantasyMoneyRules.longTermPoolFrequency || 'monthly'
+  const fantasyShortBankAmount = (Number(fantasyMoneyRules.entryFee) || 0) * activeFantasyPlayers.length * (entryFeeFrequency === 'monthly' ? Math.max(1, fantasyMonths) : 1)
   const fantasyShortBankPayouts = parseFantasyPayouts(fantasyMoneyRules.periodPayouts)
-  const fantasyBankAmount = (Number(fantasyMoneyRules.longTermPool) || 0) * fantasyMonths
+  const hasShortBank = fantasyShortBankPayouts.length > 0 && payoutMode === 'period'
+  const fantasyBankContribution = Number(fantasyMoneyRules.longTermPool) || 0
+  const fantasyBankPeriods = longTermPoolFrequency === 'monthly' ? Math.max(1, fantasyMonths) : 1
+  const fantasyBankAmount = fantasyBankContribution * activeFantasyPlayers.length * fantasyBankPeriods
   const fantasyBankPayouts = parseFantasyPayouts(fantasyMoneyRules.longTermPayouts)
   const seasonLabel = selectedTournament?.season ? `Sezóna ${selectedTournament.season}` : 'Základní část 2024/25'
-  const activePeriods = activePeriodsRaw.filter((item) => item.id === 'all' || activeFantasyRounds.some(([date]) => item.months?.includes(date.split('.')[1])))
+  const periodContainsDate = (item, date) => item.roundDates?.length ? item.roundDates.includes(date) : item.months?.includes(date.split('.')[1])
+  const activePeriods = activePeriodsRaw.filter((item) => item.id === 'all' || activeFantasyRounds.some(([date]) => periodContainsDate(item, date)))
   const period = activePeriods.find((item) => item.id === periodId) ?? activePeriods[0]
-  const periodRounds = useMemo(() => periodId === 'all' ? activeFantasyRounds : activeFantasyRounds.filter(([date]) => period.months.includes(date.split('.')[1])), [activeFantasyRounds, period, periodId])
+  const periodRounds = useMemo(() => periodId === 'all' ? activeFantasyRounds : activeFantasyRounds.filter(([date]) => periodContainsDate(period, date)), [activeFantasyRounds, period, periodId])
   const visibleRounds = selectedRoundIndex === null ? periodRounds : periodRounds.slice(0, selectedRoundIndex + 1)
   const selectedRound = selectedRoundIndex === null ? null : periodRounds[selectedRoundIndex]
   const selectedTournamentRoundIndex = selectedRound ? activeFantasyRounds.indexOf(selectedRound) : activeFantasyRounds.indexOf(visibleRounds.at(-1))
@@ -336,9 +343,9 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
                   <span className="fantasy-player-identity"><span>{player.name}</span><small>{player.nick}</small></span>
                 </span>
                 <span className="fantasy-row-metrics">
-                  {columns.slice(0, -1).map(([key, label]) => <span key={key} className={`fantasy-cell ${key === 'prizeMoney' ? 'fantasy-money-cell' : ''} ${sort.key === key ? 'is-active-sort' : ''}`}><small className="fantasy-cell-label">{label}</small>{key === 'prizeMoney' ? <><span>{formatMetricValue(getDisplayedPrizeMoney(player, periodId, activePrizeMoneyByPeriod), key)}</span>{getLongTermBankForRank(totalRankByNick.get(player.nick), fantasyBankPayouts) > 0 ? <small>+ <span className="bank-icon" aria-hidden="true">💰</span> {formatMetricValue(getLongTermBankForRank(totalRankByNick.get(player.nick), fantasyBankPayouts), key)}</small> : null}</> : formatMetricValue(getDisplayMetricValue(player, key, selectedRound), key)}</span>)}
+                  {columns.slice(0, -1).map(([key, label]) => <span key={key} className={`fantasy-cell ${key === 'prizeMoney' ? 'fantasy-money-cell' : ''} ${sort.key === key ? 'is-active-sort' : ''}`}><small className="fantasy-cell-label">{label}</small>{key === 'prizeMoney' ? (payoutMode === 'longTerm' ? <span>{getLongTermBankForRank(totalRankByNick.get(player.nick), fantasyBankPayouts) > 0 ? <span className="bank-icon" aria-hidden="true">💰</span> : null} {formatMetricValue(getLongTermBankForRank(totalRankByNick.get(player.nick), fantasyBankPayouts), key)}</span> : <><span>{formatMetricValue(getDisplayedPrizeMoney(player, periodId, activePrizeMoneyByPeriod), key)}</span>{getLongTermBankForRank(totalRankByNick.get(player.nick), fantasyBankPayouts) > 0 ? <small>+ <span className="bank-icon" aria-hidden="true">💰</span> {formatMetricValue(getLongTermBankForRank(totalRankByNick.get(player.nick), fantasyBankPayouts), key)}</small> : null}</>) : formatMetricValue(getDisplayMetricValue(player, key, selectedRound), key)}</span>)}
                 </span>
-                <span className={`fantasy-points ${columns.at(-1)[0] === 'prizeMoney' ? 'fantasy-money-cell' : ''} ${sort.key === columns.at(-1)[0] ? 'is-active-sort' : ''}`.trim()}>{statView === 'prizes' ? <small className="fantasy-points-label">{columns.at(-1)[1]}</small> : null}{columns.at(-1)[0] === 'prizeMoney' ? <><span>{formatMetricValue(getDisplayedPrizeMoney(player, periodId, activePrizeMoneyByPeriod), 'prizeMoney')}</span>{getLongTermBankForRank(totalRankByNick.get(player.nick), fantasyBankPayouts) > 0 ? <small>+ <span className="bank-icon" aria-hidden="true">💰</span> {formatMetricValue(getLongTermBankForRank(totalRankByNick.get(player.nick), fantasyBankPayouts), 'prizeMoney')}</small> : null}</> : formatMetricValue(getDisplayMetricValue(player, columns.at(-1)[0], selectedRound), columns.at(-1)[0])}</span>
+                <span className={`fantasy-points ${columns.at(-1)[0] === 'prizeMoney' ? 'fantasy-money-cell' : ''} ${sort.key === columns.at(-1)[0] ? 'is-active-sort' : ''}`.trim()}>{statView === 'prizes' ? <small className="fantasy-points-label">{columns.at(-1)[1]}</small> : null}{columns.at(-1)[0] === 'prizeMoney' ? (payoutMode === 'longTerm' ? <span>{getLongTermBankForRank(totalRankByNick.get(player.nick), fantasyBankPayouts) > 0 ? <span className="bank-icon" aria-hidden="true">💰</span> : null} {formatMetricValue(getLongTermBankForRank(totalRankByNick.get(player.nick), fantasyBankPayouts), 'prizeMoney')}</span> : <><span>{formatMetricValue(getDisplayedPrizeMoney(player, periodId, activePrizeMoneyByPeriod), 'prizeMoney')}</span>{getLongTermBankForRank(totalRankByNick.get(player.nick), fantasyBankPayouts) > 0 ? <small>+ <span className="bank-icon" aria-hidden="true">💰</span> {formatMetricValue(getLongTermBankForRank(totalRankByNick.get(player.nick), fantasyBankPayouts), 'prizeMoney')}</small> : null}</>) : formatMetricValue(getDisplayMetricValue(player, columns.at(-1)[0], selectedRound), columns.at(-1)[0])}</span>
               </article>
             )
           })}
@@ -347,7 +354,7 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
 
       {isDbFantasy && fantasyData ? (
         <section className="panel long-term-bank-panel" aria-label="Banky Fantasy">
-          <article className={`long-term-bank-card ${expandedFantasyBank === 'short' ? 'is-open' : ''}`.trim()}>
+          {hasShortBank ? <article className={`long-term-bank-card ${expandedFantasyBank === 'short' ? 'is-open' : ''}`.trim()}>
             <button type="button" className="long-term-bank-toggle" aria-expanded={expandedFantasyBank === 'short'} onClick={() => setExpandedFantasyBank((current) => current === 'short' ? null : 'short')}>
               <span className="long-term-bank-toggle-label">
                 <span className="bank-icon" aria-hidden="true">💰</span>
@@ -355,24 +362,23 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
               </span>
               <span className="long-term-bank-toggle-summary">
                 <strong className="long-term-bank-toggle-value">{fantasyShortBankAmount.toLocaleString('cs-CZ')} Kč</strong>
-                {fantasyShortBankAmount > 0 ? <small>{activeFantasyPlayers.length} × {Number(fantasyMoneyRules.entryFee).toLocaleString('cs-CZ')} Kč měsíčně</small> : null}
+                {fantasyShortBankAmount > 0 ? <small>{activeFantasyPlayers.length} × {Number(fantasyMoneyRules.entryFee).toLocaleString('cs-CZ')} Kč {entryFeeFrequency === 'monthly' ? 'měsíčně' : 'za celé období'}</small> : null}
               </span>
               <span className="long-term-bank-toggle-hint">{expandedFantasyBank === 'short' ? 'Skrýt detail' : 'Zobrazit detail'}</span>
             </button>
             {expandedFantasyBank === 'short' ? (
               <div className="long-term-bank-info">
-                <p className="long-term-bank-summary">Vyplácené částky za období:</p>
-                <ol className="long-term-bank-payouts">
+                {payoutMode === 'period' ? <><p className="long-term-bank-summary">Vyplácené částky za období:</p><ol className="long-term-bank-payouts">
                   {fantasyShortBankPayouts.map((item) => <li key={item.place} className={`long-term-bank-place ${item.place === 1 ? 'is-exact' : item.place === 2 ? 'is-near' : 'is-win'}`}><strong>{item.place}.</strong><span className="long-term-bank-amount">{item.amount.toLocaleString('cs-CZ')} Kč</span></li>)}
-                </ol>
-                <p className="long-term-bank-summary">Zbylých {(Number(fantasyMoneyRules.longTermPool) || 0).toLocaleString('cs-CZ')} Kč se převádí každý měsíc do dlouhodobého banku.</p>
+                </ol></> : <p className="long-term-bank-summary">Výhry se vyplácejí až na konci turnaje z dlouhodobého banku.</p>}
+                {Number(fantasyMoneyRules.longTermPool) > 0 ? <p className="long-term-bank-summary">Zbylých {(Number(fantasyMoneyRules.longTermPool) || 0).toLocaleString('cs-CZ')} Kč se převádí {longTermPoolFrequency === 'monthly' ? 'každý měsíc' : 'jednorázově za turnaj'} do dlouhodobého banku.</p> : null}
                 <div className="long-term-bank-rules">
                   <h3>V případě shodného počtu bodů rozhoduje:</h3>
                   {fantasyRules.length > 0 ? <ol>{fantasyRules.map((rule) => <li key={rule}>{rule}</li>)}</ol> : <p>Pravidla zatím nejsou vyplněná.</p>}
                 </div>
               </div>
             ) : null}
-          </article>
+          </article> : null}
           <article className={`long-term-bank-card ${expandedFantasyBank === 'long' ? 'is-open' : ''}`.trim()}>
             <button type="button" className="long-term-bank-toggle" aria-expanded={expandedFantasyBank === 'long'} onClick={() => setExpandedFantasyBank((current) => current === 'long' ? null : 'long')}>
             <span className="long-term-bank-toggle-label">
@@ -381,7 +387,7 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
             </span>
             <span className="long-term-bank-toggle-summary">
               <strong className="long-term-bank-toggle-value">{fantasyBankAmount.toLocaleString('cs-CZ')} Kč</strong>
-                {fantasyBankAmount > 0 ? <small>{Number(fantasyMoneyRules.longTermPool).toLocaleString('cs-CZ')} Kč měsíčně × {fantasyMonths} měsíců</small> : null}
+                {fantasyBankAmount > 0 ? <small>{activeFantasyPlayers.length} hráčů × {fantasyBankContribution.toLocaleString('cs-CZ')} Kč {longTermPoolFrequency === 'monthly' ? `měsíčně × ${fantasyMonths} měsíců` : 'jednorázově za turnaj'}</small> : null}
             </span>
             <span className="long-term-bank-toggle-hint">{expandedFantasyBank === 'long' ? 'Skrýt detail' : 'Zobrazit detail'}</span>
             </button>

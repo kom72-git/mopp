@@ -3,6 +3,7 @@ export const tournaments = [
     id: '2026',
     label: '2026',
     title: 'MS ve fotbale 2026',
+    status: 'finished',
     tabTitle: 'MS fotbal 2026', // title v záložce prohlížeče
     sheetId: '1cdrtECld-UgY8qjcc2UajQwcO3F85u1EgV2EU2sc9Lw',
     gid: '134828351',
@@ -59,6 +60,7 @@ export const tournaments = [
     id: 'PO-2025',
     label: 'PO-2025',
     title: 'Play-off hokejové extraligy 2025',
+    status: 'finished',
     shortLabel: 'Play-off ELH 2025',
     tabTitle: 'Play-off ELH 2025',
     sheetId: '1cdrtECld-UgY8qjcc2UajQwcO3F85u1EgV2EU2sc9Lw',

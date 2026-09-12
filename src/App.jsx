@@ -130,11 +130,14 @@ function isTournamentActiveByDate(tournament) {
 function getTournamentStatus(tournament) {
   if (tournament?.status === 'finished') return { key: 'finished', label: 'Ukončeno' }
 
-  const start = new Date(tournament?.firstMatchStartsAt || tournament?.startDate || '').getTime()
-  if (Number.isFinite(start) && start > Date.now()) return { key: 'draft', label: 'Připravuje se' }
-  if (tournament?.status === 'draft' && !Number.isFinite(start)) return { key: 'draft', label: 'Připravuje se' }
+  const start = new Date(tournament?.startDate || tournament?.firstMatchStartsAt || '').getTime()
+  const end = new Date(tournament?.endDate || '').getTime()
+  const now = Date.now()
+  if (Number.isFinite(start) && now < start) return { key: 'draft', label: 'Připravuje se' }
+  if (Number.isFinite(end) && now > end + 86400000 - 1) return { key: 'finished', label: 'Ukončeno' }
+  if (Number.isFinite(start)) return { key: 'active', label: 'Probíhá' }
   if (tournament?.status === 'active') return { key: 'active', label: 'Probíhá' }
-  return { key: 'finished', label: 'Ukončeno' }
+  return { key: 'draft', label: 'Připravuje se' }
 }
 
 function extractCalendarDate(startsAt) {
@@ -594,7 +597,7 @@ function AuthPanel({ activeProduct, selectedTournamentId, selectedTournament, se
       .then((payload) => {
         if (cancelled || !payload?.ok) return
         const names = [user.username, user.displayName].map((value) => String(value || '').trim().toLowerCase()).filter(Boolean)
-        setFantasyAccountPlayer((payload.players || []).find((player) => names.includes(String(player.nick || '').toLowerCase()) || names.includes(String(player.name || '').toLowerCase())) || null)
+        setFantasyAccountPlayer((payload.players || []).find((player) => String(player.userId || '') === String(user.id || '') || names.includes(String(player.nick || '').toLowerCase()) || names.includes(String(player.name || '').toLowerCase())) || null)
         setFantasyAccountPeriods((payload.periods || []).filter((period) => period.id !== 'all'))
       })
       .catch(() => { setFantasyAccountPlayer(null); setFantasyAccountPeriods([]) })
@@ -1078,7 +1081,6 @@ async function fetchLiveData(tournamentId) {
 }
 
 function sortTournamentsBySchedule(items) {
-  const now = Date.now()
   const getStart = (tournament) => {
     const time = new Date(tournament?.startDate ?? '').getTime()
     return Number.isFinite(time) ? time : 0
@@ -1088,8 +1090,9 @@ function sortTournamentsBySchedule(items) {
     return Number.isFinite(time) ? time : getStart(tournament)
   }
   const getStatusRank = (tournament) => {
-    if (tournament?.status === 'active') return 0
-    if (tournament?.status === 'draft' || getStart(tournament) > now) return 1
+    const status = getTournamentStatus(tournament).key
+    if (status === 'active') return 0
+    if (status === 'draft') return 1
     return 2
   }
 
@@ -1119,11 +1122,13 @@ async function fetchFantasyTournamentCatalog() {
     id: `db:${tournament._id}`,
     label: tournament.name,
     title: tournament.name,
+    subtitle: tournament.subtitle || 'Fantasy soutěž',
     shortLabel: tournament.shortLabel || tournament.name,
     status: tournament.status,
     productType: 'fantasy',
     season: tournament.season,
     startDate: tournament.startDate || '',
+    endDate: tournament.endDate || '',
     fantasyMonths: tournament.fantasyMonths || 0,
     heroLogo: tournament.heroLogo || '',
     favicon: tournament.favicon || '',
@@ -2693,7 +2698,7 @@ function App() {
           </div>
           <h1>{activeProduct === 'fantasy' ? selectedFantasyTournament?.title ?? selectedFantasyTournament?.label ?? 'Fantasy' : selectedTournament?.title ?? selectedTournament?.label ?? 'MOPP turnaj'}</h1>
           <div className="tournament-subtitle-row">
-            <p className="tournament-subtitle">{activeProduct === 'fantasy' ? selectedFantasyTournament?.season ? `Sezóna ${selectedFantasyTournament.season}` : 'Fantasy soutěž' : selectedTournament?.subtitle ?? 'Tipovací soutěž'}</p>
+            <p className="tournament-subtitle">{activeProduct === 'fantasy' ? selectedFantasyTournament?.subtitle ?? 'Fantasy soutěž' : selectedTournament?.subtitle ?? 'Tipovací soutěž'}</p>
           </div>
           {(activeProduct === 'fantasy' ? selectedFantasyTournament : selectedTournament) ? (() => {
             const status = getTournamentStatus(activeProduct === 'fantasy' ? selectedFantasyTournament : selectedTournament)

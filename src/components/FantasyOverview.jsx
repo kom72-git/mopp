@@ -331,7 +331,10 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
                 <span className={`fantasy-rank-shift ${shift > 0 ? 'is-up' : shift < 0 ? 'is-down' : 'is-flat'}`} aria-label={shift > 0 ? `posun nahoru o ${shift}` : shift < 0 ? `posun dolů o ${Math.abs(shift)}` : 'beze změny'}>
                   {shift > 0 ? `↑${shift}` : shift < 0 ? `↓${Math.abs(shift)}` : '–'}
                 </span>
-                <span className="fantasy-player-name"><span>{player.name}</span><small>{player.nick}</small></span>
+                <span className="fantasy-player-name">
+                  {player.avatar ? <img className="user-avatar fantasy-player-avatar" src={player.avatar} alt="" /> : <span className="user-avatar fantasy-player-avatar is-placeholder" aria-hidden="true">{player.name.slice(0, 1).toUpperCase()}</span>}
+                  <span className="fantasy-player-identity"><span>{player.name}</span><small>{player.nick}</small></span>
+                </span>
                 <span className="fantasy-row-metrics">
                   {columns.slice(0, -1).map(([key, label]) => <span key={key} className={`fantasy-cell ${key === 'prizeMoney' ? 'fantasy-money-cell' : ''} ${sort.key === key ? 'is-active-sort' : ''}`}><small className="fantasy-cell-label">{label}</small>{key === 'prizeMoney' ? <><span>{formatMetricValue(getDisplayedPrizeMoney(player, periodId, activePrizeMoneyByPeriod), key)}</span>{getLongTermBankForRank(totalRankByNick.get(player.nick), fantasyBankPayouts) > 0 ? <small>+ <span className="bank-icon" aria-hidden="true">💰</span> {formatMetricValue(getLongTermBankForRank(totalRankByNick.get(player.nick), fantasyBankPayouts), key)}</small> : null}</> : formatMetricValue(getDisplayMetricValue(player, key, selectedRound), key)}</span>)}
                 </span>
@@ -403,7 +406,10 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
           <div className="panel-head">
             <div>
               <span className="fantasy-eyebrow">Statistiky hráče · {period.label}</span>
-              <h2>{selectedPlayer.name}</h2>
+              <div className="fantasy-player-detail-title">
+                {selectedPlayer.avatar ? <img className="user-avatar fantasy-detail-avatar" src={selectedPlayer.avatar} alt="" /> : <span className="user-avatar fantasy-detail-avatar is-placeholder" aria-hidden="true">{selectedPlayer.name.slice(0, 1).toUpperCase()}</span>}
+                <h2>{selectedPlayer.name}</h2>
+              </div>
             </div>
             <button type="button" className="panel-close-button" onClick={() => setSelectedPlayerNick('')} aria-label="Zavřít statistiky hráče" title="Zavřít">×</button>
           </div>

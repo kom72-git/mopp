@@ -18,6 +18,10 @@ function sanitizeEntryFeePaidByPeriod(value) {
   );
 }
 
+function normalizeFantasyIdentity(value) {
+  return String(value ?? '').trim().toLowerCase();
+}
+
 function tieBreakRulesFor(order = []) {
   const labels = {
     exact: "Počet přesných výsledků za 10 bodů.",
@@ -336,10 +340,22 @@ function registerSharedRoutes({ app, getDb, requireJwt, requireRole }) {
     }
   });
 
+  app.get("/api/admin/fantasy/users", requireJwt, requireRole("admin"), async (req, res) => {
+    try {
+      const users = await getDb().collection("users")
+        .find({ status: "active" }, { projection: { username: 1, displayName: 1, avatar: 1, role: 1 } })
+        .sort({ displayName: 1, username: 1 })
+        .toArray();
+      return res.json({ ok: true, users: users.map((user) => ({ ...user, _id: user._id.toString() })) });
+    } catch {
+      return res.status(500).json({ ok: false, message: "Účty se nepodařilo načíst." });
+    }
+  });
+
   app.get("/api/fantasy/tournaments", async (req, res) => {
     try {
       const tournaments = await getDb().collection("tournaments").find({ productType: "fantasy" }).sort({ createdAt: -1 }).toArray();
-      return res.json({ ok: true, tournaments: tournaments.map((tournament) => ({ _id: tournament._id.toString(), name: tournament.name, shortLabel: tournament.shortLabel || tournament.name, season: tournament.season, status: tournament.status, startDate: tournament.startDate || "", fantasyMonths: tournament.fantasyMonths || null, heroLogo: tournament.heroLogo || "", favicon: tournament.favicon || "", fantasyPeriodRankLabel: tournament.fantasyPeriodRankLabel || "Měsíční", fantasyMoneyRules: tournament.fantasyMoneyRules || null, tieBreakRules: tournament.tieBreakRules || [] })) });
+      return res.json({ ok: true, tournaments: tournaments.map((tournament) => ({ _id: tournament._id.toString(), name: tournament.name, shortLabel: tournament.shortLabel || tournament.name, subtitle: tournament.subtitle || "Fantasy soutěž", season: tournament.season, status: tournament.status, startDate: tournament.startDate || "", endDate: tournament.endDate || "", fantasyMonths: tournament.fantasyMonths || null, heroLogo: tournament.heroLogo || "", favicon: tournament.favicon || "", fantasyPeriodRankLabel: tournament.fantasyPeriodRankLabel || "Měsíční", fantasyMoneyRules: tournament.fantasyMoneyRules || null, tieBreakRules: tournament.tieBreakRules || [] })) });
     } catch {
       return res.status(500).json({ ok: false, message: "Fantasy turnaje se nepodařilo načíst." });
     }
@@ -350,15 +366,18 @@ function registerSharedRoutes({ app, getDb, requireJwt, requireRole }) {
       const name = String(req.body?.name ?? "").trim();
       const season = String(req.body?.season ?? "").trim();
       const startDate = String(req.body?.startDate ?? "").trim();
+      const endDate = String(req.body?.endDate ?? "").trim();
       const fantasyMonths = Math.max(0, Number(req.body?.fantasyMonths) || 0);
       const heroLogo = String(req.body?.heroLogo ?? "").trim();
       const favicon = String(req.body?.favicon ?? "").trim();
+      const shortLabel = String(req.body?.shortLabel ?? "").trim().slice(0, 60);
+      const subtitle = String(req.body?.subtitle ?? "Fantasy soutěž").trim().slice(0, 80) || "Fantasy soutěž";
       const fantasyPeriodRankLabel = String(req.body?.fantasyPeriodRankLabel ?? "Měsíční").trim() || "Měsíční";
       const fantasyMoneyRules = req.body?.fantasyMoneyRules && typeof req.body.fantasyMoneyRules === "object" ? req.body.fantasyMoneyRules : {};
       const tieBreakRules = Array.isArray(req.body?.tieBreakRules) ? req.body.tieBreakRules.map((rule) => String(rule ?? "").trim()).filter(Boolean).slice(0, 5) : [];
       if (name.length < 2 || name.length > 100) return res.status(400).json({ ok: false, message: "Název turnaje musí mít 2 až 100 znaků." });
       const now = new Date();
-      const tournament = { name, shortLabel: name, tabTitle: name, subtitle: "Fantasy", season, startDate, status: "draft", productType: "fantasy", fantasyMonths, heroLogo, favicon, fantasyPeriodRankLabel, fantasyMoneyRules, tieBreakRules, roundLabel: "kolo", createdAt: now, updatedAt: now };
+      const tournament = { name, shortLabel: shortLabel || name, tabTitle: shortLabel || name, subtitle, season, startDate, endDate, status: "draft", productType: "fantasy", fantasyMonths, heroLogo, favicon, fantasyPeriodRankLabel, fantasyMoneyRules, tieBreakRules, roundLabel: "kolo", createdAt: now, updatedAt: now };
       const result = await getDb().collection("tournaments").insertOne(tournament);
       return res.status(201).json({ ok: true, tournament: { ...tournament, _id: result.insertedId.toString() }, message: "Fantasy turnaj byl založen." });
     } catch {
@@ -372,10 +391,13 @@ function registerSharedRoutes({ app, getDb, requireJwt, requireRole }) {
       const name = String(req.body?.name ?? "").trim();
       const season = String(req.body?.season ?? "").trim();
       const startDate = String(req.body?.startDate ?? "").trim();
+      const endDate = String(req.body?.endDate ?? "").trim();
       const fantasyMonths = Math.max(0, Number(req.body?.fantasyMonths) || 0);
       const heroLogo = String(req.body?.heroLogo ?? "").trim();
       const favicon = String(req.body?.favicon ?? "").trim();
       const status = String(req.body?.status ?? "draft").trim();
+      const shortLabel = String(req.body?.shortLabel ?? "").trim().slice(0, 60);
+      const subtitle = String(req.body?.subtitle ?? "Fantasy soutěž").trim().slice(0, 80) || "Fantasy soutěž";
       const fantasyPeriodRankLabel = String(req.body?.fantasyPeriodRankLabel ?? "Měsíční").trim() || "Měsíční";
       const fantasyMoneyRules = req.body?.fantasyMoneyRules && typeof req.body.fantasyMoneyRules === "object" ? req.body.fantasyMoneyRules : {};
       const tieBreakRules = Array.isArray(req.body?.tieBreakRules) ? req.body.tieBreakRules.map((rule) => String(rule ?? "").trim()).filter(Boolean).slice(0, 5) : [];
@@ -384,7 +406,7 @@ function registerSharedRoutes({ app, getDb, requireJwt, requireRole }) {
       if (!["draft", "active", "finished"].includes(status)) return res.status(400).json({ ok: false, message: "Neplatný stav turnaje." });
       const result = await getDb().collection("tournaments").findOneAndUpdate(
         { _id: new ObjectId(rawTournamentId), productType: "fantasy" },
-        { $set: { name, shortLabel: name, tabTitle: name, subtitle: "Fantasy", season, status, startDate, fantasyMonths, heroLogo, favicon, fantasyPeriodRankLabel, fantasyMoneyRules, tieBreakRules, updatedAt: new Date() } },
+        { $set: { name, shortLabel: shortLabel || name, tabTitle: shortLabel || name, subtitle, season, status, startDate, endDate, fantasyMonths, heroLogo, favicon, fantasyPeriodRankLabel, fantasyMoneyRules, tieBreakRules, updatedAt: new Date() } },
         { returnDocument: "after" },
       );
       if (!result) return res.status(404).json({ ok: false, message: "Fantasy turnaj nebyl nalezen." });
@@ -421,6 +443,7 @@ function registerSharedRoutes({ app, getDb, requireJwt, requireRole }) {
       const players = Array.isArray(req.body?.players) ? req.body.players : [];
       const cleanedPlayers = players.map((player, index) => ({
         tournamentId,
+        userId: ObjectId.isValid(String(player?.userId ?? "")) ? String(player.userId) : "",
         playerKey: String(player?.nick || player?.name || `p${index + 1}`).trim(),
         nick: String(player?.nick || player?.name || `p${index + 1}`).trim(),
         name: String(player?.name || player?.nick || `Hráč ${index + 1}`).trim(),
@@ -528,16 +551,26 @@ function registerSharedRoutes({ app, getDb, requireJwt, requireRole }) {
       if (!ObjectId.isValid(rawTournamentId)) return res.status(400).json({ ok: false, message: "Turnaj není platný." });
       const tournamentId = new ObjectId(rawTournamentId);
       const db = getDb();
-      const [tournament, players, periods, rounds, seasonStats, payouts] = await Promise.all([
+      const [tournament, players, periods, rounds, seasonStats, payouts, users] = await Promise.all([
         db.collection("tournaments").findOne({ _id: tournamentId, productType: "fantasy" }, { projection: { fantasyMonths: 1, heroLogo: 1, favicon: 1, fantasyPeriodRankLabel: 1, fantasyMoneyRules: 1, tieBreakRules: 1 } }),
         db.collection("fantasyPlayers").find({ tournamentId }).sort({ order: 1 }).toArray(),
         db.collection("fantasyPeriods").find({ tournamentId }).sort({ order: 1 }).toArray(),
         db.collection("fantasyRounds").find({ tournamentId }).sort({ roundNumber: 1 }).toArray(),
         db.collection("fantasySeasonStats").find({ tournamentId }).toArray(),
         db.collection("fantasyPayouts").find({ tournamentId }).toArray(),
+        db.collection("users").find({}, { projection: { username: 1, displayName: 1, avatar: 1 } }).toArray(),
       ]);
       if (players.length === 0 && rounds.length === 0) return res.json({ ok: true, players: [], periods: [{ id: "all", label: "Celkem" }], rounds: [], seasonStats: {}, prizeMoneyByPeriod: {}, longTermBankByPeriod: {}, tipsportStatsByPeriod: {}, fantasyMonths: tournament?.fantasyMonths || 0, heroLogo: tournament?.heroLogo || "", favicon: tournament?.favicon || "", fantasyPeriodRankLabel: tournament?.fantasyPeriodRankLabel || "Měsíční", fantasyMoneyRules: tournament?.fantasyMoneyRules || null, tieBreakRules: tournament?.tieBreakRules || [] });
       const playerKeys = players.map((player) => player.playerKey);
+      const usersByIdentity = new Map();
+      for (const user of users) {
+        const avatar = String(user.avatar || '').trim();
+        if (!avatar) continue;
+        for (const identity of [user.username, user.displayName]) {
+          const key = normalizeFantasyIdentity(identity);
+          if (key && !usersByIdentity.has(key)) usersByIdentity.set(key, avatar);
+        }
+      }
       const prizeMoneyByPeriod = {};
       const longTermBankByPeriod = {};
       const tipsportStatsByPeriod = {};
@@ -553,7 +586,13 @@ function registerSharedRoutes({ app, getDb, requireJwt, requireRole }) {
       const generatedPeriods = [{ id: "all", label: "Celkem" }, ...[...new Set(rounds.map((round) => String(round.date).split('.')[1]).filter(Boolean))].map((month) => ({ id: month, label: monthLabels[month] || month, months: [month] }))];
       return res.json({
         ok: true,
-        players: players.map((player) => ({ name: player.name, nick: player.nick || player.playerKey, entryFeePaidByPeriod: sanitizeEntryFeePaidByPeriod(player.entryFeePaidByPeriod) })),
+        players: players.map((player) => {
+          const nick = player.nick || player.playerKey;
+          const linkedUser = player.userId ? users.find((user) => user._id.toString() === String(player.userId)) : null;
+          const avatar = linkedUser?.avatar || usersByIdentity.get(normalizeFantasyIdentity(nick)) || usersByIdentity.get(normalizeFantasyIdentity(player.name)) || '';
+          const name = linkedUser?.displayName || linkedUser?.username || player.name;
+          return { id: player._id?.toString() || player.playerKey, userId: player.userId || '', name, nick, avatar, entryFeePaidByPeriod: sanitizeEntryFeePaidByPeriod(player.entryFeePaidByPeriod) };
+        }),
         periods: (periods.length ? periods : generatedPeriods).map(({ id, label, months }) => ({ id, label, months })),
         rounds: rounds.map((round) => [round.date, playerKeys.map((key) => Object.prototype.hasOwnProperty.call(round.scores || {}, key) ? round.scores[key] : ''), round.awards || {}]),
         seasonStats: Object.fromEntries(seasonStats.map(({ playerKey, ...stats }) => [playerKey, { bestDailyRank: stats.bestDailyRank, bestPeriodRank: stats.bestPeriodRank, finalFantasyRank: stats.finalFantasyRank, fantasyNets: stats.fantasyNets }])),

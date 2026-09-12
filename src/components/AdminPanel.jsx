@@ -58,7 +58,7 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
   const [editingTournamentId, setEditingTournamentId] = useState('')
   const [editingMatchId, setEditingMatchId] = useState('')
   const [openSection, setOpenSection] = useState('')
-  const [form, setForm] = useState({ name: '', subtitle: '', shortLabel: '', season: '', plannedMatchCount: '', selectionMatchCount: '1', scheduleUrl: '', status: 'draft', roundLabel: '', startDate: '', heroLogo: '', logoSet: 'elh', favicon: '', entryFee: '10', longTermContribution: '' })
+  const [form, setForm] = useState({ name: '', subtitle: '', shortLabel: '', season: '', plannedMatchCount: '', selectionMatchCount: '1', scheduleUrl: '', status: 'draft', roundLabel: '', startDate: '', endDate: '', heroLogo: '', logoSet: 'elh', favicon: '', entryFee: '10', longTermContribution: '' })
   const [participantUserIds, setParticipantUserIds] = useState([])
   const [tournamentPlayers, setTournamentPlayers] = useState([])
   const [isAccountPickerOpen, setIsAccountPickerOpen] = useState(false)
@@ -178,6 +178,7 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
             status: activeTournament.status || 'draft',
             roundLabel: activeTournament.roundLabel || '',
             startDate: activeTournament.startDate || '',
+            endDate: activeTournament.endDate || '',
             heroLogo: activeTournament.heroLogo || '',
             logoSet: activeTournament.logoSet || '',
             favicon: activeTournament.favicon || '',
@@ -362,7 +363,7 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
         setMessage('Turnaj byl upraven.')
         return
       }
-      setForm({ name: '', subtitle: '', shortLabel: '', season: '', plannedMatchCount: '', selectionMatchCount: '1', scheduleUrl: '', status: 'draft', roundLabel: '', startDate: '', heroLogo: '', logoSet: 'elh', favicon: '', entryFee: '10', longTermContribution: '' })
+      setForm({ name: '', subtitle: '', shortLabel: '', season: '', plannedMatchCount: '', selectionMatchCount: '1', scheduleUrl: '', status: 'draft', roundLabel: '', startDate: '', endDate: '', heroLogo: '', logoSet: 'elh', favicon: '', entryFee: '10', longTermContribution: '' })
       setParticipantUserIds([])
       setTournamentPlayers([])
       setStages([])
@@ -495,6 +496,7 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
       status: tournament.status || 'draft',
       roundLabel: tournament.roundLabel || '',
       startDate: tournament.startDate || '',
+      endDate: tournament.endDate || '',
       heroLogo: tournament.heroLogo || '',
       logoSet: tournament.logoSet || '',
       favicon: tournament.favicon || '',
@@ -516,7 +518,7 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
     setEditingTournamentId('')
     setParticipantUserIds([])
     setTournamentPlayers([])
-    setForm({ name: '', subtitle: '', shortLabel: '', season: '', plannedMatchCount: '', selectionMatchCount: '1', scheduleUrl: '', status: 'draft', roundLabel: '', startDate: '', heroLogo: '', logoSet: 'elh', favicon: '', entryFee: '10', longTermContribution: '' })
+    setForm({ name: '', subtitle: '', shortLabel: '', season: '', plannedMatchCount: '', selectionMatchCount: '1', scheduleUrl: '', status: 'draft', roundLabel: '', startDate: '', endDate: '', heroLogo: '', logoSet: 'elh', favicon: '', entryFee: '10', longTermContribution: '' })
     setScoring({ exact: '10', near: '5', winner: '3' })
     setTieBreakOrder(['exact', 'scored', 'noBet'])
     setTieBreakRules([])
@@ -590,16 +592,15 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
             </label>
             <div className="admin-tournament-form-row">
               <label className="admin-field"><span className="admin-field-label">Začátek turnaje</span><ManualDateInput name="startDate" value={form.startDate} onChange={(value) => setForm((current) => ({ ...current, startDate: value }))} title="Datum prvního zápasu turnaje." /></label>
-              <label className="admin-field"><span className="admin-field-label">Logo turnaje</span><select name="heroLogo" value={form.heroLogo} onChange={updateField} title="Vyber obrázek ze složky public/tournaments."><option value="">Bez loga</option>{tournamentLogos.map((logo) => <option key={logo.path} value={logo.path}>{logo.name}</option>)}</select></label>
+              <label className="admin-field"><span className="admin-field-label">Konec turnaje</span><ManualDateInput name="endDate" value={form.endDate} onChange={(value) => setForm((current) => ({ ...current, endDate: value }))} title="Po tomto datu se turnaj automaticky označí jako ukončený." /></label>
             </div>
-            <p className="admin-field-help">Data slouží pro orientaci a zobrazení turnaje; nezakládají zápasy automaticky.</p>
             {form.heroLogo ? <img className="admin-tournament-logo-preview" src={form.heroLogo} alt="Náhled loga turnaje" /> : null}
             <div className="admin-tournament-form-row">
               <label className="admin-field"><span className="admin-field-label">Sada týmových log</span><select name="logoSet" value={form.logoSet} onChange={updateField} title="Určuje, odkud se načtou loga týmů v zápasech."><option value="">Bez sady log</option><option value="elh">ELH loga</option></select><small>Pro ELH zvol ELH loga; u mezinárodního turnaje použijeme vlajky.</small></label>
               <label className="admin-field"><span className="admin-field-label">Favicon (ikona v záložce)</span><select name="favicon" value={form.favicon} onChange={updateField} title="Ikona zobrazená v záložce prohlížeče."><option value="">Výchozí</option><option value="/icons/ball.svg">Fotbalový míč</option><option value="/icons/puck.svg">Hokejový puk</option></select><small>Změní se ikona v záložce, když je tenhle turnaj vybraný.</small></label>
             </div>
             <div className="admin-tournament-form-row">
-              <label className="admin-field"><span className="admin-field-label">Stav turnaje</span><select name="status" value={form.status} onChange={updateField}><option value="draft">Připravovaný</option><option value="active">Aktivní</option><option value="finished">Ukončený</option></select><small>Aktivní turnaj je určený pro běžné používání.</small></label>
+              <label className="admin-field"><span className="admin-field-label">Logo turnaje</span><select name="heroLogo" value={form.heroLogo} onChange={updateField} title="Vyber obrázek ze složky public/tournaments."><option value="">Bez loga</option>{tournamentLogos.map((logo) => <option key={logo.path} value={logo.path}>{logo.name}</option>)}</select></label>
               <label className="admin-field"><span className="admin-field-label">Jednotka kola</span><input name="roundLabel" value={form.roundLabel} onChange={updateField} placeholder="den / kolo" title="Nezadává se datum. Zadej slovo den nebo kolo." required /><small>Zobrazení čísla kola, například 1. den nebo 1. kolo.</small></label>
             </div>
             <div className="admin-form-actions">

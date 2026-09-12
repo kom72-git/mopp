@@ -146,12 +146,13 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
   const entryFeeFrequency = fantasyMoneyRules.entryFeeFrequency || 'monthly'
   const payoutMode = fantasyMoneyRules.payoutMode || 'period'
   const longTermPoolFrequency = fantasyMoneyRules.longTermPoolFrequency || 'monthly'
-  const fantasyShortBankAmount = (Number(fantasyMoneyRules.entryFee) || 0) * activeFantasyPlayers.length * (entryFeeFrequency === 'monthly' ? Math.max(1, fantasyMonths) : 1)
+  const fantasyShortBankAmount = (Number(fantasyMoneyRules.entryFee) || 0) * activeFantasyPlayers.length
   const fantasyShortBankPayouts = parseFantasyPayouts(fantasyMoneyRules.periodPayouts)
   const hasShortBank = fantasyShortBankPayouts.length > 0 && payoutMode === 'period'
   const fantasyBankContribution = Number(fantasyMoneyRules.longTermPool) || 0
-  const fantasyBankPeriods = longTermPoolFrequency === 'monthly' ? Math.max(1, fantasyMonths) : 1
-  const fantasyBankAmount = fantasyBankContribution * activeFantasyPlayers.length * fantasyBankPeriods
+  const fantasyBankAmount = longTermPoolFrequency === 'tournament'
+    ? fantasyBankContribution * activeFantasyPlayers.length
+    : fantasyBankContribution * Math.max(1, fantasyMonths)
   const fantasyBankPayouts = parseFantasyPayouts(fantasyMoneyRules.longTermPayouts)
   const seasonLabel = selectedTournament?.season ? `Sezóna ${selectedTournament.season}` : 'Základní část 2024/25'
   const periodContainsDate = (item, date) => item.roundDates?.length ? item.roundDates.includes(date) : item.months?.includes(date.split('.')[1])
@@ -387,7 +388,13 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
             </span>
             <span className="long-term-bank-toggle-summary">
               <strong className="long-term-bank-toggle-value">{fantasyBankAmount.toLocaleString('cs-CZ')} Kč</strong>
-                {fantasyBankAmount > 0 ? <small>{activeFantasyPlayers.length} hráčů × {fantasyBankContribution.toLocaleString('cs-CZ')} Kč {longTermPoolFrequency === 'monthly' ? `měsíčně × ${fantasyMonths} měsíců` : 'jednorázově za turnaj'}</small> : null}
+                {fantasyBankAmount > 0 ? (
+                  <small>
+                    {longTermPoolFrequency === 'tournament'
+                      ? `${activeFantasyPlayers.length} hráčů × ${fantasyBankContribution.toLocaleString('cs-CZ')} Kč`
+                      : `${fantasyBankContribution.toLocaleString('cs-CZ')} Kč měsíčně × ${fantasyMonths} měsíců`}
+                  </small>
+                ) : null}
             </span>
             <span className="long-term-bank-toggle-hint">{expandedFantasyBank === 'long' ? 'Skrýt detail' : 'Zobrazit detail'}</span>
             </button>

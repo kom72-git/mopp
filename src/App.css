@@ -4628,6 +4628,69 @@
   font-size: 0.68rem;
 }
 
+.admin-editing-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.5rem 0 0.65rem;
+  padding: 0.42rem 0.6rem;
+  border: 1px solid #d8e6f2;
+  border-radius: 8px;
+  background: #f2f8ff;
+  font-size: 0.78rem;
+  color: #33506a;
+}
+
+.admin-editing-banner strong {
+  color: #0f2d4a;
+}
+
+.admin-editing-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 600;
+}
+
+.admin-editing-select select {
+  border: 1px solid #c7d9e8;
+  border-radius: 5px;
+  background: #fff;
+  color: #0f2d4a;
+  padding: 0.24rem 0.4rem;
+  font: inherit;
+  font-size: 0.78rem;
+  max-width: 12rem;
+}
+
+.admin-editing-new {
+  margin-left: auto;
+  flex: 0 0 auto;
+}
+
+.admin-editing-status {
+  border-radius: 999px;
+  padding: 0.14rem 0.56rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.admin-editing-status.is-draft {
+  background: #fff6e8;
+  color: #8c5620;
+}
+
+.admin-editing-status.is-active {
+  background: #dff5dc;
+  color: #12562c;
+}
+
+.admin-editing-status.is-finished {
+  background: #edf2f8;
+  color: #53657b;
+}
+
 .admin-panel-stats strong {
   font-size: 0.95rem;
 }
@@ -4855,6 +4918,18 @@
   padding: 0.42rem 0.5rem;
   font: inherit;
   font-size: 0.76rem;
+}
+
+.auto-resize-textarea {
+  box-sizing: border-box;
+  width: 100%;
+  border: 1px solid #c7d9e8;
+  border-radius: 5px;
+  padding: 0.42rem 0.5rem;
+  font: inherit;
+  font-size: 0.76rem;
+  resize: none;
+  overflow: hidden;
 }
 
 .admin-tournament-form-row {

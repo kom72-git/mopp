@@ -616,7 +616,7 @@ function AuthPanel({ activeProduct, selectedTournamentId, selectedTournament, se
           </div>
           <button type="button" className="auth-button auth-logout" onClick={logout}>Odhlásit</button>
           {activePanel === 'admin' && user.role === 'admin' && activeProduct === 'tips' ? <AdminPanel selectedTournamentId={selectedTournamentId} accountNotificationCount={pendingAccountNotificationCount} onAccountNotificationsRead={markAccountNotificationsRead} onTournamentMembershipChanged={handleTournamentMembershipChanged} onTournamentUpdated={onTournamentUpdated} onMatchesChanged={onMatchesChanged} onClose={() => setActivePanel('')} /> : null}
-          {activePanel === 'admin' && user.role === 'admin' && activeProduct === 'fantasy' ? <FantasyAdminPanel onImported={onFantasyUpdated} onClose={() => setActivePanel('')} /> : null}
+          {activePanel === 'admin' && user.role === 'admin' && activeProduct === 'fantasy' ? <FantasyAdminPanel initialTournamentId={selectedTournamentId} onImported={onFantasyUpdated} onClose={() => setActivePanel('')} /> : null}
           {activePanel === 'tips' && activeProduct === 'tips' ? <PlayerTipsPanel selectedTournamentId={selectedTournamentId} scheduleRefreshKey={scheduleRefreshKey} hasSelectionNotification={hasSelectionNotification} onSelectionUpdated={() => setHasSelectionNotification(false)} onTipUpdated={onTipUpdated} onClose={() => setActivePanel('')} /> : null}
           {activePanel === 'account' ? (
             <div className="auth-form auth-account-form">
@@ -1130,7 +1130,7 @@ async function fetchFantasyTournamentCatalog() {
     fantasyPeriodRankLabel: tournament.fantasyPeriodRankLabel || 'Měsíční',
     fantasyMoneyRules: tournament.fantasyMoneyRules || null,
   }))
-  const hasArchivedSeason = dbTournaments.some((tournament) => tournament.season === '2024/25' || tournament.shortLabel === 'ELH 2024/25')
+  const hasArchivedSeason = dbTournaments.length > 0
   return sortTournamentsBySchedule([...(hasArchivedSeason ? [] : fallbackFantasyTournaments), ...dbTournaments])
 }
 function SplitTip({ value }) {

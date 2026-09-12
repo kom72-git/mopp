@@ -611,6 +611,7 @@ function registerSharedRoutes({ app, getDb, requireJwt, requireRole }) {
         bestDailyRank: payouts[player.playerKey]?.bestDailyRank,
         bestPeriodRank: payouts[player.playerKey]?.bestPeriodRank,
         fantasyNets: payouts[player.playerKey]?.fantasyNets,
+        finalFantasyRank: payouts[player.playerKey]?.finalFantasyRank,
       }));
       await Promise.all(rows.map((row) => {
         const set = {};
@@ -619,9 +620,17 @@ function registerSharedRoutes({ app, getDb, requireJwt, requireRole }) {
         if (row.bestDailyRank !== undefined) set.bestDailyRank = Number(row.bestDailyRank) || null;
         if (row.bestPeriodRank !== undefined) set.bestPeriodRank = Number(row.bestPeriodRank) || null;
         if (row.fantasyNets !== undefined) set.fantasyNets = Number(row.fantasyNets) || 0;
-        return Object.keys(set).length === 0
+        const payoutWrite = Object.keys(set).length === 0
           ? Promise.resolve()
           : db.collection("fantasyPayouts").updateOne({ tournamentId, periodId, playerKey: row.playerKey }, { $set: { tournamentId, periodId, playerKey: row.playerKey, ...set } }, { upsert: true });
+        const seasonStatsWrite = row.finalFantasyRank !== undefined
+          ? db.collection("fantasySeasonStats").updateOne(
+            { tournamentId, playerKey: row.playerKey },
+            { $set: { finalFantasyRank: Number(row.finalFantasyRank) || null }, $setOnInsert: { tournamentId, playerKey: row.playerKey } },
+            { upsert: true },
+          )
+          : Promise.resolve();
+        return Promise.all([payoutWrite, seasonStatsWrite]);
       }));
       return res.json({ ok: true, message: "Fantasy výplaty byly uloženy." });
     } catch {

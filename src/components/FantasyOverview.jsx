@@ -45,16 +45,21 @@ function getPlayerStats(rounds, player, periodId = 'all', seasonStats = fantasyS
       worst: total.worst + (score === worst ? 1 : 0),
     }
   }, { best: 0, worst: 0 })
-  const periodStats = periodId === 'all'
+  const periodEntriesForPlayer = periodId === 'all'
     ? Object.entries(tipsportStatsByPeriod)
       .filter(([key]) => key !== 'all')
       .map(([, stats]) => stats?.[player.nick])
       .filter(Boolean)
-      .reduce((total, stats) => ({
+    : []
+  // Bez seznamu obdobi (napr. archivovany turnaj bez rozpadu po mesicich) se drzi celkove udaje ze seasonStats.
+  const periodStats = periodId === 'all'
+    ? (periodEntriesForPlayer.length > 0
+      ? periodEntriesForPlayer.reduce((total, stats) => ({
         bestDailyRank: stats.bestDailyRank !== null && stats.bestDailyRank !== undefined && stats.bestDailyRank !== '' && Number.isFinite(Number(stats.bestDailyRank) ) ? Math.min(total.bestDailyRank ?? Infinity, Number(stats.bestDailyRank)) : total.bestDailyRank,
         bestPeriodRank: stats.bestPeriodRank !== null && stats.bestPeriodRank !== undefined && stats.bestPeriodRank !== '' && Number.isFinite(Number(stats.bestPeriodRank)) ? Math.min(total.bestPeriodRank ?? Infinity, Number(stats.bestPeriodRank)) : total.bestPeriodRank,
         fantasyNets: total.fantasyNets + (Number(stats.fantasyNets) || 0),
       }), { fantasyNets: 0 })
+      : {})
     : tipsportStatsByPeriod[periodId]?.[player.nick] ?? {}
   return {
     ...seasonStats[player.nick],
@@ -227,7 +232,7 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
     standings: [['prizeMoney', 'Peníze'], ['average', 'Průměr'], ['averageLastFive', 'Forma 5'], ['points', 'Body']],
     performance: [['bestScore', 'Nejlepší'], ['worstScore', 'Nejhorší'], ['last', selectedRound ? 'V kole' : 'Poslední']],
     awards: [['awards.best', 'Borec kola'], ['awards.worst', 'Kopyto kola'], ['missed', 'Netipováno']],
-    prizes: [['bestDailyRank', 'NEJ denní'], ['bestPeriodRank', `NEJ ${fantasyPeriodRankLabel.toLowerCase()}`], ['fantasyNets', 'Nety']],
+    prizes: [['bestDailyRank', 'NEJ denní'], ['bestPeriodRank', `NEJ ${fantasyPeriodRankLabel.toLowerCase()}`], ['fantasyNets', 'Nety'], ...(periodId === 'all' ? [['finalFantasyRank', 'Konečné umístění']] : [])],
   }
   const columns = statViews[statView]
 
@@ -357,6 +362,7 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
                 <ol className="long-term-bank-payouts">
                   {fantasyShortBankPayouts.map((item) => <li key={item.place} className={`long-term-bank-place ${item.place === 1 ? 'is-exact' : item.place === 2 ? 'is-near' : 'is-win'}`}><strong>{item.place}.</strong><span className="long-term-bank-amount">{item.amount.toLocaleString('cs-CZ')} Kč</span></li>)}
                 </ol>
+                <p className="long-term-bank-summary">Zbylých {(Number(fantasyMoneyRules.longTermPool) || 0).toLocaleString('cs-CZ')} Kč se převádí každý měsíc do dlouhodobého banku.</p>
                 <div className="long-term-bank-rules">
                   <h3>V případě shodného počtu bodů rozhoduje:</h3>
                   {fantasyRules.length > 0 ? <ol>{fantasyRules.map((rule) => <li key={rule}>{rule}</li>)}</ol> : <p>Pravidla zatím nejsou vyplněná.</p>}

@@ -22,6 +22,18 @@ function normalizeFantasyIdentity(value) {
   return String(value ?? '').trim().toLowerCase();
 }
 
+function parseMatchStartTime(value) {
+  const text = String(value ?? '').trim();
+  if (!text) return Number.NaN;
+  if (/[zZ]|[+-]\d{2}:?\d{2}$/.test(text)) return new Date(text).getTime();
+  const naive = new Date(`${text}:00Z`);
+  if (Number.isNaN(naive.getTime())) return Number.NaN;
+  const offsetLabel = new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/Prague', timeZoneName: 'longOffset' }).formatToParts(naive).find((part) => part.type === 'timeZoneName')?.value || 'GMT+00:00';
+  const offsetMatch = offsetLabel.match(/GMT([+-])(\d{2}):?(\d{2})/);
+  const offsetMinutes = offsetMatch ? (Number(offsetMatch[2]) * 60 + Number(offsetMatch[3])) * (offsetMatch[1] === '-' ? -1 : 1) : 0;
+  return naive.getTime() - offsetMinutes * 60 * 1000;
+}
+
 function tieBreakRulesFor(order = []) {
   const labels = {
     exact: "Počet přesných výsledků za 10 bodů.",
@@ -78,7 +90,7 @@ async function loadMongoTournamentData(getDb, tournamentId, session) {
   for (const tip of tips) {
     if (!allowedUserIds.has(tip.userId.toString())) continue;
     const match = matches.find((item) => item._id.equals(tip.matchId));
-    const hasStarted = match && new Date(match.startsAt).getTime() <= now;
+    const hasStarted = match && parseMatchStartTime(match.startsAt) <= now;
     const isOwnTip = Boolean(session) && tip.userId.toString() === session.sub;
     if (!tipsByMatch.has(tip.matchId.toString())) tipsByMatch.set(tip.matchId.toString(), []);
     const points = scoreTip(`${tip.homeScore}:${tip.awayScore}`, match?.score, tournament.scoring);
@@ -89,7 +101,7 @@ async function loadMongoTournamentData(getDb, tournamentId, session) {
   // Hraci bez vlastniho tipu se v tabulce zobrazi vzdy (N/N po zacatku zapasu, jinak jen "ceka na tip"),
   // aby ve sloupci poradi nevznikaly mezery pro hrace, kteri v tabulce chybi.
   for (const match of matches) {
-    const hasStarted = new Date(match.startsAt).getTime() <= now;
+    const hasStarted = parseMatchStartTime(match.startsAt) <= now;
     const matchKey = match._id.toString();
     const existingUserIds = new Set((tipsByMatch.get(matchKey) || []).map((tip) => tip.userId.toString()));
     for (const user of users) {
@@ -150,7 +162,7 @@ async function loadMongoTournamentData(getDb, tournamentId, session) {
       updatedByAdminName: match.updatedByUsername || null,
       tipCount: eligibleTips.filter((tip) => tip.matchId.equals(match._id)).length,
       playerCount: users.length,
-      tipsVisible: new Date(match.startsAt).getTime() <= now,
+      tipsVisible: parseMatchStartTime(match.startsAt) <= now,
       ownTip: session ? (() => {
         const tip = tips.find((item) => item.matchId.equals(match._id) && item.userId.toString() === session.sub);
         return tip ? { homeScore: tip.homeScore, awayScore: tip.awayScore } : null;

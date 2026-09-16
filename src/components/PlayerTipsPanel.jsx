@@ -58,10 +58,11 @@ export default function PlayerTipsPanel({ selectedTournamentId, scheduleRefreshK
   const [scheduleMessage, setScheduleMessage] = useState('')
   const [tipsMode, setTipsMode] = useState('mine')
   const autoSaveTimers = useRef({})
+  const matchesInitializedRef = useRef(false)
 
   useEffect(() => {
     let cancelled = false
-    fetch('/api/player/matches', { credentials: 'include' })
+    const loadOpenMatches = () => fetch('/api/player/matches', { credentials: 'include' })
       .then(async (response) => {
         const payload = await response.json().catch(() => ({}))
         if (!response.ok) throw new Error(payload.message || 'Zápasy se nepodařilo načíst')
@@ -71,20 +72,26 @@ export default function PlayerTipsPanel({ selectedTournamentId, scheduleRefreshK
         if (cancelled) return
         const loadedMatches = payload.matches ?? []
         setMatches(loadedMatches)
-        setValues(Object.fromEntries(loadedMatches.map((match) => [match._id, {
+        setValues((current) => Object.fromEntries(loadedMatches.map((match) => [match._id, current[match._id] ?? {
           homeScore: match.tip?.homeScore ?? '',
           awayScore: match.tip?.awayScore ?? '',
         }])))
         // Vychází se z aktuálního kola jen jednou při načtení, aby se pohled během editace sám nepřepnul jinam.
-        const loadedGroups = buildMatchGroups(loadedMatches)
-        const initialIndex = loadedGroups.findIndex((group) => group.matches.some((match) => new Date(match.startsAt).getTime() > Date.now()))
-        setActiveGroupIndex(initialIndex >= 0 ? initialIndex : Math.max(0, loadedGroups.length - 1))
+        if (!matchesInitializedRef.current) {
+          const loadedGroups = buildMatchGroups(loadedMatches)
+          const initialIndex = loadedGroups.findIndex((group) => group.matches.some((match) => new Date(match.startsAt).getTime() > Date.now()))
+          setActiveGroupIndex(initialIndex >= 0 ? initialIndex : Math.max(0, loadedGroups.length - 1))
+          matchesInitializedRef.current = true
+        }
       })
       .catch((error) => {
         if (!cancelled) setMessage(error.message)
       })
+    loadOpenMatches()
+    const refreshId = window.setInterval(loadOpenMatches, 30000)
     return () => {
       cancelled = true
+      window.clearInterval(refreshId)
     }
   }, [])
 
@@ -140,6 +147,7 @@ export default function PlayerTipsPanel({ selectedTournamentId, scheduleRefreshK
   }
 
   const saveTip = async (matchId, tipValues = values[matchId]) => {
+    const previousTip = values[matchId]
     setBusyMatchId(matchId)
     setTipMessages((current) => ({ ...current, [matchId]: null }))
     const startedAt = Date.now()
@@ -157,6 +165,8 @@ export default function PlayerTipsPanel({ selectedTournamentId, scheduleRefreshK
       onTipUpdated?.(payload.tip)
     } catch (error) {
       setTipMessage(matchId, error.message, true)
+      setValues((current) => ({ ...current, [matchId]: previousTip }))
+      if (error.message.includes('už nelze tipovat')) setMatches((current) => current.filter((match) => match._id !== matchId))
     } finally {
       const elapsed = Date.now() - startedAt
       if (elapsed < minBusyMs) await new Promise((resolve) => window.setTimeout(resolve, minBusyMs - elapsed))

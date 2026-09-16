@@ -84,6 +84,18 @@ function getOptionalSession(req) {
   }
 }
 
+function parseMatchStartTime(value) {
+  const text = String(value ?? '').trim();
+  if (!text) return Number.NaN;
+  if (/[zZ]|[+-]\d{2}:?\d{2}$/.test(text)) return new Date(text).getTime();
+  const naive = new Date(`${text}:00Z`);
+  if (Number.isNaN(naive.getTime())) return Number.NaN;
+  const offsetLabel = new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/Prague', timeZoneName: 'longOffset' }).formatToParts(naive).find((part) => part.type === 'timeZoneName')?.value || 'GMT+00:00';
+  const offsetMatch = offsetLabel.match(/GMT([+-])(\d{2}):?(\d{2})/);
+  const offsetMinutes = offsetMatch ? (Number(offsetMatch[2]) * 60 + Number(offsetMatch[3])) * (offsetMatch[1] === '-' ? -1 : 1) : 0;
+  return naive.getTime() - offsetMinutes * 60 * 1000;
+}
+
 function requireRole(role) {
   return (req, res, next) => {
     if (req.session?.role !== role) {
@@ -496,7 +508,7 @@ function createAuthRoutes({ app, getDb }) {
   app.get("/api/player/matches", requireJwt, async (req, res) => {
     try {
       const matches = await getDb().collection("matches")
-        .find({ status: "open", startsAt: { $gt: new Date().toISOString() } }, { projection: { tournamentId: 1, round: 1, startsAt: 1, home: 1, away: 1, bank: 1, status: 1 } })
+        .find({ status: "open" }, { projection: { tournamentId: 1, round: 1, startsAt: 1, home: 1, away: 1, bank: 1, status: 1 } })
         .sort({ round: 1, startsAt: 1 })
         .toArray();
       const tips = await getDb().collection("tips")
@@ -505,7 +517,7 @@ function createAuthRoutes({ app, getDb }) {
       const tipsByMatchId = new Map(tips.map((tip) => [tip.matchId.toString(), tip]));
       return res.json({
         ok: true,
-        matches: matches.map((match) => ({
+        matches: matches.filter((match) => parseMatchStartTime(match.startsAt) > Date.now()).map((match) => ({
           ...match,
           _id: match._id.toString(),
           tournamentId: match.tournamentId.toString(),
@@ -513,7 +525,7 @@ function createAuthRoutes({ app, getDb }) {
             homeScore: tipsByMatchId.get(match._id.toString()).homeScore,
             awayScore: tipsByMatchId.get(match._id.toString()).awayScore,
           } : null,
-          canEdit: new Date(match.startsAt).getTime() > Date.now(),
+          canEdit: parseMatchStartTime(match.startsAt) > Date.now(),
         })),
       });
     } catch {
@@ -532,7 +544,7 @@ function createAuthRoutes({ app, getDb }) {
 
       const db = getDb();
       const match = await db.collection("matches").findOne({ _id: new ObjectId(matchId), status: "open" });
-      if (!match || new Date(match.startsAt).getTime() <= Date.now()) {
+      if (!match || parseMatchStartTime(match.startsAt) <= Date.now()) {
         return res.status(409).json({ ok: false, message: "Tento zápas už nelze tipovat." });
       }
 

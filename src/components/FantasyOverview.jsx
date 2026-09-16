@@ -181,6 +181,14 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
       .catch(() => {})
     return () => { cancelled = true }
   }, [isDbFantasy, refreshKey, selectedTournamentId])
+  useEffect(() => {
+    const currentNicks = new Set(activeFantasyPlayers.map((player) => player.nick))
+    setVisiblePlayerNicks((visible) => {
+      const retained = visible.filter((nick) => currentNicks.has(nick))
+      const newPlayers = activeFantasyPlayers.map((player) => player.nick).filter((nick) => !visible.includes(nick))
+      return [...retained, ...newPlayers]
+    })
+  }, [activeFantasyPlayers])
   const standingsWithStats = useMemo(() => standings.map((player) => ({ ...player, ...getPlayerStats(visibleRounds, player, periodId, activeSeasonStats, activePrizeMoneyByPeriod, activeLongTermBankByPeriod, activeTipsportStatsByPeriod) })), [activeLongTermBankByPeriod, activePrizeMoneyByPeriod, activeSeasonStats, activeTipsportStatsByPeriod, periodId, standings, visibleRounds])
   const displayedStandings = useMemo(() => [...standingsWithStats].sort((first, second) => {
     const firstValue = sort.key === 'prizeMoney' ? getDisplayedPrizeMoney(first, periodId, activePrizeMoneyByPeriod) : getMetricValue(first, sort.key)

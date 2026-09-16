@@ -1,4 +1,4 @@
-export const chartColors = ['#2563eb', '#0ea5e9', '#14b8a6', '#eab308', '#f97316']
+export const chartColors = ['#111827', '#2563eb', '#dc2626', '#16a34a', '#ca8a04', '#9333ea']
 
 export const fantasyPlayers = [
   { name: 'Láďa Šafařík', nick: 'joudik' },

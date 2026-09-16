@@ -410,7 +410,7 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
         }))
         setEditingMatchId('')
         setMessage('Zápas byl upraven.')
-        onMatchesChanged?.()
+        await onMatchesChanged?.()
         return
       }
       setMatchForm((current) => ({ ...current, round: String(Number(current.round) + 1), startsAt: '', home: '', away: '', score: '', manualBank: '' }))
@@ -420,7 +420,7 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
         return String(a.startsAt).localeCompare(String(b.startsAt))
       }))
       setCounts((current) => current ? { ...current, matches: current.matches + 1 } : current)
-      onMatchesChanged?.()
+      await onMatchesChanged?.()
     } catch (error) {
       setMessage(error.message)
     } finally {
@@ -713,8 +713,9 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
                 <option value="locked">Uzamčený</option>
               </select>
             </div>
-            <div className="admin-tournament-form-row">
+            <div className="admin-match-teams-row">
               <input name="home" value={matchForm.home} onChange={updateMatchField} placeholder="Domácí tým" required />
+              <span className="admin-match-vs" aria-hidden="true">–</span>
               <input name="away" value={matchForm.away} onChange={updateMatchField} placeholder="Hostující tým" required />
               <label className="admin-score-field">
                 <span className="admin-field-label">Výsledek (domácí : hosté)</span>
@@ -724,6 +725,8 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
                   <input type="number" min="0" max="99" value={matchForm.score.split(':')[1] || ''} onChange={(event) => updateMatchScore('away', event.target.value)} aria-label={`Skóre hostujícího týmu ${matchForm.away || ''}`} placeholder="0" />
                 </div>
               </label>
+            </div>
+            <div className="admin-tournament-form-row">
               <input name="manualBank" type="number" min="0" value={matchForm.manualBank} onChange={updateMatchField} placeholder="Bank ručně (volitelné)" />
             </div>
             <div className="admin-form-actions">

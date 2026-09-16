@@ -4504,10 +4504,20 @@
 
 .admin-score-field {
   min-width: 0;
+  display: grid;
+  gap: 0.2rem;
 }
 
 .admin-match-score {
   margin-top: 0.2rem;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  gap: 0.3rem;
+}
+
+.admin-score-field .admin-field-label {
+  white-space: nowrap;
 }
 
 .admin-match-score input {
@@ -5066,6 +5076,33 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.8fr);
   gap: 0.35rem;
+}
+
+.admin-match-teams-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) minmax(9rem, 0.7fr);
+  align-items: end;
+  gap: 0.45rem;
+}
+
+.admin-match-vs {
+  padding-bottom: 0.45rem;
+  color: #6c8399;
+  font-weight: 800;
+}
+
+.admin-match-teams-row .admin-score-field {
+  min-width: 0;
+}
+
+@media (max-width: 620px) {
+  .admin-match-teams-row {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  }
+
+  .admin-match-teams-row .admin-score-field {
+    grid-column: 1 / -1;
+  }
 }
 
 .admin-fantasy-payout-row {

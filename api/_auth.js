@@ -1042,8 +1042,11 @@ function createAuthRoutes({ app, getDb }) {
         || existingMatch.status !== status;
       const update = {
         $set: { round, startsAt, home, away, score: score || null, status, updatedAt: new Date() },
+        $unset: { updatedByUserId: "", updatedByUsername: "" },
       };
       if (matchDetailsChanged) {
+        delete update.$unset.updatedByUserId;
+        delete update.$unset.updatedByUsername;
         update.$set.updatedByUserId = req.session.sub;
         update.$set.updatedByUsername = req.session.displayName || req.session.username || "admin";
       }

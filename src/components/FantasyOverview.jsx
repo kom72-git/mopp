@@ -161,9 +161,10 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
   const periodRounds = useMemo(() => periodId === 'all' ? activeFantasyRounds : activeFantasyRounds.filter(([date]) => periodContainsDate(period, date)), [activeFantasyRounds, period, periodId])
   const visibleRounds = selectedRoundIndex === null ? periodRounds : periodRounds.slice(0, selectedRoundIndex + 1)
   const selectedRound = selectedRoundIndex === null ? null : periodRounds[selectedRoundIndex]
+  const rankingRounds = selectedRound ? [selectedRound] : visibleRounds
   const selectedTournamentRoundIndex = selectedRound ? activeFantasyRounds.indexOf(selectedRound) : activeFantasyRounds.indexOf(visibleRounds.at(-1))
   const lastRound = selectedRound ?? (periodId === 'all' ? visibleRounds.at(-1) : visibleRounds.at(-2))
-  const standings = rankPlayers(activeFantasyPlayers, visibleRounds, lastRound)
+  const standings = rankPlayers(activeFantasyPlayers, rankingRounds, selectedRound ?? lastRound)
   const totalStandings = rankPlayers(activeFantasyPlayers, activeFantasyRounds)
   const totalRankByNick = new Map(totalStandings.map((player, index) => [player.nick, index + 1]))
   const previousStandings = rankPlayers(activeFantasyPlayers, visibleRounds.slice(0, -1))
@@ -189,7 +190,7 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
       return [...retained, ...newPlayers]
     })
   }, [activeFantasyPlayers])
-  const standingsWithStats = useMemo(() => standings.map((player) => ({ ...player, ...getPlayerStats(visibleRounds, player, periodId, activeSeasonStats, activePrizeMoneyByPeriod, activeLongTermBankByPeriod, activeTipsportStatsByPeriod) })), [activeLongTermBankByPeriod, activePrizeMoneyByPeriod, activeSeasonStats, activeTipsportStatsByPeriod, periodId, standings, visibleRounds])
+  const standingsWithStats = useMemo(() => standings.map((player) => ({ ...player, ...getPlayerStats(rankingRounds, player, periodId, activeSeasonStats, activePrizeMoneyByPeriod, activeLongTermBankByPeriod, activeTipsportStatsByPeriod) })), [activeLongTermBankByPeriod, activePrizeMoneyByPeriod, activeSeasonStats, activeTipsportStatsByPeriod, periodId, rankingRounds, standings])
   const displayedStandings = useMemo(() => [...standingsWithStats].sort((first, second) => {
     const firstValue = sort.key === 'prizeMoney' ? getDisplayedPrizeMoney(first, periodId, activePrizeMoneyByPeriod) : getMetricValue(first, sort.key)
     const secondValue = sort.key === 'prizeMoney' ? getDisplayedPrizeMoney(second, periodId, activePrizeMoneyByPeriod) : getMetricValue(second, sort.key)

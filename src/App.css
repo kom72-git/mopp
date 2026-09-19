@@ -5834,6 +5834,15 @@
 }
 
 @media (max-width: 620px) {
+  .rank-chart-wrap {
+    overflow-x: hidden;
+  }
+
+  .rank-chart {
+    min-width: 0;
+    width: 100%;
+  }
+
   .tips-head {
     display: none;
   }

@@ -605,6 +605,91 @@
   grid-template-columns: 2rem 2.5rem minmax(160px, 1fr) repeat(4, minmax(5.1rem, 0.68fr));
 }
 
+.fantasy-table-head.is-compact,
+.fantasy-table-row.is-compact {
+  grid-template-columns: 2rem 2.5rem minmax(170px, 1fr) repeat(2, minmax(5.4rem, 0.72fr));
+}
+
+.fantasy-table-row.is-compact .fantasy-cell-nets {
+  grid-column: 4;
+}
+
+.fantasy-table-row.is-compact .fantasy-cell-tipsport-rank {
+  grid-column: 5;
+}
+
+.fantasy-table-head.is-compact .fantasy-metric-fantasyNets,
+.fantasy-table-head.is-compact .fantasy-metric-bestDailyRank {
+  grid-row: 1;
+}
+
+.fantasy-table-head.is-compact .fantasy-metric-fantasyNets {
+  grid-column: 4;
+}
+
+.fantasy-table-head.is-compact .fantasy-metric-bestDailyRank {
+  grid-column: 5;
+}
+
+@media (min-width: 621px) {
+  .fantasy-table-head.is-standings .fantasy-metric-points,
+  .fantasy-table-row.is-standings .fantasy-metric-points {
+    order: 1;
+  }
+
+  .fantasy-table-head.is-standings .fantasy-metric-prizeMoney,
+  .fantasy-table-row.is-standings .fantasy-metric-prizeMoney {
+    order: 2;
+  }
+
+  .fantasy-table-head.is-standings .fantasy-metric-average,
+  .fantasy-table-row.is-standings .fantasy-metric-average {
+    order: 3;
+  }
+
+  .fantasy-table-head.is-standings .fantasy-metric-averageLastFive,
+  .fantasy-table-row.is-standings .fantasy-metric-averageLastFive {
+    order: 4;
+  }
+
+  .fantasy-table-head.is-performance .fantasy-metric-bestScore,
+  .fantasy-table-row.is-performance .fantasy-metric-bestScore,
+  .fantasy-table-head.is-awards .fantasy-metric-awards-best,
+  .fantasy-table-row.is-awards .fantasy-metric-awards-best,
+  .fantasy-table-head.is-prizes .fantasy-metric-bestDailyRank,
+  .fantasy-table-row.is-prizes .fantasy-metric-bestDailyRank {
+    order: 1;
+  }
+
+  .fantasy-table-head.is-prizes .fantasy-metric-worstDailyRank,
+  .fantasy-table-row.is-prizes .fantasy-metric-worstDailyRank {
+    order: 2;
+  }
+
+  .fantasy-table-head.is-performance .fantasy-metric-worstScore,
+  .fantasy-table-row.is-performance .fantasy-metric-worstScore,
+  .fantasy-table-head.is-awards .fantasy-metric-awards-worst,
+  .fantasy-table-row.is-awards .fantasy-metric-awards-worst,
+  .fantasy-table-head.is-prizes .fantasy-metric-bestPeriodRank,
+  .fantasy-table-row.is-prizes .fantasy-metric-bestPeriodRank {
+    order: 3;
+  }
+
+  .fantasy-table-head.is-performance .fantasy-metric-last,
+  .fantasy-table-row.is-performance .fantasy-metric-last,
+  .fantasy-table-head.is-awards .fantasy-metric-missed,
+  .fantasy-table-row.is-awards .fantasy-metric-missed,
+  .fantasy-table-head.is-prizes .fantasy-metric-fantasyNets,
+  .fantasy-table-row.is-prizes .fantasy-metric-fantasyNets {
+    order: 4;
+  }
+
+  .fantasy-table-head.is-prizes .fantasy-metric-finalFantasyRank,
+  .fantasy-table-row.is-prizes .fantasy-metric-finalFantasyRank {
+    order: 5;
+  }
+}
+
 .fantasy-table-head {
   padding: 0 0.65rem;
   color: #708596;
@@ -693,6 +778,10 @@
   display: none;
 }
 
+.fantasy-label-compact {
+  display: none;
+}
+
 .fantasy-table-row .fantasy-cell .fantasy-cell-label {
   display: none;
 }
@@ -711,6 +800,7 @@
   box-sizing: border-box;
   padding-right: 0.65rem;
   text-align: right;
+  font-size: 0.84rem;
   font-variant-numeric: tabular-nums;
 }
 
@@ -746,6 +836,36 @@
 
 .fantasy-rank-chart-panel .panel-head h2 {
   margin: 0.08rem 0 0;
+}
+
+.fantasy-selected-round {
+  margin-left: 0.45rem;
+  color: #6d8191;
+  font-size: 0.72em;
+  font-weight: 600;
+}
+
+.fantasy-selected-round::before {
+  content: '·';
+  margin-right: 0.45rem;
+}
+
+.fantasy-chart-head-meta {
+  display: flex;
+  min-height: 2.1rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  text-align: right;
+}
+
+.fantasy-chart-context {
+  position: relative;
+  top: 0.18rem;
+  color: #6d8191;
+  font-size: 0.74rem;
+  font-weight: 600;
 }
 
 .fantasy-rank-selected-round {
@@ -862,6 +982,25 @@
     display: none;
   }
 
+  .fantasy-table-row .fantasy-cell .fantasy-cell-label {
+    display: inline;
+  }
+
+  .fantasy-label-wide {
+    display: none;
+  }
+
+  .fantasy-label-compact {
+    display: inline;
+  }
+
+  .fantasy-points-label {
+    display: block;
+    color: #8496a4;
+    font-size: 0.64rem;
+    font-weight: 600;
+  }
+
   .fantasy-mobile-sort {
     display: flex;
     align-items: center;
@@ -898,6 +1037,7 @@
 
   .fantasy-points {
     padding-right: 0.65rem;
+    font-size: 0.72rem;
   }
 
   .fantasy-row-metrics {
@@ -907,6 +1047,17 @@
     justify-content: flex-start;
     gap: 0.8rem;
     min-width: 0;
+  }
+
+  .fantasy-one-table.has-standings-bank .fantasy-row-metrics {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: baseline;
+    justify-content: initial;
+  }
+
+  .fantasy-one-table.has-standings-bank .fantasy-row-metrics .fantasy-metric-prizeMoney {
+    grid-column: 1 / -1;
   }
 
   .fantasy-cell {
@@ -925,6 +1076,14 @@
   }
 
   .fantasy-table-row .fantasy-cell .fantasy-cell-label {
+    display: inline;
+  }
+
+  .fantasy-label-wide {
+    display: none;
+  }
+
+  .fantasy-label-compact {
     display: inline;
   }
 
@@ -5118,6 +5277,17 @@
   align-self: center;
   color: #174c73;
   font-size: 0.76rem;
+}
+
+.admin-fantasy-player-name {
+  display: grid;
+  min-width: 7rem;
+  gap: 0.12rem;
+}
+
+.admin-fantasy-player-name small {
+  color: #75899a;
+  font-size: 0.68rem;
 }
 
 .admin-entry-fee-grid {

@@ -30,6 +30,8 @@ function getPlayerStats(rounds, player, periodId = 'all', seasonStats = fantasyS
   const scores = rounds.map((round) => round[1][player.playerIndex])
   const countedScores = scores.filter((score) => Number.isFinite(score) || score === 'N').map((score) => score === 'N' ? 0 : score)
   const noBets = scores.filter((score) => score === 'N').length
+  const roundNets = rounds.reduce((total, round) => total + (Number(round[3]?.[player.nick]) || 0), 0)
+  const selectedRoundDailyRank = rounds.length === 1 ? Number(rounds[0][4]?.[player.nick]) || null : null
   const awards = rounds.reduce((total, round) => {
     const manualAwards = round[2] || {}
     const score = round[1][player.playerIndex]
@@ -58,12 +60,17 @@ function getPlayerStats(rounds, player, periodId = 'all', seasonStats = fantasyS
         bestDailyRank: stats.bestDailyRank !== null && stats.bestDailyRank !== undefined && stats.bestDailyRank !== '' && Number.isFinite(Number(stats.bestDailyRank) ) ? Math.min(total.bestDailyRank ?? Infinity, Number(stats.bestDailyRank)) : total.bestDailyRank,
         bestPeriodRank: stats.bestPeriodRank !== null && stats.bestPeriodRank !== undefined && stats.bestPeriodRank !== '' && Number.isFinite(Number(stats.bestPeriodRank)) ? Math.min(total.bestPeriodRank ?? Infinity, Number(stats.bestPeriodRank)) : total.bestPeriodRank,
         fantasyNets: total.fantasyNets + (Number(stats.fantasyNets) || 0),
-      }), { fantasyNets: 0 })
-      : {})
-    : tipsportStatsByPeriod[periodId]?.[player.nick] ?? {}
+      }), { fantasyNets: roundNets + (Number(seasonStats[player.nick]?.finalFantasyNets) || 0) })
+      : { fantasyNets: roundNets + (Number(seasonStats[player.nick]?.finalFantasyNets ?? seasonStats[player.nick]?.fantasyNets) || 0) })
+    : { ...(tipsportStatsByPeriod[periodId]?.[player.nick] ?? {}), fantasyNets: roundNets + (Number(tipsportStatsByPeriod[periodId]?.[player.nick]?.fantasyNets) || 0) }
+  const dailyRankValues = periodId === 'all' || rounds.length > 1
+    ? rounds.map((round) => Number(round[4]?.[player.nick])).filter((rank) => Number.isFinite(rank) && rank > 0)
+    : []
   return {
     ...seasonStats[player.nick],
     ...periodStats,
+    worstDailyRank: dailyRankValues.length ? Math.max(...dailyRankValues) : null,
+    bestDailyRank: selectedRoundDailyRank ?? periodStats.bestDailyRank ?? seasonStats[player.nick]?.bestDailyRank,
     prizeMoney: prizeMoneyByPeriod[periodId]?.[player.nick] ?? 0,
     longTermBank: longTermBankByPeriod[periodId]?.[player.nick] ?? 0,
     averageLastFive: countedScores.length ? Math.round(countedScores.slice(-5).reduce((total, score) => total + score, 0) / Math.min(5, countedScores.length)) : 0,
@@ -113,7 +120,13 @@ function getLongTermBankForRank(rank, payouts) {
 function formatFantasyDate(date) {
   if (!date) return ''
   const [day, month] = String(date).split('.')
-  return `${Number(day)}.${Number(month)}.2026`
+  return `${String(day).padStart(2, '0')}.${String(month).padStart(2, '0')}.2026`
+}
+
+function formatFantasyShortDate(date) {
+  if (!date) return ''
+  const [day, month] = String(date).split('.')
+  return `${String(day).padStart(2, '0')}.${String(month).padStart(2, '0')}.`
 }
 
 function parseFantasyPayouts(value) {
@@ -132,6 +145,7 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
   const [visiblePlayerNicks, setVisiblePlayerNicks] = useState(() => fantasyPlayers.map((player) => player.nick))
   const [hoveredPlayerNick, setHoveredPlayerNick] = useState('')
   const touchLegendHandledRef = useRef(false)
+  const fantasyOneTableRef = useRef(null)
   const activeFantasyPlayers = fantasyData?.players ?? (isDbFantasy ? [] : fantasyPlayers)
   const activePeriodsRaw = fantasyData?.periods?.length ? fantasyData.periods : (isDbFantasy ? [{ id: 'all', label: 'Celkem' }] : periods)
   const activeFantasyRounds = fantasyData?.rounds ?? (isDbFantasy ? [] : fantasyRounds)
@@ -139,6 +153,7 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
   const activePrizeMoneyByPeriod = fantasyData?.prizeMoneyByPeriod ?? (isDbFantasy ? {} : fantasyPrizeMoneyByPeriod)
   const activeLongTermBankByPeriod = fantasyData?.longTermBankByPeriod ?? (isDbFantasy ? {} : fantasyLongTermBankByPeriod)
   const activeTipsportStatsByPeriod = fantasyData?.tipsportStatsByPeriod ?? {}
+  const tipsportPlayerCount = Number(fantasyData?.tipsportPlayerCount ?? selectedTournament?.tipsportPlayerCount) || 0
   const fantasyMonths = Number(fantasyData?.fantasyMonths) || 0
   const fantasyPeriodRankLabel = fantasyData?.fantasyPeriodRankLabel ?? 'Měsíční'
   const fantasyMoneyRules = fantasyData?.fantasyMoneyRules ?? {}
@@ -154,6 +169,10 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
     ? fantasyBankContribution * activeFantasyPlayers.length
     : fantasyBankContribution * Math.max(1, fantasyMonths)
   const fantasyBankPayouts = parseFantasyPayouts(fantasyMoneyRules.longTermPayouts)
+  const hasFinalFantasyRanks = periodId === 'all' && activeFantasyPlayers.some((player) => {
+    const rank = activeSeasonStats[player.nick]?.finalFantasyRank
+    return rank !== null && rank !== undefined && rank !== '' && Number.isFinite(Number(rank))
+  })
   const seasonLabel = selectedTournament?.season ? `Sezóna ${selectedTournament.season}` : 'Základní část 2024/25'
   const periodContainsDate = (item, date) => item.roundDates?.length ? item.roundDates.includes(date) : item.months?.includes(date.split('.')[1])
   const activePeriods = activePeriodsRaw.filter((item) => item.id === 'all' || activeFantasyRounds.some(([date]) => periodContainsDate(item, date)))
@@ -199,8 +218,41 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
     if (firstHasValue !== secondHasValue) return firstHasValue ? -1 : 1
     const comparison = firstValue - secondValue
     if (comparison !== 0) return sort.direction === 'asc' ? comparison : -comparison
+    if (sort.key === 'awards.best') {
+      const tieBreak = (Number(first.awards?.worst) || 0) - (Number(second.awards?.worst) || 0)
+      if (tieBreak !== 0) return tieBreak
+    }
+    if (sort.key === 'awards.worst') {
+      const tieBreak = (Number(second.awards?.best) || 0) - (Number(first.awards?.best) || 0)
+      if (tieBreak !== 0) return tieBreak
+    }
     return second.points - first.points || first.playerIndex - second.playerIndex
   }), [activePrizeMoneyByPeriod, periodId, sort, standingsWithStats])
+  const [forceStandingsMetricsBreak, setForceStandingsMetricsBreak] = useState(false)
+  useEffect(() => {
+    const table = fantasyOneTableRef.current
+    if (!table) return undefined
+    const measure = () => {
+      if (statView !== 'standings') {
+        setForceStandingsMetricsBreak(false)
+        return
+      }
+      table.classList.remove('has-standings-bank')
+      const wrapped = [...table.querySelectorAll('.fantasy-row-metrics')].some((metrics) => {
+        const tops = new Set([...metrics.children].map((child) => Math.round(child.getBoundingClientRect().top)))
+        return tops.size > 1
+      })
+      table.classList.toggle('has-standings-bank', wrapped)
+      setForceStandingsMetricsBreak(wrapped)
+    }
+    const frame = window.requestAnimationFrame(measure)
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure)
+    observer?.observe(table)
+    return () => {
+      window.cancelAnimationFrame(frame)
+      observer?.disconnect()
+    }
+  }, [displayedStandings, statView])
   const selectedPlayer = standings.find((player) => player.nick === selectedPlayerNick) ?? null
   const selectedPlayerStats = useMemo(() => {
     if (!selectedPlayer) return null
@@ -219,26 +271,33 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
     }
   }, [activeFantasyPlayers, activeLongTermBankByPeriod, activePrizeMoneyByPeriod, activeSeasonStats, activeTipsportStatsByPeriod, periodId, selectedPlayer, visibleRounds])
   const rankTimeline = useMemo(() => {
-    const ranksByRound = periodRounds.map((_, roundIndex) => {
-      const rankedPlayers = rankPlayers(activeFantasyPlayers, periodRounds.slice(0, roundIndex + 1))
-      return new Map(rankedPlayers.map((player, rankIndex) => [player.nick, rankIndex + 1]))
-    })
+    const ranksByRound = statView === 'prizes'
+      ? null
+      : periodRounds.map((_, roundIndex) => {
+        const rankedPlayers = rankPlayers(activeFantasyPlayers, periodRounds.slice(0, roundIndex + 1))
+        return new Map(rankedPlayers.map((player, rankIndex) => [player.nick, rankIndex + 1]))
+      })
     return {
       rounds: periodRounds.map(([date]) => date),
       series: activeFantasyPlayers.map((player, playerIndex) => ({
         ...player,
         color: chartColors[playerIndex % chartColors.length],
-        ranks: ranksByRound.map((rankByPlayer) => rankByPlayer.get(player.nick)),
+        ranks: statView === 'prizes'
+          ? periodRounds.map((round) => {
+            const rank = Number(round[4]?.[player.nick])
+            return Number.isFinite(rank) && rank > 0 ? rank : null
+          })
+          : ranksByRound.map((rankByPlayer) => rankByPlayer.get(player.nick)),
       })),
     }
-  }, [activeFantasyPlayers, periodRounds])
+  }, [activeFantasyPlayers, periodRounds, statView])
 
   const togglePlayerVisibility = (nick) => {
     setVisiblePlayerNicks((current) => current.includes(nick) ? current.filter((item) => item !== nick) : [...current, nick])
   }
 
   const changeSort = (key) => {
-    const defaultDirection = key.includes('Rank') ? 'asc' : 'desc'
+    const defaultDirection = key === 'worstDailyRank' ? 'desc' : key === 'worstScore' || key.includes('Rank') ? 'asc' : 'desc'
     setSort((current) => current.key === key
       ? { key, direction: current.direction === 'desc' ? 'asc' : 'desc' }
       : { key, direction: defaultDirection })
@@ -247,11 +306,34 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
   const sortLabel = (key, label) => `${label}, ${sort.key === key ? (sort.direction === 'desc' ? 'sestupně' : 'vzestupně') : 'seřadit'}`
   const statViews = {
     standings: [['prizeMoney', 'Peníze'], ['average', 'Průměr'], ['averageLastFive', 'Forma 5'], ['points', 'Body']],
-    performance: [['bestScore', 'Nejlepší'], ['worstScore', 'Nejhorší'], ['last', selectedRound ? 'V kole' : 'Poslední']],
-    awards: [['awards.best', 'Borec kola'], ['awards.worst', 'Kopyto kola'], ['missed', 'Netipováno']],
-    prizes: [['bestDailyRank', 'NEJ denní'], ['bestPeriodRank', `NEJ ${fantasyPeriodRankLabel.toLowerCase()}`], ['fantasyNets', 'Nety'], ...(periodId === 'all' ? [['finalFantasyRank', 'Konečné umístění']] : [])],
+    performance: [['worstScore', 'Nejhorší body'], ['last', selectedRound ? 'Body v kole' : 'Poslední body'], ['bestScore', 'Nejlepší body']],
+    awards: [['awards.worst', 'Kopyto kola'], ['missed', 'Netipováno'], ['awards.best', 'Borec kola']],
+    prizes: selectedRound
+      ? [['fantasyNets', 'Nety'], ['bestDailyRank', 'Tipsport pořadí']]
+      : [['bestPeriodRank', `Nejlepší ${fantasyPeriodRankLabel.toLowerCase()}`], ['fantasyNets', 'Nety'], ...(hasFinalFantasyRanks ? [['finalFantasyRank', 'Konečné umístění']] : []), ...(periodId === 'all' ? [['worstDailyRank', 'Nejhorší denní']] : []), ['bestDailyRank', 'Nejlepší denní']],
   }
   const columns = statViews[statView]
+  const metricClass = (key) => `fantasy-metric-${key.replace('.', '-')}`
+  const metricLabel = (key, label) => {
+    const compactLabel = key === 'bestDailyRank'
+      ? (selectedRound ? 'Tipsport' : 'Nej denní')
+      : key === 'bestPeriodRank'
+        ? `Nej ${fantasyPeriodRankLabel === 'Měsíční' ? 'měsíční' : 'týdenní'}`
+        : key === 'worstDailyRank'
+          ? 'Nejhorší denní'
+        : key === 'finalFantasyRank' ? 'Konečné' : label
+    return <><span className="fantasy-label-wide">{label}</span><span className="fantasy-label-compact">{compactLabel}</span></>
+  }
+  const statViewEyebrow = {
+    standings: 'Pořadí hráčů',
+    performance: 'Bodový výkon hráčů',
+    awards: 'Ocenění hráčů',
+    prizes: 'Tipsport pořadí',
+  }[statView]
+  const statViewContext = selectedRound
+    ? `${statViewEyebrow} · průběžně po ${selectedTournamentRoundIndex + 1}. kole turnaje`
+    : statViewEyebrow
+  const resetSelectionSort = () => setSort({ key: statView === 'prizes' ? 'bestDailyRank' : 'points', direction: statView === 'prizes' ? 'asc' : 'desc' })
 
   return (
     <div className="fantasy-preview">
@@ -265,7 +347,7 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
             <button key={item.id} type="button" role="tab" aria-selected={item.id === periodId} className={`player-window-tab ${item.id === periodId ? 'is-active' : ''}`} onClick={() => {
               setPeriodId(item.id)
               setSelectedRoundIndex(null)
-              setSort({ key: 'points', direction: 'desc' })
+              resetSelectionSort()
             }}>
               {item.label}
             </button>
@@ -280,7 +362,7 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
             <div className="fantasy-period-round-tabs" role="tablist" aria-label={`Fantasy kola za ${period.label}`}>
               <button type="button" role="tab" aria-selected={selectedRoundIndex === null} className={`round-tab ${selectedRoundIndex === null ? 'is-active' : 'is-past'}`} onClick={() => {
                 setSelectedRoundIndex(null)
-                setSort({ key: 'points', direction: 'desc' })
+                resetSelectionSort()
               }}>
                 <span className="round-tab-label">Souhrn</span>
                 <small>celý měsíc</small>
@@ -288,10 +370,10 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
               {periodRounds.map(([date], index) => (
                 <button key={date} type="button" role="tab" aria-selected={selectedRoundIndex === index} className={`round-tab ${selectedRoundIndex === index ? 'is-active' : 'is-past'}`} onClick={() => {
                   setSelectedRoundIndex(index)
-                  setSort({ key: 'points', direction: 'desc' })
+                  resetSelectionSort()
                 }}>
                   <span className="round-tab-label">{activeFantasyRounds.indexOf(periodRounds[index]) + 1}. kolo</span>
-                  <small>{date}.</small>
+                  <small>{formatFantasyShortDate(date)}</small>
                 </button>
               ))}
             </div>
@@ -299,10 +381,10 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
         ) : null}
       </section>
 
-      <section className="panel fantasy-one-table">
+      <section ref={fantasyOneTableRef} className={`panel fantasy-one-table${forceStandingsMetricsBreak ? ' has-standings-bank' : ''}`}>
         <div className="panel-head">
           <div>
-            <span className="fantasy-eyebrow">{periodId === 'all' ? 'Celkové pořadí turnaje' : selectedRound ? `Průběžné pořadí po ${selectedTournamentRoundIndex + 1}. kole turnaje` : 'Konečné pořadí období'}</span>
+            <span className="fantasy-eyebrow">{statViewContext}</span>
             <h2>{selectedRound ? formatFantasyDate(selectedRound[0]) : `Pořadí · ${period.label}`}</h2>
           </div>
           <span className="fantasy-round-count">{visibleRounds.length} kol</span>
@@ -323,17 +405,17 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
           {[['standings', 'Pořadí'], ['performance', 'Výkon'], ['awards', 'Ocenění'], ['prizes', 'Tipsport']].map(([key, label]) => (
             <button key={key} type="button" role="tab" aria-selected={statView === key} className={`player-window-tab ${statView === key ? 'is-active' : ''}`} onClick={() => {
               setStatView(key)
-              const defaultKey = key === 'standings' ? 'points' : statViews[key][0][0]
+              const defaultKey = key === 'standings' ? 'points' : key === 'performance' ? 'bestScore' : key === 'awards' ? 'awards.best' : key === 'prizes' ? 'bestDailyRank' : statViews[key][0][0]
               setSort({ key: defaultKey, direction: defaultKey.includes('Rank') ? 'asc' : 'desc' })
             }}>{label}</button>
           ))}
         </div>
 
-        <div className={`fantasy-table-head ${columns.length === 4 ? 'is-wide' : ''}`}>
+        <div className={`fantasy-table-head is-${statView} ${columns.length === 4 ? 'is-wide' : columns.length === 2 ? 'is-compact' : ''}`}>
           <span>#</span>
           <span>±</span>
           <span>Hráč</span>
-          {columns.map(([key, label]) => <button key={key} type="button" className={sort.key === key ? 'is-active' : ''} aria-label={sortLabel(key, label)} onClick={() => changeSort(key)}>{label}<span aria-hidden="true">{sort.key === key ? (sort.direction === 'desc' ? ' ↓' : ' ↑') : ''}</span></button>)}
+          {columns.map(([key, label]) => <button key={key} type="button" className={`${metricClass(key)} ${sort.key === key ? 'is-active' : ''}`} aria-label={sortLabel(key, label)} onClick={() => changeSort(key)}>{metricLabel(key, label)}<span aria-hidden="true">{sort.key === key ? (sort.direction === 'desc' ? ' ↓' : ' ↑') : ''}</span></button>)}
         </div>
         <div className="standings-list">
           {displayedStandings.map((player, displayedIndex) => {
@@ -341,7 +423,7 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
             const standingsRank = rankByPlayer.get(player.name)
             const shift = visibleRounds.length > 1 ? (previousRankByPlayer.get(player.name) ?? standingsRank) - standingsRank : 0
             return (
-              <article className={`stand-card fantasy-table-row ${columns.length === 4 ? 'is-wide' : ''} ${selectedPlayerNick === player.nick ? 'is-selected' : ''}`} key={player.name} role="button" tabIndex={0} onClick={() => setSelectedPlayerNick(player.nick)} onKeyDown={(event) => {
+              <article className={`stand-card fantasy-table-row is-${statView} ${columns.length === 4 ? 'is-wide' : columns.length === 2 ? 'is-compact' : ''} ${selectedPlayerNick === player.nick ? 'is-selected' : ''}`} key={player.name} role="button" tabIndex={0} onClick={() => setSelectedPlayerNick(player.nick)} onKeyDown={(event) => {
                 if (event.key === 'Enter' || event.key === ' ') setSelectedPlayerNick(player.nick)
               }}>
                 <span className={`fantasy-rank is-rank-${rank}`}>{rank}</span>
@@ -353,9 +435,9 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
                   <span className="fantasy-player-identity"><span>{player.name}</span><small>{player.nick}</small></span>
                 </span>
                 <span className="fantasy-row-metrics">
-                  {columns.slice(0, -1).map(([key, label]) => <span key={key} className={`fantasy-cell ${key === 'prizeMoney' ? 'fantasy-money-cell' : ''} ${sort.key === key ? 'is-active-sort' : ''}`}><small className="fantasy-cell-label">{label}</small>{key === 'prizeMoney' ? (payoutMode === 'longTerm' ? <span>{getLongTermBankForRank(totalRankByNick.get(player.nick), fantasyBankPayouts) > 0 ? <span className="bank-icon" aria-hidden="true">💰</span> : null} {formatMetricValue(getLongTermBankForRank(totalRankByNick.get(player.nick), fantasyBankPayouts), key)}</span> : <><span>{formatMetricValue(getDisplayedPrizeMoney(player, periodId, activePrizeMoneyByPeriod), key)}</span>{getLongTermBankForRank(totalRankByNick.get(player.nick), fantasyBankPayouts) > 0 ? <small>+ <span className="bank-icon" aria-hidden="true">💰</span> {formatMetricValue(getLongTermBankForRank(totalRankByNick.get(player.nick), fantasyBankPayouts), key)}</small> : null}</>) : formatMetricValue(getDisplayMetricValue(player, key, selectedRound), key)}</span>)}
+                  {columns.slice(0, -1).map(([key, label]) => <span key={key} className={`${metricClass(key)} fantasy-cell fantasy-cell-${key === 'fantasyNets' ? 'nets' : 'secondary'} ${key === 'prizeMoney' ? 'fantasy-money-cell' : ''} ${sort.key === key ? 'is-active-sort' : ''}`}><small className="fantasy-cell-label">{metricLabel(key, label)}</small>{key === 'prizeMoney' ? (payoutMode === 'longTerm' ? <span>{getLongTermBankForRank(totalRankByNick.get(player.nick), fantasyBankPayouts) > 0 ? <span className="bank-icon" aria-hidden="true">💰</span> : null} {formatMetricValue(getLongTermBankForRank(totalRankByNick.get(player.nick), fantasyBankPayouts), key)}</span> : <><span>{formatMetricValue(getDisplayedPrizeMoney(player, periodId, activePrizeMoneyByPeriod), key)}</span>{getLongTermBankForRank(totalRankByNick.get(player.nick), fantasyBankPayouts) > 0 ? <small>+ <span className="bank-icon" aria-hidden="true">💰</span> {formatMetricValue(getLongTermBankForRank(totalRankByNick.get(player.nick), fantasyBankPayouts), key)}</small> : null}</>) : formatMetricValue(getDisplayMetricValue(player, key, selectedRound), key)}</span>)}
                 </span>
-                <span className={`fantasy-points ${columns.at(-1)[0] === 'prizeMoney' ? 'fantasy-money-cell' : ''} ${sort.key === columns.at(-1)[0] ? 'is-active-sort' : ''}`.trim()}>{statView === 'prizes' ? <small className="fantasy-points-label">{columns.at(-1)[1]}</small> : null}{columns.at(-1)[0] === 'prizeMoney' ? (payoutMode === 'longTerm' ? <span>{getLongTermBankForRank(totalRankByNick.get(player.nick), fantasyBankPayouts) > 0 ? <span className="bank-icon" aria-hidden="true">💰</span> : null} {formatMetricValue(getLongTermBankForRank(totalRankByNick.get(player.nick), fantasyBankPayouts), 'prizeMoney')}</span> : <><span>{formatMetricValue(getDisplayedPrizeMoney(player, periodId, activePrizeMoneyByPeriod), 'prizeMoney')}</span>{getLongTermBankForRank(totalRankByNick.get(player.nick), fantasyBankPayouts) > 0 ? <small>+ <span className="bank-icon" aria-hidden="true">💰</span> {formatMetricValue(getLongTermBankForRank(totalRankByNick.get(player.nick), fantasyBankPayouts), 'prizeMoney')}</small> : null}</>) : formatMetricValue(getDisplayMetricValue(player, columns.at(-1)[0], selectedRound), columns.at(-1)[0])}</span>
+                <span className={`${metricClass(columns.at(-1)[0])} fantasy-points fantasy-cell-tipsport-rank ${columns.at(-1)[0] === 'prizeMoney' ? 'fantasy-money-cell' : ''} ${sort.key === columns.at(-1)[0] ? 'is-active-sort' : ''}`.trim()}><small className="fantasy-points-label">{metricLabel(columns.at(-1)[0], columns.at(-1)[1])}</small>{columns.at(-1)[0] === 'prizeMoney' ? (payoutMode === 'longTerm' ? <span>{getLongTermBankForRank(totalRankByNick.get(player.nick), fantasyBankPayouts) > 0 ? <span className="bank-icon" aria-hidden="true">💰</span> : null} {formatMetricValue(getLongTermBankForRank(totalRankByNick.get(player.nick), fantasyBankPayouts), 'prizeMoney')}</span> : <><span>{formatMetricValue(getDisplayedPrizeMoney(player, periodId, activePrizeMoneyByPeriod), 'prizeMoney')}</span>{getLongTermBankForRank(totalRankByNick.get(player.nick), fantasyBankPayouts) > 0 ? <small>+ <span className="bank-icon" aria-hidden="true">💰</span> {formatMetricValue(getLongTermBankForRank(totalRankByNick.get(player.nick), fantasyBankPayouts), 'prizeMoney')}</small> : null}</>) : formatMetricValue(getDisplayMetricValue(player, columns.at(-1)[0], selectedRound), columns.at(-1)[0])}</span>
               </article>
             )
           })}
@@ -453,13 +535,15 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
       <section className="panel rank-chart-panel fantasy-rank-chart-panel">
         <div className="panel-head">
           <div>
-            <span className="fantasy-eyebrow">Průběžné pořadí po každém Fantasy kole</span>
-            <h2>Vývoj pořadí · {period.label}</h2>
+            <span className="fantasy-eyebrow">{statView === 'prizes' ? 'Průběžné pořadí hráčů v Tipsport Fantasy' : 'Průběžné pořadí po každém Fantasy kole'}</span>
+            <h2>Vývoj pořadí · {period.label}{selectedRound ? <small className="fantasy-selected-round">vybrané kolo {formatFantasyShortDate(selectedRound[0])}</small> : null}</h2>
           </div>
-          {selectedRound ? <span className="fantasy-round-count">Vybráno {selectedRound[0]}.</span> : null}
+          <div className="fantasy-chart-head-meta">
+            {statView === 'prizes' && tipsportPlayerCount > 0 ? <span className="fantasy-chart-context">Tipsport Fantasy · {tipsportPlayerCount.toLocaleString('cs-CZ')} hráčů</span> : null}
+          </div>
         </div>
 
-        <div className="rank-chart-wrap" role="img" aria-label={`Graf vývoje Fantasy pořadí za ${period.label}`}>
+        <div className="rank-chart-wrap" role="img" aria-label={`Graf vývoje ${statView === 'prizes' ? 'Tipsport' : 'Fantasy'} pořadí za ${period.label}`}>
           {(() => {
             const width = 940
             const height = 330
@@ -468,14 +552,20 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
             const innerHeight = height - margin.top - margin.bottom
             const stepX = rankTimeline.rounds.length > 1 ? innerWidth / (rankTimeline.rounds.length - 1) : 0
             const tickIndexes = buildXAxisTickIndexes(rankTimeline.rounds.length, 16)
-            const rankToY = (rank) => margin.top + ((rank - 1) / Math.max(1, activeFantasyPlayers.length - 1)) * innerHeight
+            const chartRankMax = statView === 'prizes'
+              ? Math.max(1, ...rankTimeline.series.flatMap((player) => player.ranks.filter((rank) => Number.isFinite(rank))))
+              : Math.max(1, activeFantasyPlayers.length)
+            const rankTickValues = statView === 'prizes'
+              ? [...new Set(Array.from({ length: 5 }, (_, index) => index === 0 ? 1 : Math.round((chartRankMax * index) / 4)))]
+              : Array.from({ length: activeFantasyPlayers.length }, (_, index) => index + 1)
+            const rankToY = (rank) => margin.top + ((rank - 1) / Math.max(1, chartRankMax - 1)) * innerHeight
             const indexToX = (index) => margin.left + index * stepX
             const visibleSeries = rankTimeline.series.filter((player) => visiblePlayerNicks.includes(player.nick))
 
             return (
               <svg viewBox={`0 0 ${width} ${height}`} className="rank-chart" preserveAspectRatio="xMidYMid meet">
                 <rect x="0" y="0" width={width} height={height} fill="#f9fcff" />
-                {Array.from({ length: activeFantasyPlayers.length }, (_, index) => index + 1).map((rank) => (
+                {rankTickValues.map((rank) => (
                   <g key={`fantasy-grid-${rank}`}>
                     <line x1={margin.left} y1={rankToY(rank)} x2={width - margin.right} y2={rankToY(rank)} className="rank-grid-line" />
                     <text x={8} y={rankToY(rank) + 4} className="rank-axis-label">{rank}.</text>
@@ -493,25 +583,37 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
                 {rankTimeline.rounds.map((round, index) => tickIndexes.has(index) ? (
                   <text key={`fantasy-x-${round}`} x={indexToX(index)} y={height - 20} textAnchor="middle" className="rank-axis-label">{round}.</text>
                 ) : null)}
-                <text x={width / 2} y={height - 4} textAnchor="middle" className="rank-axis-title">Fantasy kolo</text>
+                <text x={width / 2} y={height - 4} textAnchor="middle" className="rank-axis-title">{statView === 'prizes' ? 'Kolo' : 'Fantasy kolo'}</text>
                 {visibleSeries.map((player) => {
                   const hasHover = Boolean(hoveredPlayerNick)
                   const isHovered = hoveredPlayerNick === player.nick
-                  const path = player.ranks.map((rank, index) => `${index === 0 ? 'M' : 'L'} ${indexToX(index)} ${rankToY(rank)}`).join(' ')
+                  const rankSegments = []
+                  let currentSegment = []
+                  player.ranks.forEach((rank, index) => {
+                    if (Number.isFinite(rank)) currentSegment.push([index, rank])
+                    else if (currentSegment.length) {
+                      rankSegments.push(currentSegment)
+                      currentSegment = []
+                    }
+                  })
+                  if (currentSegment.length) rankSegments.push(currentSegment)
                   return (
                     <g key={player.nick}>
-                      <path
-                        d={path}
-                        stroke={player.color}
-                        className={`rank-line ${hasHover && !isHovered ? 'is-dim' : ''} ${isHovered ? 'is-highlight' : ''}`.trim()}
-                        onMouseEnter={() => setHoveredPlayerNick(player.nick)}
-                        onMouseLeave={() => setHoveredPlayerNick('')}
-                        onClick={() => setHoveredPlayerNick(player.nick)}
-                      >
-                        <title>{player.name}</title>
-                      </path>
+                      {rankSegments.map((segment, segmentIndex) => (
+                        <path
+                          key={`${player.nick}-segment-${segmentIndex}`}
+                          d={segment.map(([index, rank], pointIndex) => `${pointIndex === 0 ? 'M' : 'L'} ${indexToX(index)} ${rankToY(rank)}`).join(' ')}
+                          stroke={player.color}
+                          className={`rank-line ${hasHover && !isHovered ? 'is-dim' : ''} ${isHovered ? 'is-highlight' : ''}`.trim()}
+                          onMouseEnter={() => setHoveredPlayerNick(player.nick)}
+                          onMouseLeave={() => setHoveredPlayerNick('')}
+                          onClick={() => setHoveredPlayerNick(player.nick)}
+                        >
+                          <title>{player.name}</title>
+                        </path>
+                      ))}
                       {player.ranks.map((rank, index) => (
-                        <circle
+                        Number.isFinite(rank) ? <circle
                           key={`${player.nick}-${index}`}
                           cx={indexToX(index)}
                           cy={rankToY(rank)}
@@ -523,7 +625,7 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
                           onClick={() => setHoveredPlayerNick(player.nick)}
                         >
                           <title>{`${player.name} · ${rank}. místo · ${rankTimeline.rounds[index]}.`}</title>
-                        </circle>
+                        </circle> : null
                       ))}
                     </g>
                   )

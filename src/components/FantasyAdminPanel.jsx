@@ -32,7 +32,7 @@ function AutoResizeTextarea({ value, minRows = 3, ...props }) {
 }
 
 export default function FantasyAdminPanel({ onImported, onClose, initialTournamentId }) {
-  const blankForm = { name: '', shortLabel: '', subtitle: 'Fantasy soutěž', season: '', startDate: '', endDate: '', fantasyMonths: '', status: 'draft', heroLogo: '/fantasy.png', favicon: '', fantasyPeriodRankLabel: 'Měsíční', fantasyMoneyRules: { entryFee: '', entryFeeFrequency: 'monthly', payoutMode: 'period', longTermPool: '', longTermPoolFrequency: 'monthly', periodPayouts: '500;200', longTermPayouts: '' }, tieBreakRules: [] }
+  const blankForm = { name: '', shortLabel: '', subtitle: 'Fantasy soutěž', season: '', startDate: '', endDate: '', fantasyMonths: '', tipsportPlayerCount: '', status: 'draft', heroLogo: '/fantasy.png', favicon: '', fantasyPeriodRankLabel: 'Měsíční', fantasyMoneyRules: { entryFee: '', entryFeeFrequency: 'monthly', payoutMode: 'period', longTermPool: '', longTermPoolFrequency: 'monthly', periodPayouts: '500;200', longTermPayouts: '' }, tieBreakRules: [] }
   const blankPeriodsText = 'Září;9\nŘíjen;10\nListopad;11\nProsinec;12\nLeden;1\nÚnor;2\nBřezen;3'
   const [tournaments, setTournaments] = useState([])
   const [users, setUsers] = useState([])
@@ -46,6 +46,8 @@ export default function FantasyAdminPanel({ onImported, onClose, initialTourname
   const [selectedRoundId, setSelectedRoundId] = useState('new')
   const [roundDate, setRoundDate] = useState('')
   const [scores, setScores] = useState({})
+  const [tipsportNets, setTipsportNets] = useState({})
+  const [tipsportDailyRanks, setTipsportDailyRanks] = useState({})
   const [awards, setAwards] = useState({ best: [] })
   const [payoutPeriodId, setPayoutPeriodId] = useState('')
   const [payouts, setPayouts] = useState({})
@@ -84,7 +86,7 @@ export default function FantasyAdminPanel({ onImported, onClose, initialTourname
 
   useEffect(() => {
     if (!selectedTournament) return
-    setForm({ name: selectedTournament.name || '', shortLabel: selectedTournament.shortLabel || '', subtitle: selectedTournament.subtitle || 'Fantasy soutěž', season: selectedTournament.season || '', startDate: selectedTournament.startDate || '', endDate: selectedTournament.endDate || '', fantasyMonths: selectedTournament.fantasyMonths ?? '', status: selectedTournament.status || 'draft', heroLogo: selectedTournament.heroLogo || '/fantasy.png', favicon: selectedTournament.favicon || '', fantasyPeriodRankLabel: selectedTournament.fantasyPeriodRankLabel || 'Měsíční', fantasyMoneyRules: { entryFee: selectedTournament.fantasyMoneyRules?.entryFee ?? '', entryFeeFrequency: selectedTournament.fantasyMoneyRules?.entryFeeFrequency || 'monthly', payoutMode: selectedTournament.fantasyMoneyRules?.payoutMode || 'period', longTermPool: selectedTournament.fantasyMoneyRules?.longTermPool ?? '', longTermPoolFrequency: selectedTournament.fantasyMoneyRules?.longTermPoolFrequency || 'monthly', periodPayouts: selectedTournament.fantasyMoneyRules?.periodPayouts ?? '500;200', longTermPayouts: selectedTournament.fantasyMoneyRules?.longTermPayouts ?? '' }, tieBreakRules: selectedTournament.tieBreakRules || [] })
+    setForm({ name: selectedTournament.name || '', shortLabel: selectedTournament.shortLabel || '', subtitle: selectedTournament.subtitle || 'Fantasy soutěž', season: selectedTournament.season || '', startDate: selectedTournament.startDate || '', endDate: selectedTournament.endDate || '', fantasyMonths: selectedTournament.fantasyMonths ?? '', tipsportPlayerCount: selectedTournament.tipsportPlayerCount ?? '', status: selectedTournament.status || 'draft', heroLogo: selectedTournament.heroLogo || '/fantasy.png', favicon: selectedTournament.favicon || '', fantasyPeriodRankLabel: selectedTournament.fantasyPeriodRankLabel || 'Měsíční', fantasyMoneyRules: { entryFee: selectedTournament.fantasyMoneyRules?.entryFee ?? '', entryFeeFrequency: selectedTournament.fantasyMoneyRules?.entryFeeFrequency || 'monthly', payoutMode: selectedTournament.fantasyMoneyRules?.payoutMode || 'period', longTermPool: selectedTournament.fantasyMoneyRules?.longTermPool ?? '', longTermPoolFrequency: selectedTournament.fantasyMoneyRules?.longTermPoolFrequency || 'monthly', periodPayouts: selectedTournament.fantasyMoneyRules?.periodPayouts ?? '500;200', longTermPayouts: selectedTournament.fantasyMoneyRules?.longTermPayouts ?? '' }, tieBreakRules: selectedTournament.tieBreakRules || [] })
   }, [selectedTournament?._id])
 
   useEffect(() => {
@@ -110,6 +112,7 @@ export default function FantasyAdminPanel({ onImported, onClose, initialTourname
           fantasyNets: payload.tipsportStatsByPeriod?.[activePeriodId]?.[player.nick]?.fantasyNets ?? '',
           longTermBank: payload.longTermBankByPeriod?.[activePeriodId]?.[player.nick] ?? '',
           finalFantasyRank: payload.seasonStats?.[player.nick]?.finalFantasyRank ?? '',
+          finalFantasyNets: payload.seasonStats?.[player.nick]?.finalFantasyNets ?? '',
         }])))
       })
       .catch(() => {})
@@ -127,12 +130,16 @@ export default function FantasyAdminPanel({ onImported, onClose, initialTourname
     if (roundId === 'new') {
       setRoundDate('')
       setScores({})
+      setTipsportNets({})
+      setTipsportDailyRanks({})
       setAwards({ best: [] })
       return
     }
     const round = rounds.find((item) => item._id === roundId)
     setRoundDate(round?.date || '')
     setScores(round?.scores || {})
+    setTipsportNets(round?.tipsportNets || {})
+    setTipsportDailyRanks(round?.tipsportDailyRanks || {})
     setAwards({ best: round?.awards?.best || [] })
   }
 
@@ -266,7 +273,7 @@ export default function FantasyAdminPanel({ onImported, onClose, initialTourname
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ roundId: selectedRoundId === 'new' ? '' : selectedRoundId, date: roundDate, scores, awards }),
+        body: JSON.stringify({ roundId: selectedRoundId === 'new' ? '' : selectedRoundId, date: roundDate, scores, tipsportNets, tipsportDailyRanks, awards }),
       })
       const payload = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(payload.message || 'Kolo se nepodařilo uložit')
@@ -457,6 +464,7 @@ export default function FantasyAdminPanel({ onImported, onClose, initialTourname
             <label className="admin-field"><span className="admin-field-label">Konec turnaje</span><input type="date" value={form.endDate} onChange={(event) => setForm((current) => ({ ...current, endDate: event.target.value }))} title="Po tomto datu se turnaj automaticky označí jako ukončený." /></label>
           </div>
           <label className="admin-field"><span className="admin-field-label">Počet herních měsíců</span><input type="number" min="1" value={form.fantasyMonths} onChange={(event) => setForm((current) => ({ ...current, fantasyMonths: event.target.value }))} /></label>
+          <label className="admin-field"><span className="admin-field-label">Počet Tipsport hráčů</span><input type="number" min="1" value={form.tipsportPlayerCount} onChange={(event) => setForm((current) => ({ ...current, tipsportPlayerCount: event.target.value }))} /><small>Celkový počet hráčů na Tipsportu, vůči kterému se zobrazí pořadí v grafu.</small></label>
           <div className="admin-tournament-form-row">
             <label className="admin-field"><span className="admin-field-label">Logo turnaje</span><select value={form.heroLogo} onChange={(event) => setForm((current) => ({ ...current, heroLogo: event.target.value }))}><option value="">Bez loga</option><option value="/fantasy.png">Fantasy</option>{tournamentLogos.map((logo) => <option key={logo.path} value={logo.path}>{logo.name}</option>)}</select></label>
             <label className="admin-field"><span className="admin-field-label">Favicon (ikona v záložce)</span><select value={form.favicon} onChange={(event) => setForm((current) => ({ ...current, favicon: event.target.value }))}><option value="">Výchozí</option><option value="/icons/puck.svg">Hokejový puk</option><option value="/icons/ball.svg">Fotbalový míč</option></select></label>
@@ -581,9 +589,11 @@ export default function FantasyAdminPanel({ onImported, onClose, initialTourname
           })}</select></label>
           <label className="admin-field"><span className="admin-field-label">Datum kola</span><input value={roundDate} onChange={(event) => setRoundDate(event.target.value)} placeholder="např. 9.9" /></label>
           {players.map((player) => <div className="admin-fantasy-payout-row" key={player.nick}>
-            <strong>{player.name}</strong>
-            <label className="admin-field"><span className="admin-field-label">Body</span><input value={scores[player.nick] ?? ''} onChange={(event) => setScores((current) => ({ ...current, [player.nick]: event.target.value }))} placeholder="body nebo N" /></label>
+            <span className="admin-fantasy-player-name"><strong>{player.name}</strong><small>{player.nick}</small></span>
             <label className="admin-member-checkbox"><input type="checkbox" checked={awards.best?.includes(player.nick)} onChange={(event) => setAwards((current) => ({ ...current, best: event.target.checked ? [...(current.best || []), player.nick] : (current.best || []).filter((nick) => nick !== player.nick) }))} /><span>Borec při shodě</span></label>
+            <label className="admin-field"><span className="admin-field-label">Body</span><input value={scores[player.nick] ?? ''} onChange={(event) => setScores((current) => ({ ...current, [player.nick]: event.target.value }))} placeholder="body nebo N" /></label>
+            <label className="admin-field"><span className="admin-field-label">Nety</span><input type="number" min="0" value={tipsportNets[player.nick] ?? ''} onChange={(event) => setTipsportNets((current) => ({ ...current, [player.nick]: event.target.value }))} /></label>
+            <label className="admin-field"><span className="admin-field-label">Pořadí Tipsport</span><input type="number" min="1" value={tipsportDailyRanks[player.nick] ?? ''} onChange={(event) => setTipsportDailyRanks((current) => ({ ...current, [player.nick]: event.target.value }))} /></label>
           </div>)}
           <div className="admin-form-actions">
             <button type="button" className="auth-submit" onClick={saveRound} disabled={isBusy || !selectedTournamentId || !roundDate || players.length === 0}>Uložit kolo</button>
@@ -599,21 +609,21 @@ export default function FantasyAdminPanel({ onImported, onClose, initialTourname
         <div className="admin-tournament-form">
           <label className="admin-field"><span className="admin-field-label">Období</span><select value={payoutPeriodId || periods[0]?.id || 'all'} onChange={(event) => setPayoutPeriodId(event.target.value)}>{payoutPeriods.map((period) => <option key={period.id} value={period.id}>{period.label}</option>)}</select></label>
           {(payoutPeriodId || periods[0]?.id || 'all') === 'all' ? (
-            <p className="admin-field-help">Za „Celkem" se vyplňuje jen dlouhodobý bank a konečné umístění v Tipsportu – výhra, nety a NEJ umístění se do celkové tabulky počítají samy z jednotlivých období.</p>
+            <p className="admin-field-help">Ve filtru „Celkem“ vyplň po skončení turnaje celkovou vyhranou částku z dlouhodobého banku dle konečného pořadí hráčů a konečné umístění + získané nety z Tipsportu opět po skončení turnaje.</p>
           ) : null}
           {players.map((player) => <div className="admin-fantasy-payout-row" key={player.nick}>
-            <strong>{player.name}</strong>
+            <span className="admin-fantasy-player-name"><strong>{player.name}</strong><small>{player.nick}</small></span>
             {(payoutPeriodId || periods[0]?.id || 'all') === 'all' ? (
               <>
                 <label className="admin-field"><span className="admin-field-label">Dlouhodobý bank</span><input type="number" min="0" value={payouts[player.nick]?.longTermBank ?? ''} onChange={(event) => setPayouts((current) => ({ ...current, [player.nick]: { ...current[player.nick], longTermBank: event.target.value } }))} /></label>
                 <label className="admin-field"><span className="admin-field-label">Konečné umístění</span><input type="number" min="0" value={payouts[player.nick]?.finalFantasyRank ?? ''} onChange={(event) => setPayouts((current) => ({ ...current, [player.nick]: { ...current[player.nick], finalFantasyRank: event.target.value } }))} /></label>
+                <label className="admin-field"><span className="admin-field-label">Konečné nety</span><input type="number" min="0" value={payouts[player.nick]?.finalFantasyNets ?? ''} onChange={(event) => setPayouts((current) => ({ ...current, [player.nick]: { ...current[player.nick], finalFantasyNets: event.target.value } }))} /></label>
               </>
             ) : (
               <>
                 <label className="admin-field"><span className="admin-field-label">Výhra</span><input type="number" min="0" value={payouts[player.nick]?.prizeMoney ?? ''} onChange={(event) => setPayouts((current) => ({ ...current, [player.nick]: { ...current[player.nick], prizeMoney: event.target.value } }))} /></label>
                 <label className="admin-field"><span className="admin-field-label">Nety</span><input type="number" value={payouts[player.nick]?.fantasyNets ?? ''} onChange={(event) => setPayouts((current) => ({ ...current, [player.nick]: { ...current[player.nick], fantasyNets: event.target.value } }))} /></label>
-                <label className="admin-field"><span className="admin-field-label">NEJ denní</span><input type="number" min="0" value={payouts[player.nick]?.bestDailyRank ?? ''} onChange={(event) => setPayouts((current) => ({ ...current, [player.nick]: { ...current[player.nick], bestDailyRank: event.target.value } }))} /></label>
-                <label className="admin-field"><span className="admin-field-label">NEJ {form.fantasyPeriodRankLabel.toLowerCase()}</span><input type="number" min="0" value={payouts[player.nick]?.bestPeriodRank ?? ''} onChange={(event) => setPayouts((current) => ({ ...current, [player.nick]: { ...current[player.nick], bestPeriodRank: event.target.value } }))} /></label>
+                <label className="admin-field"><span className="admin-field-label">Pořadí Tipsport</span><input type="number" min="0" value={payouts[player.nick]?.bestPeriodRank ?? ''} onChange={(event) => setPayouts((current) => ({ ...current, [player.nick]: { ...current[player.nick], bestPeriodRank: event.target.value } }))} /></label>
               </>
             )}
           </div>)}

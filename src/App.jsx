@@ -160,6 +160,7 @@ function parseMatchDate(startsAt) {
 }
 
 function parseStartsAtDisplay(startsAt, matchId, round, tournamentYear) {
+  const padDatePart = (value) => String(value).padStart(2, '0')
   const isIsoDate = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(String(startsAt ?? ''))
   if (isIsoDate) {
     const date = new Date(startsAt)
@@ -172,7 +173,7 @@ function parseStartsAtDisplay(startsAt, matchId, round, tournamentYear) {
         matchNo: '',
         dayName: weekday,
         dayShort: weekdayShort,
-        rest: `${date.getDate()}.${date.getMonth() + 1}.${date.getFullYear()} (${pad(date.getHours())}:${pad(date.getMinutes())})`,
+        rest: `${padDatePart(date.getDate())}.${padDatePart(date.getMonth() + 1)}.${date.getFullYear()} (${pad(date.getHours())}:${pad(date.getMinutes())})`,
       }
     }
   }
@@ -229,7 +230,7 @@ function parseStartsAtDisplay(startsAt, matchId, round, tournamentYear) {
   const rest = restDate && tournamentYear
     ? (() => {
       const time = restDate[2].trim()
-      return `${Number(restDate[1].split('.')[0])}.${Number(restDate[1].split('.')[1])}.${tournamentYear}${time ? ` (${time})` : ''}`
+      return `${padDatePart(restDate[1].split('.')[0])}.${padDatePart(restDate[1].split('.')[1])}.${tournamentYear}${time ? ` (${time})` : ''}`
     })()
     : restRaw.trimStart()
   const matchNo = ''
@@ -1131,6 +1132,7 @@ async function fetchFantasyTournamentCatalog() {
     startDate: tournament.startDate || '',
     endDate: tournament.endDate || '',
     fantasyMonths: tournament.fantasyMonths || 0,
+    tipsportPlayerCount: tournament.tipsportPlayerCount || 0,
     heroLogo: tournament.heroLogo || '',
     favicon: tournament.favicon || '',
     fantasyPeriodRankLabel: tournament.fantasyPeriodRankLabel || 'Měsíční',

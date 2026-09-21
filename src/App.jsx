@@ -1020,6 +1020,54 @@ function buildMatchRankSnapshots(matches, players, tieBreakOrder) {
   return snapshots
 }
 
+function buildRoundRankSnapshots(matches, players, tieBreakOrder) {
+  const matchesByRound = new Map()
+  for (const match of matches) {
+    const round = extractRound(match)
+    if (!Number.isFinite(round)) continue
+    if (!matchesByRound.has(round)) matchesByRound.set(round, [])
+    matchesByRound.get(round).push(match)
+  }
+
+  return new Map([...matchesByRound.entries()].map(([round, roundMatches]) => {
+    const pointsByPlayer = new Map(players.map((player) => [player.id, 0]))
+    const lastTipTimestampByPlayer = new Map(players.map((player) => [player.id, Number.NaN]))
+    for (const match of roundMatches) {
+      for (const tip of match?.tips ?? []) {
+        if (!pointsByPlayer.has(tip.playerId)) continue
+        if (Number.isFinite(tip.points)) pointsByPlayer.set(tip.playerId, (pointsByPlayer.get(tip.playerId) ?? 0) + tip.points)
+        const timestamp = toTipTimestampMs(tip.updatedAt)
+        if (Number.isFinite(timestamp)) {
+          const previousTimestamp = lastTipTimestampByPlayer.get(tip.playerId)
+          lastTipTimestampByPlayer.set(tip.playerId, Number.isFinite(previousTimestamp) ? Math.max(previousTimestamp, timestamp) : timestamp)
+        }
+      }
+    }
+    const rankingPlayers = players.map((player) => ({ ...player, points: pointsByPlayer.get(player.id) ?? 0 }))
+    const fallbackOrder = new Map(players.map((player, index) => [player.id, index]))
+    const sortedPlayerIds = [...rankingPlayers].sort((a, b) => {
+      const pointsDiff = (Number(b.points) || 0) - (Number(a.points) || 0)
+      if (pointsDiff !== 0) return pointsDiff
+      const aTipTimestamp = lastTipTimestampByPlayer.get(a.id)
+      const bTipTimestamp = lastTipTimestampByPlayer.get(b.id)
+      if (Number.isFinite(aTipTimestamp) || Number.isFinite(bTipTimestamp)) {
+        if (!Number.isFinite(aTipTimestamp)) return 1
+        if (!Number.isFinite(bTipTimestamp)) return -1
+        if (aTipTimestamp !== bTipTimestamp) return aTipTimestamp - bTipTimestamp
+      }
+      const aRegistration = toTipTimestampMs(a.createdAt)
+      const bRegistration = toTipTimestampMs(b.createdAt)
+      if (Number.isFinite(aRegistration) || Number.isFinite(bRegistration)) {
+        if (!Number.isFinite(aRegistration)) return 1
+        if (!Number.isFinite(bRegistration)) return -1
+        if (aRegistration !== bRegistration) return aRegistration - bRegistration
+      }
+      return (fallbackOrder.get(a.id) ?? 999) - (fallbackOrder.get(b.id) ?? 999)
+    }).map((player) => player.id)
+    return [round, new Map(sortedPlayerIds.map((playerId, index) => [playerId, index + 1]))]
+  }))
+}
+
 function calculateMatchPayouts(match, playerOrder, overridesByMatchId, remainderRecipientsByMatchId) {
   const override = overridesByMatchId?.[match?.id]
   if (override && typeof override === 'object') {
@@ -1476,9 +1524,14 @@ function App() {
     () => buildMatchRankSnapshots(orderedMatches, players, selectedTournament?.tieBreakOrder),
     [orderedMatches, players, selectedTournament?.tieBreakOrder],
   )
+  const roundRankSnapshotByRound = useMemo(
+    () => buildRoundRankSnapshots(orderedMatches, players, selectedTournament?.tieBreakOrder),
+    [orderedMatches, players, selectedTournament?.tieBreakOrder],
+  )
 
   const currentViewState = viewStateByTournament[selectedTournamentId] ?? {}
   const rankChartView = currentViewState.rankChartView ?? 'match'
+  const rankDisplayMode = currentViewState.rankDisplayMode ?? 'total'
 
   const rankTimeline = useMemo(() => {
     if (orderedMatches.length === 0) return { rounds: [], series: [], axisLabel: 'Zápas turnaje' }
@@ -1491,7 +1544,21 @@ function App() {
     const evaluatedMatches = orderedMatches.filter((match) => isMatchEvaluated(match))
     if (evaluatedMatches.length === 0) return { rounds: [], series: [], axisLabel: 'Zápas turnaje' }
 
-    const timelineEntries = rankChartView === 'day'
+    const completedRounds = new Set()
+    const matchesByRound = new Map()
+    for (const match of orderedMatches) {
+      const round = extractRound(match)
+      if (!Number.isFinite(round)) continue
+      if (!matchesByRound.has(round)) matchesByRound.set(round, [])
+      matchesByRound.get(round).push(match)
+    }
+    for (const [round, roundMatches] of matchesByRound) {
+      if (roundMatches.length > 0 && roundMatches.every(isMatchEvaluated)) completedRounds.add(round)
+    }
+
+    const timelineEntries = rankDisplayMode === 'round'
+      ? [...roundRankSnapshotByRound.keys()].filter((round) => completedRounds.has(round)).sort((a, b) => a - b).map((round) => ({ label: round, round }))
+      : rankChartView === 'day'
       ? (() => {
         const lastMatchByRound = new Map()
         for (const match of evaluatedMatches) {
@@ -1514,7 +1581,9 @@ function App() {
     const rankByPlayer = new Map(playerOrder.map((id) => [id, []]))
 
     for (const entry of timelineEntries) {
-      const rankSnapshot = rankSnapshotByMatchId.get(entry.match.id)
+      const rankSnapshot = rankDisplayMode === 'round'
+        ? roundRankSnapshotByRound.get(entry.round)
+        : rankSnapshotByMatchId.get(entry.match.id)
       for (const playerId of playerOrder) {
         rankByPlayer.get(playerId).push(rankSnapshot?.get(playerId) ?? null)
       }
@@ -1530,9 +1599,9 @@ function App() {
     return {
       rounds: timelineEntries.map((entry) => entry.label),
       series,
-      axisLabel: rankChartView === 'day' ? 'Den turnaje' : 'Zápas turnaje',
+      axisLabel: rankDisplayMode === 'round' ? 'Kolo turnaje' : (rankChartView === 'day' ? 'Den turnaje' : 'Zápas turnaje'),
     }
-  }, [orderedMatches, players, scoreboard, rankSnapshotByMatchId, rankChartView])
+  }, [orderedMatches, players, scoreboard, rankChartView, rankDisplayMode, rankSnapshotByMatchId, roundRankSnapshotByRound])
 
   const currentRound = useMemo(() => {
     const inProgress = matches
@@ -1636,6 +1705,12 @@ function App() {
     updateCurrentTournamentState((current) => ({
       rankChartView:
         typeof value === 'function' ? value(current.rankChartView ?? 'match') : value,
+    }))
+  }
+
+  const setRankDisplayMode = (value) => {
+    updateCurrentTournamentState((current) => ({
+      rankDisplayMode: typeof value === 'function' ? value(current.rankDisplayMode ?? 'total') : value,
     }))
   }
 
@@ -2242,11 +2317,15 @@ function App() {
     if (!selectedMatch) return []
     const isMatchEvaluated = Boolean(selectedMatch.score && selectedMatch.score !== '--:--')
     const selectedMatchIndex = orderedMatches.findIndex((match) => match.id === selectedMatch.id)
-    const rankByPlayerForSelectedMatch = rankSnapshotByMatchId.get(selectedMatch.id) ?? new Map()
+    const selectedRoundNumber = extractRound(selectedMatch)
+    const activeRoundIndex = rounds.indexOf(selectedRoundNumber)
+    const rankByPlayerForSelectedMatch = rankDisplayMode === 'round'
+      ? roundRankSnapshotByRound.get(selectedRoundNumber) ?? new Map()
+      : rankSnapshotByMatchId.get(selectedMatch.id) ?? new Map()
     const previousMatchId = selectedMatchIndex > 0 ? orderedMatches[selectedMatchIndex - 1]?.id : ''
-    const rankByPlayerForPreviousMatch = previousMatchId
-      ? rankSnapshotByMatchId.get(previousMatchId) ?? new Map()
-      : new Map()
+    const rankByPlayerForPreviousMatch = rankDisplayMode === 'round'
+      ? roundRankSnapshotByRound.get(rounds[activeRoundIndex - 1]) ?? new Map()
+      : previousMatchId ? rankSnapshotByMatchId.get(previousMatchId) ?? new Map() : new Map()
 
     const cumulativePointsByPlayer = new Map(players.map((player) => [player.id, 0]))
     if (selectedMatchIndex >= 0) {
@@ -2308,7 +2387,7 @@ function App() {
         return a.rank - b.rank
       })
       .map((tip, index) => ({ ...tip, rank: index + 1 }))
-  }, [orderedMatches, players, rankSnapshotByMatchId, scoreboard, selectedMatch, remainderRecipientByMatchId])
+  }, [orderedMatches, players, rankDisplayMode, rankSnapshotByMatchId, remainderRecipientByMatchId, roundRankSnapshotByRound, rounds, scoreboard, selectedMatch])
 
   const [syncMessage, setSyncMessage] = useState('')
   const [showSyncTooltip, setShowSyncTooltip] = useState(false)
@@ -3187,18 +3266,7 @@ function App() {
 
               <section className="player-rank-mini" aria-label="Vývoj pořadí hráče">
                 <div className="player-rank-mini-head">
-                  <h3>Vývoj pořadí hráče ({rankChartView === 'day' ? 'po dnech' : 'po zápasech'})</h3>
-                  <span className="standings-metric-shell">
-                    <select
-                      className="standings-metric-select"
-                      aria-label="Zobrazení vývoje pořadí"
-                      value={rankChartView}
-                      onChange={(event) => setRankChartView(event.target.value)}
-                    >
-                      <option value="day">Po dnech</option>
-                      <option value="match">Po zápasech</option>
-                    </select>
-                  </span>
+                  <h3>Vývoj pořadí hráče ({rankDisplayMode === 'round' ? 'po kolech' : 'celkem'})</h3>
                 </div>
                 {selectedPlayerRankSeries ? (
                   <div className="player-rank-mini-wrap" role="img" aria-label={`Vývoj pořadí hráče ${selectedPlayerProfile.name}`}>
@@ -3663,7 +3731,7 @@ function App() {
                   <span>Tip</span>
                   <span>Výhra</span>
                   <span>Celkem</span>
-                  <span>Zápas</span>
+                  <span>{rankDisplayMode === 'round' ? 'Kolo' : 'Zápas'}</span>
                 </div>
 
                 {selectedMatchTips.map((tip) => (
@@ -3772,18 +3840,24 @@ function App() {
 
       <section className="panel rank-chart-panel">
         <div className="panel-head">
-          <h2>Vývoj pořadí hráčů ({rankChartView === 'day' ? 'po dnech' : 'po zápasech'})</h2>
-          <span className="standings-metric-shell">
-            <select
-              className="standings-metric-select"
-              aria-label="Zobrazení vývoje pořadí"
-              value={rankChartView}
-              onChange={(event) => setRankChartView(event.target.value)}
-            >
-              <option value="day">Po dnech</option>
-              <option value="match">Po zápasech</option>
-            </select>
-          </span>
+          <h2>Vývoj pořadí hráčů ({rankDisplayMode === 'round' ? 'po kolech' : 'celkem'})</h2>
+          <div className="rank-display-switch">
+            <span className="standings-metric-shell">
+              <select
+                className="standings-metric-select"
+                aria-label="Zobrazení tabulky a grafu"
+                value={rankDisplayMode}
+                onChange={(event) => setRankDisplayMode(event.target.value)}
+              >
+                <option value="total">Celkem</option>
+                <option value="round">Kolo</option>
+              </select>
+            </span>
+            <span className="rank-display-switch-hint tip-callout">
+              <span className="tip-callout-prefix"><span className="tip-callout-icon" aria-hidden="true">i</span><span className="tip-callout-label">Tip:</span></span>
+              <span className="tip-callout-text">mění zobrazení tabulky i grafu</span>
+            </span>
+          </div>
         </div>
 
         {rankTimeline.rounds.length > 0 ? (

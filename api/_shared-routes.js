@@ -71,7 +71,7 @@ async function loadMongoTournamentData(getDb, tournamentId, session) {
   const participantUserIds = (hasRoster ? roster.map((player) => player?.userId) : tournament.participantUserIds || []).filter((id) => ObjectId.isValid(id)).map((id) => new ObjectId(id));
   const userQuery = { _id: { $in: participantUserIds }, status: "active" };
   const users = await database.collection("users")
-    .find(userQuery, { projection: { username: 1, displayName: 1, avatar: 1, entryFeePaid: 1 } })
+    .find(userQuery, { projection: { username: 1, displayName: 1, avatar: 1, entryFeePaid: 1, createdAt: 1 } })
     .sort({ createdAt: 1 })
     .toArray();
   const allowedUserIds = new Set(users.map((user) => user._id.toString()));
@@ -118,9 +118,9 @@ async function loadMongoTournamentData(getDb, tournamentId, session) {
   const players = hasRoster
     ? roster.map((player) => {
       const user = usersById.get(player.userId);
-      return { id: player.id, userId: player.userId || null, name: player.name, avatar: user?.avatar || "", entryFeePaid: Boolean(player.entryFeePaid), points: pointsByUser.get(player.userId) || 0 };
+      return { id: player.id, userId: player.userId || null, name: player.name, avatar: user?.avatar || "", createdAt: user?.createdAt || null, entryFeePaid: Boolean(player.entryFeePaid), points: pointsByUser.get(player.userId) || 0 };
     })
-    : users.map((user) => ({ id: user._id.toString(), userId: user._id.toString(), name: displayNameForUser(user), avatar: user.avatar || "", entryFeePaid: Boolean(user.entryFeePaid), points: pointsByUser.get(user._id.toString()) || 0 }));
+    : users.map((user) => ({ id: user._id.toString(), userId: user._id.toString(), name: displayNameForUser(user), avatar: user.avatar || "", createdAt: user.createdAt || null, entryFeePaid: Boolean(user.entryFeePaid), points: pointsByUser.get(user._id.toString()) || 0 }));
   const longTermBankTotal = players.length * (Number(tournament.longTermContribution) || 0);
 
   return {

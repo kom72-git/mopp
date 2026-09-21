@@ -222,7 +222,7 @@
   outline: none;
 }
 
-.product-nav button.is-active {
+.product-nav > .product-tournament-control > .product-tournament-buttons > button.is-active {
   background: #f4f9fd;
   border-color: #b9d3e8;
   color: #174c73;
@@ -1381,6 +1381,7 @@
 .tournament-menu-option {
   width: 100%;
   border: 0;
+  border-left: 2px solid transparent;
   border-radius: 6px;
   padding: 0.48rem 0.6rem;
   background: transparent;
@@ -1408,17 +1409,50 @@
 }
 
 .tournament-menu-option:hover,
-.tournament-menu-option:focus-visible,
-.tournament-menu-option.is-selected {
+.tournament-menu-option:focus-visible {
   background: #e5f2fb;
   color: #174c73;
   outline: none;
 }
 
+.tournament-menu-option.is-selected {
+  background: #edf6fc;
+  color: #174c73;
+  border-left: 2px solid #8fb7d8;
+}
+
+.tournament-menu-option.is-selected:hover,
+.tournament-menu-option.is-selected:focus-visible {
+  background: #e5f2fb;
+  color: #174c73;
+  border-left: 2px solid #6fa1c6;
+}
+
 .tournament-menu-option.is-finished:hover,
-.tournament-menu-option.is-finished:focus-visible,
+.tournament-menu-option.is-finished:focus-visible {
+  color: #315b7c;
+}
+
 .tournament-menu-option.is-finished.is-selected {
   color: #315b7c;
+}
+
+.layout.is-fantasy .product-nav > .product-tournament-control > .product-tournament-buttons > button:hover,
+.layout.is-fantasy .product-nav > .product-tournament-control > .product-tournament-buttons > button:focus-visible {
+  background: #e2f2ef;
+  border-color: #70aaa2;
+  color: #175f58;
+}
+
+.layout.is-fantasy .tournament-menu-option:hover,
+.layout.is-fantasy .tournament-menu-option:focus-visible {
+  background: #e2f2ef;
+  color: #175f58;
+}
+
+.layout.is-fantasy .tournament-menu-option.is-selected:hover,
+.layout.is-fantasy .tournament-menu-option.is-selected:focus-visible {
+  border-left-color: #70aaa2;
 }
 
 .hero-logo-wrap {
@@ -1639,9 +1673,10 @@
 }
 
 .round-tab.is-past {
-  background: #eef3f8;
-  border-color: #d6e1ec;
-  color: #5f7489;
+  background: #eaf0f5;
+  border-color: #c9d6e1;
+  color: #5b7185;
+  box-shadow: inset 0 0 0 1px rgb(91 117 138 / 7%);
 }
 
 .round-tab.is-current {
@@ -3534,6 +3569,32 @@
 .rank-chart-panel {
   display: grid;
   gap: 0.55rem;
+}
+
+.rank-display-switch {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+}
+
+.rank-display-switch-hint {
+  display: inline-flex;
+  align-items: baseline;
+  max-width: 15rem;
+  color: #6d8191;
+  font-size: 0.72rem;
+  text-align: right;
+}
+
+.rank-display-switch-hint .tip-callout-text {
+  position: relative;
+  top: 0.04rem;
+}
+
+.rank-legend-hint .tip-callout-text {
+  position: relative;
+  top: 0.04rem;
 }
 
 .auth-panel {
@@ -6192,6 +6253,10 @@
   .rank-chart-panel .panel-head {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .rank-display-switch {
+    align-self: flex-end;
   }
 
   .rank-view-toggle {

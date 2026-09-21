@@ -316,11 +316,11 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
   const metricClass = (key) => `fantasy-metric-${key.replace('.', '-')}`
   const metricLabel = (key, label) => {
     const compactLabel = key === 'bestDailyRank'
-      ? (selectedRound ? 'Tipsport' : 'Nej denní')
+      ? (selectedRound ? 'Tipsport' : 'Nejlepší')
       : key === 'bestPeriodRank'
         ? `Nej ${fantasyPeriodRankLabel === 'Měsíční' ? 'měsíční' : 'týdenní'}`
         : key === 'worstDailyRank'
-          ? 'Nejhorší denní'
+          ? 'Nejhorší'
         : key === 'finalFantasyRank' ? 'Konečné' : label
     return <><span className="fantasy-label-wide">{label}</span><span className="fantasy-label-compact">{compactLabel}</span></>
   }

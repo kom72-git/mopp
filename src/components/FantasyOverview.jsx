@@ -144,6 +144,7 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
   const [expandedFantasyBank, setExpandedFantasyBank] = useState(null)
   const [visiblePlayerNicks, setVisiblePlayerNicks] = useState(() => fantasyPlayers.map((player) => player.nick))
   const [hoveredPlayerNick, setHoveredPlayerNick] = useState('')
+  const [showRankLegendInfo, setShowRankLegendInfo] = useState(false)
   const touchLegendHandledRef = useRef(false)
   const fantasyOneTableRef = useRef(null)
   const activeFantasyPlayers = fantasyData?.players ?? (isDbFantasy ? [] : fantasyPlayers)
@@ -635,8 +636,9 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
           })()}
         </div>
 
-        <div className="rank-legend">
-          {rankTimeline.series.map((player) => (
+        <div className="rank-legend-row">
+          <div className="rank-legend">
+            {rankTimeline.series.map((player) => (
             <button
               type="button"
               key={player.nick}
@@ -666,8 +668,23 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
               <span className="rank-legend-dot" style={{ backgroundColor: player.color }} />
               {player.name}
             </button>
-          ))}
+            ))}
+          </div>
+          <button
+            type="button"
+            className="scoring-info-toggle rank-legend-info-toggle"
+            aria-expanded={showRankLegendInfo}
+            aria-label="Jak pracovat s grafem"
+            title="Jak pracovat s grafem"
+            onClick={() => setShowRankLegendInfo((current) => !current)}
+          >
+            ?
+          </button>
         </div>
+        {showRankLegendInfo ? <div className="scoring-info-card rank-legend-info-card" role="note">
+          <button type="button" className="panel-close-button" onClick={() => setShowRankLegendInfo(false)} aria-label="Zavřít nápovědu" title="Zavřít">×</button>
+          <p className="scoring-info-text">Přejetím přes jméno v legendě nebo přes čáru či bod grafu zvýrazníš hráče. Kliknutím na jméno hráče čáru skryješ nebo zobrazíš.</p>
+        </div> : null}
       </section>
     </div>
   )

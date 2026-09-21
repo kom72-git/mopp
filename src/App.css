@@ -868,6 +868,38 @@
   font-weight: 600;
 }
 
+@media (max-width: 620px) {
+  .fantasy-rank-chart-panel .panel-head {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: stretch;
+    flex-direction: initial;
+    gap: 0.25rem;
+  }
+
+  .fantasy-rank-chart-panel .panel-head > div:first-child {
+    display: contents;
+  }
+
+  .fantasy-rank-chart-panel .panel-head h2 {
+    grid-row: 2;
+    width: 100%;
+    white-space: nowrap;
+  }
+
+  .fantasy-rank-chart-panel .fantasy-eyebrow {
+    grid-row: 1;
+  }
+
+  .fantasy-rank-chart-panel .fantasy-chart-head-meta {
+    min-height: auto;
+    width: 100%;
+    grid-row: 3;
+    align-items: flex-start;
+    text-align: left;
+  }
+}
+
 .fantasy-rank-selected-round {
   stroke: #f0b63f;
   stroke-width: 8;
@@ -2891,7 +2923,7 @@
 }
 
 .player-rank-mini {
-  margin: 0 0 0.52rem;
+  margin: 0.75rem 0 0.52rem;
   display: grid;
   gap: 0.28rem;
 }
@@ -4627,6 +4659,14 @@
   margin: 0.35rem 0 0;
   font-size: 0.74rem;
   font-weight: 600;
+
+.player-form-info-toggle {
+  margin-left: 0.08rem;
+}
+
+.player-form-info-card {
+  margin-top: 0.45rem;
+}
   flex: 1 1 100%;
   text-align: right;
 }

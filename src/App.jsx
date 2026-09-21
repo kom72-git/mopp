@@ -1877,7 +1877,6 @@ function App() {
     const selectedStanding = standings.find((player) => player.id === effectiveSelectedPlayerId)
     if (!selectedStanding) return null
 
-    const entryFeePaid = Boolean(selectedStanding.entryFeePaid)
     const timeline = matches
       .map((match) => {
         const tip = (match.tips ?? []).find((item) => item.playerId === effectiveSelectedPlayerId)
@@ -2393,6 +2392,7 @@ function App() {
   const [showSyncTooltip, setShowSyncTooltip] = useState(false)
   const [isSyncing, setIsSyncing] = useState(false)
   const [showScoringInfo, setShowScoringInfo] = useState(false)
+    const [showPlayerFormInfo, setShowPlayerFormInfo] = useState(false)
   const [showRankDisplayInfo, setShowRankDisplayInfo] = useState(false)
   const [showRankLegendInfo, setShowRankLegendInfo] = useState(false)
 
@@ -3201,11 +3201,6 @@ function App() {
                   <span>Statistika hráče</span>
                   <span className="player-focus-separator" aria-hidden="true">|</span>
                   <span className="player-focus-player-name">{selectedPlayerProfile.name}</span>
-                  {selectedPlayerProfile.entryFeePaid ? (
-                    <span className="player-entry-fee-badge" title="Vstupné uhrazeno">✓ Uhrazeno</span>
-                  ) : (
-                    <span className="player-entry-fee-badge is-pending" title="Vstupné neuhrazeno">• Neuhrazeno</span>
-                  )}
                 </h2>
                 <button
                   type="button"
@@ -3233,17 +3228,22 @@ function App() {
                     </button>
                   )
                 })}
+                <button
+                  type="button"
+                  className="scoring-info-toggle player-form-info-toggle"
+                  aria-expanded={showPlayerFormInfo}
+                  aria-label="Co mění filtr formy hráče"
+                  title="Co mění filtr formy hráče"
+                  onClick={() => setShowPlayerFormInfo((current) => !current)}
+                >
+                  ?
+                </button>
               </div>
 
-              <p className="player-window-note tip-callout tip-callout-note">
-                <span className="tip-callout-prefix">
-                  <span className="tip-callout-icon" aria-hidden="true">i</span>
-                  <span className="tip-callout-label">Tip:</span>
-                </span>
-                <span className="tip-callout-text">
-                  filtrem lze přepínat mezi celkovou statistikou a posledními zápasy, tedy aktuální formou.
-                </span>
-              </p>
+              {showPlayerFormInfo ? <div className="scoring-info-card player-form-info-card" role="note">
+                <button type="button" className="panel-close-button" onClick={() => setShowPlayerFormInfo(false)} aria-label="Zavřít nápovědu" title="Zavřít">×</button>
+                <p className="scoring-info-text">Filtrem přepínáš mezi celkovou statistikou a posledními zápasy, tedy aktuální formou.</p>
+              </div> : null}
 
               {/*
               <section className="player-tip-progress-row" aria-label="Aktivita tipování">

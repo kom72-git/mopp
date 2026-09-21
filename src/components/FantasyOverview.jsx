@@ -546,8 +546,8 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
         <div className="rank-chart-wrap" role="img" aria-label={`Graf vývoje ${statView === 'prizes' ? 'Tipsport' : 'Fantasy'} pořadí za ${period.label}`}>
           {(() => {
             const width = 940
-            const height = 330
-            const margin = { top: 16, right: 18, bottom: 38, left: 40 }
+            const height = 348
+            const margin = { top: 16, right: 18, bottom: 56, left: 40 }
             const innerWidth = width - margin.left - margin.right
             const innerHeight = height - margin.top - margin.bottom
             const stepX = rankTimeline.rounds.length > 1 ? innerWidth / (rankTimeline.rounds.length - 1) : 0
@@ -581,9 +581,9 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
                   />
                 ) : null}
                 {rankTimeline.rounds.map((round, index) => tickIndexes.has(index) ? (
-                  <text key={`fantasy-x-${round}`} x={indexToX(index)} y={height - 20} textAnchor="middle" className="rank-axis-label">{round}.</text>
+                  <text key={`fantasy-x-${round}`} x={indexToX(index)} y={height - 38} textAnchor="middle" className="rank-axis-label">{round}.</text>
                 ) : null)}
-                <text x={width / 2} y={height - 4} textAnchor="middle" className="rank-axis-title">{statView === 'prizes' ? 'Kolo' : 'Fantasy kolo'}</text>
+                <text x={width / 2} y={height - 12} textAnchor="middle" className="rank-axis-title">{statView === 'prizes' ? 'Kolo' : 'Fantasy kolo'}</text>
                 {visibleSeries.map((player) => {
                   const hasHover = Boolean(hoveredPlayerNick)
                   const isHovered = hoveredPlayerNick === player.nick

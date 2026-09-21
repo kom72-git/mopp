@@ -2393,6 +2393,8 @@ function App() {
   const [showSyncTooltip, setShowSyncTooltip] = useState(false)
   const [isSyncing, setIsSyncing] = useState(false)
   const [showScoringInfo, setShowScoringInfo] = useState(false)
+  const [showRankDisplayInfo, setShowRankDisplayInfo] = useState(false)
+  const [showRankLegendInfo, setShowRankLegendInfo] = useState(false)
 
   const standingsMetricOptions = [
     { value: 'points', label: 'Vše' },
@@ -3842,31 +3844,44 @@ function App() {
         <div className="panel-head">
           <h2>Vývoj pořadí hráčů ({rankDisplayMode === 'round' ? 'po kolech' : 'celkem'})</h2>
           <div className="rank-display-switch">
-            <span className="standings-metric-shell">
-              <select
-                className="standings-metric-select"
-                aria-label="Zobrazení tabulky a grafu"
-                value={rankDisplayMode}
-                onChange={(event) => setRankDisplayMode(event.target.value)}
+            <div className="rank-display-switch-controls">
+              <span className="standings-metric-shell">
+                <select
+                  className="standings-metric-select"
+                  aria-label="Zobrazení tabulky a grafu"
+                  value={rankDisplayMode}
+                  onChange={(event) => setRankDisplayMode(event.target.value)}
+                >
+                  <option value="total">Celkem</option>
+                  <option value="round">Kolo</option>
+                </select>
+              </span>
+              <button
+                type="button"
+                className="scoring-info-toggle rank-display-info-toggle"
+                aria-expanded={showRankDisplayInfo}
+                aria-label="Co přepínač mění"
+                title="Co přepínač mění"
+                onClick={() => setShowRankDisplayInfo((current) => !current)}
               >
-                <option value="total">Celkem</option>
-                <option value="round">Kolo</option>
-              </select>
-            </span>
-            <span className="rank-display-switch-hint tip-callout">
-              <span className="tip-callout-prefix"><span className="tip-callout-icon" aria-hidden="true">i</span><span className="tip-callout-label">Tip:</span></span>
-              <span className="tip-callout-text">mění zobrazení tabulky i grafu</span>
-            </span>
+                ?
+              </button>
+            </div>
           </div>
         </div>
+
+        {showRankDisplayInfo ? <div className="scoring-info-card rank-display-info-card" role="note">
+          <button type="button" className="panel-close-button" onClick={() => setShowRankDisplayInfo(false)} aria-label="Zavřít nápovědu" title="Zavřít">×</button>
+          <p className="scoring-info-text">Přepínač mění zobrazení tabulky i grafu společně.</p>
+        </div> : null}
 
         {rankTimeline.rounds.length > 0 ? (
           <>
             <div className="rank-chart-wrap" role="img" aria-label="Graf vývoje pořadí hráčů">
               {(() => {
                 const width = 940
-                const height = 330
-                const margin = { top: 16, right: 18, bottom: 38, left: 40 }
+                const height = 348
+                const margin = { top: 16, right: 18, bottom: 56, left: 40 }
                 const innerWidth = width - margin.left - margin.right
                 const innerHeight = height - margin.top - margin.bottom
                 const maxRank = rankTimeline.series.length
@@ -3900,7 +3915,7 @@ function App() {
                         <text
                           key={`x-${round}`}
                           x={indexToX(index)}
-                          y={height - 20}
+                          y={height - 38}
                           textAnchor="middle"
                           className="rank-axis-label"
                         >
@@ -3909,7 +3924,7 @@ function App() {
                       ) : null
                     ))}
 
-                    <text x={width / 2} y={height - 4} textAnchor="middle" className="rank-axis-title">
+                    <text x={width / 2} y={height - 12} textAnchor="middle" className="rank-axis-title">
                       {rankTimeline.axisLabel}
                     </text>
 
@@ -3957,48 +3972,57 @@ function App() {
               })()}
             </div>
 
-            <div className="rank-legend">
-              {rankTimeline.series.map((player) => (
-                <button
-                  type="button"
-                  className={`rank-legend-item ${normalizedVisiblePlayerIds.includes(player.id) ? '' : 'is-muted'} ${hoveredPlayerId && hoveredPlayerId !== player.id ? 'is-dim' : ''} ${hoveredPlayerId === player.id ? 'is-hover' : ''}`.trim()}
-                  key={`legend-${player.id}`}
-                  onClick={() => {
-                    if (touchLegendHandledRef.current) {
-                      touchLegendHandledRef.current = false
-                      return
-                    }
-                    togglePlayerVisibility(player.id)
-                  }}
-                  onTouchStart={(event) => {
-                    event.preventDefault()
-                    touchLegendHandledRef.current = true
+            <div className="rank-legend-row">
+              <div className="rank-legend">
+                {rankTimeline.series.map((player) => (
+                  <button
+                    type="button"
+                    className={`rank-legend-item ${normalizedVisiblePlayerIds.includes(player.id) ? '' : 'is-muted'} ${hoveredPlayerId && hoveredPlayerId !== player.id ? 'is-dim' : ''} ${hoveredPlayerId === player.id ? 'is-hover' : ''}`.trim()}
+                    key={`legend-${player.id}`}
+                    onClick={() => {
+                      if (touchLegendHandledRef.current) {
+                        touchLegendHandledRef.current = false
+                        return
+                      }
+                      togglePlayerVisibility(player.id)
+                    }}
+                    onTouchStart={(event) => {
+                      event.preventDefault()
+                      touchLegendHandledRef.current = true
 
-                    if (hoveredPlayerId !== player.id) {
-                      setHoveredPlayerId(player.id)
-                      return
-                    }
+                      if (hoveredPlayerId !== player.id) {
+                        setHoveredPlayerId(player.id)
+                        return
+                      }
 
-                    togglePlayerVisibility(player.id)
-                    setHoveredPlayerId('')
-                  }}
-                  onMouseEnter={() => setHoveredPlayerId(player.id)}
-                  onMouseLeave={() => setHoveredPlayerId('')}
-                  onFocus={() => setHoveredPlayerId(player.id)}
-                  onBlur={() => setHoveredPlayerId('')}
-                >
-                  <span className="rank-legend-dot" style={{ backgroundColor: player.color }} />
-                  {player.name}
-                </button>
-              ))}
+                      togglePlayerVisibility(player.id)
+                      setHoveredPlayerId('')
+                    }}
+                    onMouseEnter={() => setHoveredPlayerId(player.id)}
+                    onMouseLeave={() => setHoveredPlayerId('')}
+                    onFocus={() => setHoveredPlayerId(player.id)}
+                    onBlur={() => setHoveredPlayerId('')}
+                  >
+                    <span className="rank-legend-dot" style={{ backgroundColor: player.color }} />
+                    {player.name}
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                className="scoring-info-toggle rank-legend-info-toggle"
+                aria-expanded={showRankLegendInfo}
+                aria-label="Jak pracovat s grafem"
+                title="Jak pracovat s grafem"
+                onClick={() => setShowRankLegendInfo((current) => !current)}
+              >
+                ?
+              </button>
             </div>
-            <p className="rank-legend-hint tip-callout">
-              <span className="tip-callout-prefix">
-                <span className="tip-callout-icon" aria-hidden="true">i</span>
-                <span className="tip-callout-label">Tip:</span>
-              </span>
-              <span className="tip-callout-text">přejetím přes jméno v legendě nebo přes čáru či bod grafu zobrazíš hráče v tooltipu a zvýrazníš jeho jméno; kliknutím na jméno hráče čáru skryješ/zobrazíš.</span>
-            </p>
+            {showRankLegendInfo ? <div className="scoring-info-card rank-legend-info-card" role="note">
+              <button type="button" className="panel-close-button" onClick={() => setShowRankLegendInfo(false)} aria-label="Zavřít nápovědu" title="Zavřít">×</button>
+              <p className="scoring-info-text">Přejetím přes jméno v legendě nebo přes čáru či bod grafu zvýrazníš hráče. Kliknutím na jméno hráče čáru skryješ nebo zobrazíš.</p>
+            </div> : null}
           </>
         ) : (
           <p>Zatím nejsou data pro graf.</p>

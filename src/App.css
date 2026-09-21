@@ -1369,6 +1369,7 @@
   left: 0;
   width: 100%;
   box-sizing: border-box;
+  box-sizing: border-box;
   display: grid;
   gap: 0.2rem;
   padding: 0.35rem;
@@ -1380,8 +1381,8 @@
 
 .tournament-menu-option {
   width: 100%;
-  border: 0;
-  border-left: 2px solid transparent;
+  box-sizing: border-box;
+  border: 1px solid #b9d3e8;
   border-radius: 6px;
   padding: 0.48rem 0.6rem;
   background: transparent;
@@ -1418,14 +1419,12 @@
 .tournament-menu-option.is-selected {
   background: #edf6fc;
   color: #174c73;
-  border-left: 2px solid #8fb7d8;
 }
 
 .tournament-menu-option.is-selected:hover,
 .tournament-menu-option.is-selected:focus-visible {
   background: #e5f2fb;
   color: #174c73;
-  border-left: 2px solid #6fa1c6;
 }
 
 .tournament-menu-option.is-finished:hover,
@@ -1435,6 +1434,25 @@
 
 .tournament-menu-option.is-finished.is-selected {
   color: #315b7c;
+}
+
+.product-tournament-menu .tournament-menu-option {
+  border-left: 1px solid #b9d3e8;
+}
+
+.product-tournament-menu .tournament-menu-option:hover,
+.product-tournament-menu .tournament-menu-option:focus-visible,
+.product-tournament-menu .tournament-menu-option.is-selected {
+  border-left: 2px solid #8fb7d8;
+}
+
+.product-tournament-menu .tournament-menu-option.is-selected {
+  border-left: 2px solid #6f9ec0;
+}
+
+.product-tournament-menu .tournament-menu-option.is-selected:hover,
+.product-tournament-menu .tournament-menu-option.is-selected:focus-visible {
+  border-left: 2px solid #6f9ec0;
 }
 
 .layout.is-fantasy .product-nav > .product-tournament-control > .product-tournament-buttons > button:hover,
@@ -1448,11 +1466,32 @@
 .layout.is-fantasy .tournament-menu-option:focus-visible {
   background: #e2f2ef;
   color: #175f58;
+  border-left-color: #70aaa2;
 }
 
 .layout.is-fantasy .tournament-menu-option.is-selected:hover,
 .layout.is-fantasy .tournament-menu-option.is-selected:focus-visible {
-  border-left-color: #70aaa2;
+  background: #e2f2ef;
+}
+
+.layout.is-fantasy .product-tournament-menu .tournament-menu-option:hover,
+.layout.is-fantasy .product-tournament-menu .tournament-menu-option:focus-visible {
+  background: #e2f2ef;
+}
+
+.layout.is-fantasy .product-tournament-menu .tournament-menu-option:hover,
+.layout.is-fantasy .product-tournament-menu .tournament-menu-option:focus-visible,
+.layout.is-fantasy .product-tournament-menu .tournament-menu-option.is-selected {
+  border-left: 2px solid #70aaa2;
+}
+
+.layout.is-fantasy .product-tournament-menu .tournament-menu-option.is-selected {
+  border-left: 2px solid #3f8f87;
+}
+
+.layout.is-fantasy .product-tournament-menu .tournament-menu-option.is-selected:hover,
+.layout.is-fantasy .product-tournament-menu .tournament-menu-option.is-selected:focus-visible {
+  border-left: 2px solid #3f8f87;
 }
 
 .hero-logo-wrap {
@@ -3578,23 +3617,37 @@
   gap: 0.2rem;
 }
 
-.rank-display-switch-hint {
-  display: inline-flex;
-  align-items: baseline;
-  max-width: 15rem;
-  color: #6d8191;
-  font-size: 0.72rem;
-  text-align: right;
+.rank-display-info-toggle {
+  margin-left: 0.05rem;
 }
 
-.rank-display-switch-hint .tip-callout-text {
-  position: relative;
-  top: 0.04rem;
+.rank-display-switch-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.28rem;
 }
 
-.rank-legend-hint .tip-callout-text {
-  position: relative;
-  top: 0.04rem;
+.rank-display-info-card {
+  margin: -0.15rem 0 0.1rem;
+}
+
+.rank-legend-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+}
+
+.rank-legend-row .rank-legend {
+  flex: 0 1 auto;
+}
+
+.rank-legend-info-toggle {
+  flex: 0 0 auto;
+  margin-top: 0.05rem;
+}
+
+.rank-legend-info-card {
+  margin-top: 0.45rem;
 }
 
 .auth-panel {
@@ -5866,13 +5919,13 @@
 
 .rank-axis-label {
   font-size: 11px;
-  fill: #5a7288;
+  fill: #2e5a7d;
   font-weight: 700;
 }
 
 .rank-axis-title {
   font-size: 12px;
-  fill: #2e5a7d;
+  fill: #6d8191;
   font-weight: 700;
 }
 
@@ -5912,12 +5965,6 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.28rem 0.5rem;
-}
-
-.rank-legend-hint {
-  margin: 0.05rem 0 0;
-  font-size: 0.72rem;
-  color: #5b7288;
 }
 
 .tip-callout {
@@ -6252,11 +6299,17 @@
 
   .rank-chart-panel .panel-head {
     align-items: flex-start;
-    flex-direction: column;
+    flex-direction: row;
+  }
+
+  .rank-chart-panel .panel-head h2 {
+    flex: 1 1 auto;
+    min-width: 0;
   }
 
   .rank-display-switch {
-    align-self: flex-end;
+    flex: 0 0 auto;
+    align-self: flex-start;
   }
 
   .rank-view-toggle {

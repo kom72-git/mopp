@@ -159,6 +159,31 @@ async function sendVerificationEmail({ email, token }) {
   return { verificationUrl, sent: true };
 }
 
+async function sendPasswordResetEmail({ email, token }) {
+  const configuredAppUrl = process.env.APP_URL || process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL || "http://localhost:4173";
+  const appUrl = (/^https?:\/\//i.test(configuredAppUrl) ? configuredAppUrl : `https://${configuredAppUrl}`).replace(/\/+$/, "");
+  const resetUrl = `${appUrl}/?reset=${encodeURIComponent(token)}`;
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASSWORD || !process.env.MAIL_FROM) {
+    return { resetUrl, sent: false };
+  }
+
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT) || 465,
+    secure: String(process.env.SMTP_SECURE).toLowerCase() === "true",
+    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD },
+    tls: { rejectUnauthorized: String(process.env.SMTP_TLS_REJECT_UNAUTHORIZED).toLowerCase() !== "false" },
+  });
+  await transporter.sendMail({
+    from: process.env.MAIL_FROM,
+    to: email,
+    subject: "Obnovení hesla MOPP",
+    text: `Pro nastavení nového hesla klikni na tento odkaz (platí 30 minut):\n\n${resetUrl}`,
+    html: `<p>Pro nastavení nového hesla klikni na následující odkaz. Platí 30 minut.</p><p><a href="${resetUrl}">Nastavit nové heslo</a></p>`,
+  });
+  return { resetUrl, sent: true };
+}
+
 function validateNewPassword(password) {
   if (String(password ?? "").length < 8) return "Heslo musí mít alespoň 8 znaků.";
   return "";
@@ -460,8 +485,11 @@ function createAuthRoutes({ app, getDb }) {
       if (process.env.NODE_ENV !== "production") {
         return res.json({ ...response, devResetToken: token });
       }
+      const emailResult = await sendPasswordResetEmail({ email, token });
+      if (!emailResult.sent) console.error("Password reset email not sent: SMTP configuration is incomplete");
       return res.json(response);
     } catch {
+      console.error("Password reset email could not be sent");
       return res.json(response);
     }
   });
@@ -1038,8 +1066,7 @@ function createAuthRoutes({ app, getDb }) {
       const matchDetailsChanged = existingMatch.round !== round
         || existingMatch.startsAt !== startsAt
         || existingMatch.home !== home
-        || existingMatch.away !== away
-        || existingMatch.status !== status;
+        || existingMatch.away !== away;
       const update = {
         $set: { round, startsAt, home, away, score: score || null, status, updatedAt: new Date() },
         $unset: { updatedByUserId: "", updatedByUsername: "" },

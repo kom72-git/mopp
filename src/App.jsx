@@ -381,6 +381,15 @@ function AuthPanel({ activeProduct, selectedTournamentId, selectedTournament, se
   }
 
   useEffect(() => {
+    const resetToken = new URLSearchParams(window.location.search).get('reset')
+    if (resetToken) {
+      setUser(null)
+      setForm((current) => ({ ...current, resetToken, password: '' }))
+      setMode('reset')
+      setIsOpen(true)
+      return undefined
+    }
+
     const verificationToken = new URLSearchParams(window.location.search).get('verify')
     if (verificationToken) {
       fetch('/api/auth/verify-email', {
@@ -552,6 +561,9 @@ function AuthPanel({ activeProduct, selectedTournamentId, selectedTournament, se
         setMode('login')
         setMessage('Heslo bylo změněno. Nyní se můžeš přihlásit.')
         setForm({ usernameOrEmail: '', username: '', displayName: '', email: '', password: '', confirmPassword: '', resetToken: '' })
+        const url = new URL(window.location.href)
+        url.searchParams.delete('reset')
+        window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`)
         return
       }
       setUser(payload.user)

@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import Cropper from 'react-easy-crop'
 import './App.css'
 import { matches as fallbackMatches, players as fallbackPlayers } from './data/moppData'
 import { defaultTournamentId, getTournamentById, tournaments } from './data/tournaments'
 import { getFlagUrl } from './data/countryFlags'
-import { getTeamDisplayName, getTeamLogoUrl } from './data/teamLogos'
+import { getTeamAbbreviation, getTeamDisplayName, getTeamLogoUrl } from './data/teamLogos'
 import AdminPanel from './components/AdminPanel'
 import FantasyAdminPanel from './components/FantasyAdminPanel'
 import FantasyOverview from './components/FantasyOverview'
@@ -32,6 +32,7 @@ const manualPayoutOverridesByMatchId = {
 }
 
 const chartColors = ['#2563eb', '#0ea5e9', '#06b6d4', '#14b8a6', '#22c55e', '#84cc16', '#eab308', '#f59e0b', '#f97316', '#a855f7', '#ec4899']
+const tipsBankPreviewCount = 4
 const tipPlayerChartColors = {
   '6a83ac632a04aa7f35529634': '#111827',
   '6a87271181ea2e8550c76906': '#16a34a',
@@ -1643,6 +1644,7 @@ function App() {
   const playerFormWindow = currentViewState.playerFormWindow ?? 'all'
   const standingsFormWindow = currentViewState.standingsFormWindow ?? 'all'
   const standingsMetric = currentViewState.standingsMetric ?? 'points'
+  const showAllTipsBankHistory = currentViewState.showAllTipsBankHistory ?? false
   const showLongTermBankInfo = currentViewState.showLongTermBankInfo ?? false
 
   const updateCurrentTournamentState = (patch) => {
@@ -1743,6 +1745,13 @@ function App() {
     updateCurrentTournamentState((current) => ({
       showLongTermBankInfo:
         typeof value === 'function' ? value(current.showLongTermBankInfo ?? false) : value,
+    }))
+  }
+
+  const setShowAllTipsBankHistory = (value) => {
+    updateCurrentTournamentState((current) => ({
+      showAllTipsBankHistory:
+        typeof value === 'function' ? value(current.showAllTipsBankHistory ?? false) : value,
     }))
   }
 
@@ -1860,6 +1869,31 @@ function App() {
     () => roundMatches.find((match) => match.id === effectiveSelectedMatchId) ?? roundMatches[0],
     [roundMatches, effectiveSelectedMatchId],
   )
+
+  const tipsBankHistory = useMemo(() => orderedMatches
+    .filter((match) => match.score && match.score !== '--:--' && (match.tips ?? []).every((tip) => Number.isFinite(tip.points)))
+    .map((match) => {
+      const exactWinners = (match.tips ?? []).filter((tip) => tip.points === 10)
+      const payouts = calculateMatchPayouts(
+        match,
+        new Map(players.map((player, playerIndex) => [player.id, playerIndex])),
+        manualPayoutOverridesByMatchId,
+        remainderRecipientByMatchId,
+      )
+      const winners = exactWinners.map((tip) => {
+        const player = players.find((item) => item.id === tip.playerId)
+        const payout = payouts.get(tip.playerId) ?? 0
+        return { name: player?.name ?? tip.playerId, payout }
+      })
+      return {
+        match,
+        amount: Number(match.bank),
+        winnerCount: exactWinners.length,
+        winners,
+      }
+    })
+    .filter((item) => Number.isFinite(item.amount) && item.amount >= 0),
+  [orderedMatches, players, remainderRecipientByMatchId])
 
   const effectiveSelectedPlayerId = useMemo(() => {
     if (standings.length === 0) return ''
@@ -3042,7 +3076,7 @@ function App() {
                   </div>
                 </div>
 
-                <p className="match-item-sub">Bank {match.bank == null ? '? (čeká na výsledek předchozího zápasu)' : <><strong>{match.bank}</strong> Kč</>} • <span className="ratio-help" title="Odevzdané tipy / Počet členů vybraného turnaje" aria-label="Odevzdané tipy / Počet členů vybraného turnaje">Tipy {submittedTips}/{match.playerCount ?? players.length}</span></p>
+                <p className="match-item-sub">Bank {match.bank == null ? <><strong>čeká</strong> <span className="bank-pending-note">na výsledek předchozího zápasu</span></> : <><strong>{match.bank}</strong> Kč</>} • <span className="ratio-help" title="Odevzdané tipy / Počet členů vybraného turnaje" aria-label="Odevzdané tipy / Počet členů vybraného turnaje">Tipy {submittedTips}/{match.playerCount ?? players.length}</span></p>
               </button>
             )
           })}
@@ -3735,7 +3769,7 @@ function App() {
                   </div>
                 </div>
                 <div className="selected-match-bottom">
-                  <p className="selected-match-bank">Bank {selectedMatch.bank == null ? '? (čeká na výsledek předchozího zápasu)' : <><strong>{selectedMatch.bank}</strong> Kč</>}</p>
+                  <p className="selected-match-bank">Bank {selectedMatch.bank == null ? <><strong>čeká</strong> <span className="bank-pending-note">na výsledek předchozího zápasu</span></> : <><strong>{selectedMatch.bank}</strong> Kč</>}</p>
                   {selectedMatch.updatedByAdminName ? <p className="selected-match-admin-note">(Editoval admin)</p> : null}
                 </div>
               </header>
@@ -3807,6 +3841,70 @@ function App() {
             <p>V tomto kole zatím nejsou zápasy.</p>
           )}
         </section>
+      </section>
+
+      <section className="panel long-term-bank-panel tips-bank-history-panel" aria-label="Aktuální bank Tipovačky">
+        <article className="long-term-bank-card tips-bank-card is-open">
+          <div className="tips-bank-current-row">
+            <div className="tips-bank-current-details">
+              <span className="long-term-bank-toggle-label">
+                <span className="bank-icon" aria-hidden="true">💵</span>
+                <span>Aktuální bank</span>
+              </span>
+              <button
+                type="button"
+                className="tips-bank-history-more"
+                aria-expanded={showAllTipsBankHistory}
+                disabled={tipsBankHistory.length <= tipsBankPreviewCount}
+                onClick={() => setShowAllTipsBankHistory((current) => !current)}
+              >
+                {showAllTipsBankHistory ? 'Skrýt přehled' : 'Zobrazit přehled'}
+              </button>
+            </div>
+            <span className="tips-bank-current-value">
+              <strong className="long-term-bank-toggle-value">{selectedMatch?.bank == null ? 'Čeká' : `${Number(selectedMatch.bank).toLocaleString('cs-CZ')} Kč`}</strong>
+            </span>
+          </div>
+
+          <div className="long-term-bank-info tips-bank-history-info">
+              {tipsBankHistory.length > 0 ? (
+                <>
+                  <div className="tips-bank-timeline" role="list" aria-label="Historie banku podle zápasů">
+                  {(showAllTipsBankHistory || tipsBankHistory.length <= tipsBankPreviewCount ? tipsBankHistory : tipsBankHistory.slice(-tipsBankPreviewCount)).map((item, visibleIndex, visibleItems) => {
+                    const matchIndex = showAllTipsBankHistory || tipsBankHistory.length <= tipsBankPreviewCount
+                      ? visibleIndex
+                      : tipsBankHistory.length - visibleItems.length + visibleIndex
+                    const parsedDate = new Date(item.match.startsAt)
+                    const date = Number.isNaN(parsedDate.getTime())
+                      ? (extractCalendarDate(item.match.startsAt) || item.match.startsAt)
+                      : new Intl.DateTimeFormat('cs-CZ', { day: 'numeric', month: 'numeric' }).format(parsedDate)
+                    return (
+                      <article className="tips-bank-event" role="listitem" key={item.match.id}>
+                        <span className="tips-bank-event-meta" title={`${item.match.home} – ${item.match.away}`}>
+                          {matchIndex + 1}. {roundLabel} · {date} · {getTeamAbbreviation(item.match.home)}–{getTeamAbbreviation(item.match.away)}
+                        </span>
+                        <strong className="tips-bank-event-amount">Bank {item.amount.toLocaleString('cs-CZ')} Kč</strong>
+                        {item.winnerCount > 0 ? (
+                          <span className="tips-bank-event-payout">
+                            <span className="tips-bank-winner-label">{item.winnerCount > 1 ? `${item.winnerCount}× výhra:` : 'Výhra:'}</span>{' '}
+                            {item.winners.map((winner, winnerIndex) => (
+                              <Fragment key={`${item.match.id}-${winnerIndex}`}>
+                                {winnerIndex > 0 ? <span className="tips-bank-winner-separator" aria-hidden="true">{' · '}</span> : null}
+                                <span className="tips-bank-winner-entry">
+                                  <span>{item.winnerCount === 1 ? winner.name : `${winner.name} (${winner.payout.toLocaleString('cs-CZ')} Kč)`}</span>
+                                </span>
+                              </Fragment>
+                            ))}
+                          </span>
+                        ) : <span className="tips-bank-event-result">Přeneseno dál</span>}
+                      </article>
+                    )
+                  })}
+                  </div>
+                </>
+              ) : <p className="tips-bank-history-empty">Historie se zobrazí po vyhodnocení prvního zápasu.</p>}
+          </div>
+        </article>
       </section>
 
       <section className="panel long-term-bank-panel" aria-label="Dlouhodobý bank">
@@ -3893,7 +3991,7 @@ function App() {
 
         {showRankDisplayInfo ? <div className="scoring-info-card rank-display-info-card" role="note">
           <button type="button" className="panel-close-button" onClick={() => setShowRankDisplayInfo(false)} aria-label="Zavřít nápovědu" title="Zavřít">×</button>
-          <p className="scoring-info-text">Přepínač mění zobrazení tabulky i grafu společně.</p>
+          <p className="scoring-info-text"><strong>Celkem</strong> zobrazuje průběžné pořadí za celý turnaj. <strong>Kolo</strong> ukazuje samostatné pořadí hráčů v jednotlivých kolech. Volba <strong>Celkem</strong>/<strong>Kolo</strong> mění také pořadí a posun v tabulce Tipů vybraného kola.</p>
         </div> : null}
 
         {rankTimeline.rounds.length > 0 ? (

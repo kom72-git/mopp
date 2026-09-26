@@ -95,6 +95,30 @@ function getElhAlias(teamName) {
   return null
 }
 
+const elhTeamAbbreviations = {
+  Boleslav: 'MBL',
+  Brno: 'KOM',
+  Budějovice: 'CEB',
+  Hradec: 'MHK',
+  'Karlovy Vary': 'KVA',
+  Liberec: 'LIB',
+  Litvínov: 'LIT',
+  Kladno: 'KLA',
+  Olomouc: 'OLO',
+  Pardubice: 'PCE',
+  Plzeň: 'PLZ',
+  Sparta: 'SPA',
+  Třinec: 'TRI',
+  Vítkovice: 'VIT',
+}
+
+export function getTeamAbbreviation(teamName) {
+  const normalizedName = String(teamName ?? '').trim()
+  if (!normalizedName) return ''
+  const canonicalName = getElhAlias(normalizedName) ?? normalizedName
+  return elhTeamAbbreviations[canonicalName] ?? normalizedName.slice(0, 3).toLocaleUpperCase('cs-CZ')
+}
+
 export function getTeamDisplayName(teamName) {
   const normalizedName = String(teamName ?? '').trim()
   if (!normalizedName) return normalizedName

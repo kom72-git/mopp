@@ -1868,6 +1868,42 @@
   cursor: pointer;
 }
 
+.standings-metric-options {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 0.3rem);
+  right: 0;
+  display: grid;
+  min-width: 100%;
+  padding: 0.2rem;
+  border: 1px solid #cedfed;
+  border-radius: 0.65rem;
+  background: #fff;
+  box-shadow: 0 8px 20px rgb(31 79 121 / 16%);
+}
+
+.standings-metric-option {
+  border: 0;
+  border-radius: 0.42rem;
+  padding: 0.4rem 0.62rem;
+  background: transparent;
+  color: #33506a;
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.standings-metric-option:hover,
+.standings-metric-option:focus-visible,
+.standings-metric-option.is-selected {
+  background: #e6f4ff;
+  color: #144b76;
+  outline: none;
+}
+
 .standings-metric-select:focus {
   outline: none;
   border-color: #8fb7d8;

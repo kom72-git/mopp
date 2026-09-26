@@ -45,6 +45,64 @@ const tipPlayerChartColors = {
 
 const emptyData = { players: [], matches: [] }
 
+function InlineSelect({ value, options, onChange, ariaLabel, className = '' }) {
+  const [open, setOpen] = useState(false)
+  const containerRef = useRef(null)
+  const selectedOption = options.find((option) => option.value === value) ?? options[0]
+
+  useEffect(() => {
+    if (!open) return undefined
+    const handlePointerDown = (event) => {
+      if (!containerRef.current?.contains(event.target)) setOpen(false)
+    }
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('pointerdown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [open])
+
+  const selectOption = (option) => {
+    onChange(option.value)
+    setOpen(false)
+  }
+
+  return (
+    <span className={`standings-metric-shell ${className} ${open ? 'is-open' : ''}`.trim()} ref={containerRef}>
+      <button
+        type="button"
+        className="standings-metric-select"
+        aria-label={ariaLabel}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+      >
+        {selectedOption?.label}
+      </button>
+      {open ? (
+        <span className="standings-metric-options" role="listbox" aria-label={ariaLabel}>
+          {options.map((option) => (
+            <button
+              type="button"
+              role="option"
+              aria-selected={option.value === value}
+              className={`standings-metric-option${option.value === value ? ' is-selected' : ''}`}
+              key={option.value}
+              onClick={() => selectOption(option)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </span>
+      ) : null}
+    </span>
+  )
+}
+
 function getStoredTournamentId() {
   if (typeof window === 'undefined') return ''
 
@@ -3117,20 +3175,13 @@ function App() {
                 ?
               </button>
             </h2>
-            <span className={`standings-metric-shell ${standingsMetric !== 'points' ? 'is-filtered' : ''}`.trim()}>
-              <select
-                className="standings-metric-select"
-                aria-label="Řazení pořadí"
-                value={standingsMetric}
-                onChange={(event) => setStandingsMetric(event.target.value)}
-              >
-                {standingsMetricOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </span>
+            <InlineSelect
+              value={standingsMetric}
+              options={standingsMetricOptions}
+              onChange={setStandingsMetric}
+              ariaLabel="Řazení pořadí"
+              className={standingsMetric !== 'points' ? 'is-filtered' : ''}
+            />
           </div>
 
           {showScoringInfo ? (
@@ -3978,17 +4029,12 @@ function App() {
           <h2>Vývoj pořadí hráčů ({rankDisplayMode === 'round' ? 'po kolech' : 'celkem'})</h2>
           <div className="rank-display-switch">
             <div className="rank-display-switch-controls">
-              <span className="standings-metric-shell">
-                <select
-                  className="standings-metric-select"
-                  aria-label="Zobrazení tabulky a grafu"
-                  value={rankDisplayMode}
-                  onChange={(event) => setRankDisplayMode(event.target.value)}
-                >
-                  <option value="total">Celkem</option>
-                  <option value="round">Kolo</option>
-                </select>
-              </span>
+              <InlineSelect
+                value={rankDisplayMode}
+                options={[{ value: 'total', label: 'Celkem' }, { value: 'round', label: 'Kolo' }]}
+                onChange={setRankDisplayMode}
+                ariaLabel="Zobrazení tabulky a grafu"
+              />
               <button
                 type="button"
                 className="scoring-info-toggle rank-display-info-toggle"

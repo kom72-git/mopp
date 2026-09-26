@@ -32,6 +32,15 @@ const manualPayoutOverridesByMatchId = {
 }
 
 const chartColors = ['#2563eb', '#0ea5e9', '#06b6d4', '#14b8a6', '#22c55e', '#84cc16', '#eab308', '#f59e0b', '#f97316', '#a855f7', '#ec4899']
+const tipPlayerChartColors = {
+  '6a83ac632a04aa7f35529634': '#111827',
+  '6a87271181ea2e8550c76906': '#16a34a',
+  '6a89faf4e71ff2460632e99c': '#2563eb',
+  '6a8bfb582b16aedfa843af39': '#dc2626',
+  '6aa836816c669e5f57c1f392': '#9333ea',
+  '6a8f2d265dd97676d1938634': '#f472b6',
+  '6a8aab01b195b1a484457855': '#78350f',
+}
 
 const emptyData = { players: [], matches: [] }
 
@@ -1604,7 +1613,7 @@ function App() {
     const series = playerOrder.map((playerId, index) => ({
       id: playerId,
       name: playerMeta.get(playerId)?.name ?? playerId,
-      color: chartColors[index % chartColors.length],
+      color: tipPlayerChartColors[playerId] ?? chartColors[index % chartColors.length],
       ranks: rankByPlayer.get(playerId) ?? [],
     }))
 

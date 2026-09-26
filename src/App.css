@@ -1944,9 +1944,12 @@
 
 .scoring-info-toggle {
   appearance: none;
+  display: inline-flex;
   width: 1.15rem;
   height: 1.15rem;
   flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
   margin-left: 0.4rem;
   border: 1px solid #b9d3e8;
   border-radius: 999px;
@@ -1956,8 +1959,27 @@
   font-size: 0.66rem;
   font-weight: 800;
   line-height: 1;
+  padding: 0;
   cursor: pointer;
   vertical-align: middle;
+}
+
+.scoring-info-glyph {
+  display: inline-block;
+  transform: translateY(0.04rem);
+}
+
+.scoring-info-toggle.standings-info-toggle {
+  transform: translateY(-0.04rem);
+}
+
+.scoring-info-toggle.standings-info-toggle .scoring-info-glyph {
+  transform: translateY(0.04rem);
+}
+
+.rank-legend-info-toggle .scoring-info-glyph {
+  font-size: 0.7rem;
+  font-weight: 900;
 }
 
 .scoring-info-toggle:hover,

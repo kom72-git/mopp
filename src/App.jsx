@@ -3166,13 +3166,13 @@ function App() {
               </span>
               <button
                 type="button"
-                className="scoring-info-toggle"
+                className="scoring-info-toggle standings-info-toggle"
                 aria-expanded={showScoringInfo}
                 aria-label="Jak se bodují tipy"
                 title="Jak se bodují tipy"
                 onClick={() => setShowScoringInfo((current) => !current)}
               >
-                ?
+                <span className="scoring-info-glyph">?</span>
               </button>
             </h2>
             <InlineSelect
@@ -4043,7 +4043,7 @@ function App() {
                 title="Co přepínač mění"
                 onClick={() => setShowRankDisplayInfo((current) => !current)}
               >
-                ?
+                <span className="scoring-info-glyph">?</span>
               </button>
             </div>
           </div>
@@ -4195,7 +4195,7 @@ function App() {
                 title="Jak pracovat s grafem"
                 onClick={() => setShowRankLegendInfo((current) => !current)}
               >
-                ?
+                <span className="scoring-info-glyph">?</span>
               </button>
             </div>
             {showRankLegendInfo ? <div className="scoring-info-card rank-legend-info-card" role="note">

@@ -1892,6 +1892,20 @@ function App() {
         winners,
       }
     })
+    .concat((() => {
+      const pendingMatch = orderedMatches.find((match) => {
+        const hasResult = match.score && match.score !== '--:--'
+        return !hasResult && Number.isFinite(Number(match.bank)) && Number(match.bank) >= 0
+      })
+      if (!pendingMatch) return []
+      return [{
+        match: pendingMatch,
+        amount: Number(pendingMatch.bank),
+        winnerCount: 0,
+        winners: [],
+        isPending: true,
+      }]
+    })())
     .filter((item) => Number.isFinite(item.amount) && item.amount >= 0),
   [orderedMatches, players, remainderRecipientByMatchId])
 
@@ -3879,7 +3893,7 @@ function App() {
                       ? (extractCalendarDate(item.match.startsAt) || item.match.startsAt)
                       : new Intl.DateTimeFormat('cs-CZ', { day: 'numeric', month: 'numeric' }).format(parsedDate)
                     return (
-                      <article className="tips-bank-event" role="listitem" key={item.match.id}>
+                      <article className={`tips-bank-event${item.isPending ? ' is-current' : ''}`} role="listitem" key={item.match.id}>
                         <span className="tips-bank-event-meta" title={`${item.match.home} – ${item.match.away}`}>
                           {matchIndex + 1}. {roundLabel} · {date} · {getTeamAbbreviation(item.match.home)}–{getTeamAbbreviation(item.match.away)}
                         </span>
@@ -3896,7 +3910,7 @@ function App() {
                               </Fragment>
                             ))}
                           </span>
-                        ) : <span className="tips-bank-event-result">Přeneseno dál</span>}
+                        ) : <span className="tips-bank-event-result">{item.isPending ? 'Čeká na výsledek' : 'Přeneseno dál'}</span>}
                       </article>
                     )
                   })}

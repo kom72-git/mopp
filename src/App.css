@@ -2963,7 +2963,7 @@
   border: 1px solid #d7e5f2;
   border-radius: 10px;
   overflow: hidden;
-  background: #f9fcff;
+  background: #fff;
 }
 
 .player-rank-mini-chart {
@@ -3713,6 +3713,12 @@
   background: #f9fcff;
   color: #49647a;
   font-size: 0.72rem;
+}
+
+.tips-bank-event.is-current {
+  background: #fff6e8;
+  border-color: #f1d2a3;
+  box-shadow: 0 2px 7px rgb(180 112 38 / 12%);
 }
 
 .tips-bank-event-meta {

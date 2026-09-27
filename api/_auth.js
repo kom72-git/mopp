@@ -1063,8 +1063,13 @@ function createAuthRoutes({ app, getDb }) {
 
       const existingMatch = await getDb().collection("matches").findOne({ _id: new ObjectId(matchId) });
       if (!existingMatch) return res.status(404).json({ ok: false, message: "Zápas nebyl nalezen." });
+      const existingStartsAtMs = new Date(existingMatch.startsAt).getTime();
+      const submittedStartsAtMs = new Date(startsAt).getTime();
+      const startsAtChanged = Number.isFinite(existingStartsAtMs) && Number.isFinite(submittedStartsAtMs)
+        ? existingStartsAtMs !== submittedStartsAtMs
+        : String(existingMatch.startsAt ?? "") !== startsAt;
       const matchDetailsChanged = existingMatch.round !== round
-        || existingMatch.startsAt !== startsAt
+        || startsAtChanged
         || existingMatch.home !== home
         || existingMatch.away !== away;
       const update = {

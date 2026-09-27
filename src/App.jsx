@@ -1694,7 +1694,7 @@ function App() {
   }, [matches, rounds])
 
   const selectedRound = currentViewState.selectedRound ?? currentRound
-  const hidePlayedRounds = currentViewState.hidePlayedRounds ?? false
+  const hidePlayedRounds = currentViewState.hidePlayedRounds ?? true
   const visiblePlayerIds = currentViewState.visiblePlayerIds ?? scoreboard.map((player) => player.id)
   const hoveredPlayerId = currentViewState.hoveredPlayerId ?? ''
   const selectedMatchId = currentViewState.selectedMatchId ?? ''

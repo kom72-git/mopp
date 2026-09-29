@@ -4790,6 +4790,12 @@
   font-size: 0.74rem;
 }
 
+.player-schedule-date-warning {
+  margin: 0;
+  color: #b42318;
+  font-size: 0.68rem;
+}
+
 .player-schedule-match {
   display: flex;
   align-items: center;
@@ -4801,6 +4807,10 @@
 .player-schedule-match input {
   width: auto;
   margin: 0;
+}
+
+.player-schedule-match strong {
+  font-weight: 800;
 }
 
 .player-schedule-match.is-selected {

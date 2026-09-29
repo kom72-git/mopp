@@ -250,13 +250,14 @@ export default function PlayerTipsPanel({ selectedTournamentId, scheduleRefreshK
         {scheduleRounds.length === 0 ? <p className="player-tips-message">Zatím není dostupné kolo pro tvůj výběr.</p> : scheduleRounds.map((round) => (
           <div className={`player-schedule-round${round.selection ? ' is-closed' : ''}`} key={round.round}>
             {!round.selection ? <strong>{round.round}. kolo{round.canSelect ? ` · vyber ${round.requiredSelectionCount} zápas${round.requiredSelectionCount === 1 ? '' : 'y'}` : ''}</strong> : null}
+            {round.canSelect ? <p className="player-schedule-date-warning">Ověřuj <strong>datum</strong> a <strong>čas</strong> konání vybíraného zápasu. Termíny se mohou změnit. Při odlišnostech ve vybraném zápasu, napiš adminovi!</p> : null}
             {round.matches.map((match) => {
               const checked = (scheduleSelections[round.round] ?? []).includes(match.id)
               if (round.selection) return <div className="player-schedule-closed-match" key={match.id}><span>{round.round}. kolo · {getTeamDisplayName(match.home)} – {getTeamDisplayName(match.away)} · {formatMatchDateTime(match.startsAt)}</span></div>
               return (
                 <label className={`player-schedule-match${round.selection?.matchIds?.includes(match.id) ? ' is-selected' : ''}`} key={match.id}>
                   <input type="checkbox" checked={checked} disabled={!round.canSelect || (!checked && (scheduleSelections[round.round] ?? []).length >= round.requiredSelectionCount)} onChange={() => setScheduleSelections((current) => ({ ...current, [round.round]: checked ? (current[round.round] ?? []).filter((id) => id !== match.id) : [...(current[round.round] ?? []), match.id] }))} />
-                  <span>{getTeamDisplayName(match.home)} – {getTeamDisplayName(match.away)} · {formatMatchDateTime(match.startsAt)}</span>
+                  <span>{getTeamDisplayName(match.home)} – {getTeamDisplayName(match.away)} · <strong>{formatMatchDateTime(match.startsAt)}</strong></span>
                 </label>
               )
             })}

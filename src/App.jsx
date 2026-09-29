@@ -1848,8 +1848,8 @@ function App() {
 
   const visibleRounds = useMemo(() => {
     if (!hidePlayedRounds) return rounds
-    const filtered = rounds.filter((round) => !playedRounds.has(round))
-    return filtered.length > 0 ? filtered : rounds
+    const latestCompletedRound = Math.max(...playedRounds, 0)
+    return rounds.filter((round) => !playedRounds.has(round) || round === latestCompletedRound)
   }, [hidePlayedRounds, rounds, playedRounds])
 
   const effectiveSelectedRound = useMemo(() => {

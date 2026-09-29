@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { getTeamDisplayName } from '../data/teamLogos'
 
 function formatMatchDateTime(value) {
@@ -14,6 +14,15 @@ function formatMatchDateTime(value) {
     minute: '2-digit',
   }).format(date)
   return `${formattedDate} (${formattedTime})`
+}
+
+function getMatchStatusLabel(match) {
+  if (match.score && match.score !== '--:--') return 'Vyhodnocený'
+  if (new Date(match.startsAt).getTime() <= Date.now()) return 'Čeká na výsledek'
+  if (match.status === 'open') return 'Otevřený'
+  if (match.status === 'locked') return 'Uzamčený'
+  if (match.status === 'evaluated') return 'Vyhodnocený'
+  return 'Připravovaný'
 }
 
 // Vstup <input type="datetime-local"> nemá časovou zónu, prohlížeč ji ale bere jako místní čas.
@@ -52,6 +61,8 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
   const [tournamentLogos, setTournamentLogos] = useState([])
   const [tournaments, setTournaments] = useState([])
   const [matches, setMatches] = useState([])
+  const [hideCompletedMatches, setHideCompletedMatches] = useState(true)
+  const [selectionPage, setSelectionPage] = useState(0)
   const [scheduleMatches, setScheduleMatches] = useState([])
   const [isImportingSchedule, setIsImportingSchedule] = useState(false)
   const [selectedTournamentId, setSelectedTournamentId] = useState('')
@@ -68,10 +79,11 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
   const [tieBreakOrder, setTieBreakOrder] = useState(['exact', 'scored', 'noBet'])
   const [tieBreakRules, setTieBreakRules] = useState([])
   const [payouts, setPayouts] = useState(['', '', '', '', ''])
-  const [matchForm, setMatchForm] = useState({ tournamentId: '', round: '1', startsAt: '', home: '', away: '', score: '', status: 'draft', manualBank: '' })
+  const [matchForm, setMatchForm] = useState({ tournamentId: '', round: '1', startsAt: '', home: '', away: '', score: '', status: 'open', manualBank: '' })
   const [message, setMessage] = useState('')
   const [participantMessages, setParticipantMessages] = useState({})
   const [isBusy, setIsBusy] = useState(false)
+  const matchFormRef = useRef(null)
 
   const loadAdminData = async () => {
     const [overviewResponse, tournamentsResponse] = await Promise.all([
@@ -442,6 +454,7 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
       manualBank: '',
     })
     setMessage('')
+    requestAnimationFrame(() => matchFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
   }
 
   const deleteMatch = async (match) => {
@@ -530,6 +543,42 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
   const currentAdminRound = [...matches]
     .filter((match) => new Date(match.startsAt).getTime() >= Date.now())
     .sort((a, b) => Number(a.round) - Number(b.round) || String(a.startsAt).localeCompare(String(b.startsAt)))[0]?.round
+
+  const selectedTournament = tournaments.find((tournament) => tournament._id === selectedTournamentId)
+  const activeSelectionUsers = participantUserIds
+    .map((userId) => users.find((user) => String(user._id) === userId))
+    .filter((user) => user?.status === 'active')
+  const latestListedRound = Math.max(
+    0,
+    Number(selectedTournament?.plannedMatchCount) || 0,
+    ...scheduleMatches.map((match) => Number(match.round) || 0),
+    ...matches.map((match) => Number(match.round) || 0),
+  )
+  const selectionRounds = Array.from({ length: latestListedRound || (activeSelectionUsers.length ? 1 : 0) }, (_, index) => index + 1)
+  const selectionPageSize = 10
+  const selectionPageCount = Math.ceil(selectionRounds.length / selectionPageSize)
+  const currentSelectionPage = Math.min(selectionPage, Math.max(0, selectionPageCount - 1))
+  const visibleSelectionRounds = selectionRounds.slice(currentSelectionPage * selectionPageSize, (currentSelectionPage + 1) * selectionPageSize)
+  const firstUnselectedRound = selectionRounds.find((round) => !matches.some((match) => Number(match.round) === round))
+
+  const matchesByRound = new Map()
+  for (const match of matches) {
+    const round = Number(match.round)
+    if (!Number.isFinite(round)) continue
+    if (!matchesByRound.has(round)) matchesByRound.set(round, [])
+    matchesByRound.get(round).push(match)
+  }
+  const completedRounds = [...matchesByRound]
+    .filter(([, roundMatches]) => roundMatches.every((match) => match.score && match.score !== '--:--'))
+    .map(([round]) => round)
+  const latestCompletedRound = Math.max(...completedRounds, 0)
+  const visibleAdminMatches = matches.filter((match) => (
+    !hideCompletedMatches
+    || !match.score
+    || match.score === '--:--'
+    || Number(match.round) === latestCompletedRound
+    || match._id === editingMatchId
+  ))
 
   if (!counts) return <p className="admin-panel-message admin-panel-loading">{message || 'Načítám admin přehled…'}</p>
 
@@ -701,17 +750,12 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
         {sectionButton('matches', 'Zápasy')}
         {openSection === 'matches' && tournaments.length > 0 ? (
           <>
-          <form className="admin-tournament-form" onSubmit={createMatch}>
+          <form className="admin-tournament-form admin-match-form" ref={matchFormRef} onSubmit={createMatch}>
             <h3>{editingMatchId ? 'Upravit zápas' : 'Nový zápas'}</h3>
             <p className="admin-selected-context">Turnaj: {tournaments.find((tournament) => tournament._id === selectedTournamentId)?.name || 'není vybraný'}</p>
             <div className="admin-tournament-form-row">
               <input name="round" type="number" min="1" value={matchForm.round} onChange={updateMatchField} placeholder="Kolo" required />
               <ManualDateTimeInput name="startsAt" value={matchForm.startsAt} onChange={(value) => setMatchForm((current) => ({ ...current, startsAt: value }))} aria-label="Začátek zápasu" required />
-              <select name="status" value={matchForm.status} onChange={updateMatchField}>
-                <option value="draft">Připravovaný</option>
-                <option value="open">Otevřený</option>
-                <option value="locked">Uzamčený</option>
-              </select>
             </div>
             <div className="admin-match-teams-row">
               <input name="home" value={matchForm.home} onChange={updateMatchField} placeholder="Domácí tým" required />
@@ -735,15 +779,19 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
             </div>
           </form>
           <div className="admin-tournament-list">
-            <h3>Zápasy</h3>
-            {matches.length > 0 ? matches.map((match) => (
+            <div className="admin-match-list-heading">
+              <h3>Zápasy</h3>
+              <button type="button" className="auth-button" aria-pressed={hideCompletedMatches} onClick={() => setHideCompletedMatches((current) => !current)}>
+                {hideCompletedMatches ? 'Zobrazit odehrané zápasy' : 'Skrýt odehrané zápasy'}
+              </button>
+            </div>
+            {visibleAdminMatches.length > 0 ? visibleAdminMatches.map((match) => (
               <div className={`admin-tournament-row${Number(match.round) === Number(currentAdminRound) ? ' is-current-round' : ''}`} key={match._id}>
                 <strong className="admin-match-summary"><span>{match.round}. kolo · {formatMatchDateTime(match.startsAt)}</span><span>{getTeamDisplayName(match.home)} – {getTeamDisplayName(match.away)}</span></strong>
-                <span>
-                  {match.status === 'open' ? 'otevřený' : match.status === 'locked' ? 'uzamčený' : match.status === 'evaluated' ? 'vyhodnocený' : 'připravovaný'}
-                  {' · '}Bank {match.bank == null ? 'čeká na výsledek předchozího zápasu' : `${match.bank} Kč`} · {match.bankSource === 'automatic' ? 'automaticky' : 'ručně'}
-                  {match.carriedBank > 0 ? ` (převod ${match.carriedBank} Kč)` : ''}
-                </span>
+                <div className="admin-match-details">
+                  <span className="admin-match-status">{getMatchStatusLabel(match)}</span>
+                  <span className="admin-match-bank">{match.bank == null ? '' : `Bank ${match.bank} Kč`}</span>
+                </div>
                 <div className="admin-row-actions">
                   <button type="button" className="auth-button" onClick={() => editMatch(match)}>Upravit</button>
                   <button type="button" className="auth-button is-danger" onClick={() => deleteMatch(match)} disabled={isBusy}>Smazat</button>
@@ -843,28 +891,42 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
         {sectionButton('selections', 'Kdo vybírá zápas')}
         {openSection === 'selections' ? (
           <div className="admin-tournament-form">
-            <p className="admin-field-help">Pořadí vychází z aktivních členů. Až hráč pošle výběr, založ zápas v sekci Zápasy; tady se pak automaticky zobrazí u příslušného kola.</p>
-            {(() => {
-              const activeUsers = participantUserIds.map((userId) => users.find((user) => String(user._id) === userId)).filter((user) => user?.status === 'active')
-              const rounds = [...new Set(matches.map((match) => Number(match.round)).filter(Number.isFinite))].sort((a, b) => a - b)
-              if (activeUsers.length === 0) return <p className="admin-panel-note">Nejdřív vyber členy turnaje.</p>
-              const displayedRounds = rounds.length > 0 ? rounds : [1]
-              const nextRound = rounds.length > 0 ? Math.max(...rounds) + 1 : 1
-              return [...displayedRounds, ...(rounds.length > 0 ? [nextRound] : [])].map((round) => {
-                const roundMatches = matches.filter((match) => Number(match.round) === round)
-                const selector = activeUsers[(round - 1) % activeUsers.length]
-                return (
-                  <div className="admin-selection-row" key={round}>
-                    <div className="admin-selection-meta">
-                      <strong>{round}. kolo</strong>
-                      <span>Na tahu: {selector.displayName || selector.username}</span>
-                      <span>{roundMatches.length > 0 ? `Založeno zápasů: ${roundMatches.length}` : 'Čeká na výběr hráče'}</span>
-                    </div>
-                    {roundMatches.length > 0 ? <div className="admin-selection-options">{roundMatches.map((match) => <span className="admin-selection-match" key={match._id}>{getTeamDisplayName(match.home)} – {getTeamDisplayName(match.away)}</span>)}</div> : null}
+            <p className="admin-field-help">Pořadí výběru se střídá mezi aktivními hráči. Další kolo hráčům nepůjde vybrat, dokud neproběhne výběr předchozího kola.</p>
+            {activeSelectionUsers.length === 0 ? <p className="admin-panel-note">Nejdřív vyber členy turnaje.</p> : (
+              <>
+                {selectionPageCount > 1 ? (
+                  <div className="admin-selection-pagination">
+                    {currentSelectionPage > 0 ? <button type="button" className="auth-button" onClick={() => setSelectionPage((page) => Math.max(0, page - 1))}>Předchozích 10</button> : <span />}
+                    <span>{currentSelectionPage * selectionPageSize + 1}–{Math.min((currentSelectionPage + 1) * selectionPageSize, selectionRounds.length)} z {selectionRounds.length} kol</span>
+                    {currentSelectionPage < selectionPageCount - 1 ? <button type="button" className="auth-button" onClick={() => setSelectionPage((page) => Math.min(selectionPageCount - 1, page + 1))}>Dalších 10</button> : <span />}
                   </div>
-                )
-              })
-            })()}
+                ) : null}
+                {visibleSelectionRounds.map((round) => {
+                  const roundMatches = matches.filter((match) => Number(match.round) === round)
+                  const selector = activeSelectionUsers[(round - 1) % activeSelectionUsers.length]
+                  const scheduledMatches = scheduleMatches.filter((match) => Number(match.round) === round)
+                  const selectionCount = Math.max(1, Number(selectedTournament?.selectionMatchCount) || 1)
+                  const hasSelection = roundMatches.length > 0
+                  return (
+                    <div className={`admin-selection-row${round === firstUnselectedRound ? ' is-current-round' : ''}`} key={round}>
+                      <div className="admin-selection-meta">
+                        <strong>{round}. kolo</strong>
+                        <span>{hasSelection ? 'Vybral' : 'Na tahu'}: {selector.displayName || selector.username}</span>
+                        {hasSelection && selectionCount > 1 ? <span>Vybral {roundMatches.length} z {selectionCount} zápasů</span> : null}
+                      </div>
+                      {roundMatches.length > 0 ? <div className="admin-selection-options">{roundMatches.map((match) => <span className="admin-selection-match" key={match._id}>{getTeamDisplayName(match.home)} – {getTeamDisplayName(match.away)}</span>)}</div> : scheduledMatches.length > 0 ? <div className="admin-selection-options"><span className="admin-selection-match">Rozpis obsahuje {scheduledMatches.length} možných zápasů</span></div> : null}
+                    </div>
+                  )
+                })}
+                {selectionPageCount > 1 ? (
+                  <div className="admin-selection-pagination">
+                    {currentSelectionPage > 0 ? <button type="button" className="auth-button" onClick={() => setSelectionPage((page) => Math.max(0, page - 1))}>Předchozích 10</button> : <span />}
+                    <span>{currentSelectionPage * selectionPageSize + 1}–{Math.min((currentSelectionPage + 1) * selectionPageSize, selectionRounds.length)} z {selectionRounds.length} kol</span>
+                    {currentSelectionPage < selectionPageCount - 1 ? <button type="button" className="auth-button" onClick={() => setSelectionPage((page) => Math.min(selectionPageCount - 1, page + 1))}>Dalších 10</button> : <span />}
+                  </div>
+                ) : null}
+              </>
+            )}
           </div>
         ) : null}
       </div>

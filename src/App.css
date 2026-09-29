@@ -5491,6 +5491,21 @@
   display: grid;
   gap: 0.45rem;
   margin-top: 0;
+
+.admin-match-form {
+  scroll-margin-top: 1rem;
+}
+
+.admin-match-list-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.admin-match-list-heading h3 {
+  margin: 0;
+}
   padding-top: 0.7rem;
   padding-right: 0.75rem;
   padding-bottom: 0.75rem;
@@ -5827,7 +5842,7 @@
 
 .admin-tournament-row {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto minmax(0, auto) auto;
+  grid-template-columns: minmax(12rem, 1fr) minmax(19rem, auto) auto;
   align-items: center;
   gap: 0.6rem;
   padding: 0.42rem 0.5rem;
@@ -5839,6 +5854,20 @@
 .admin-tournament-row span {
   color: #5e7890;
   text-align: right;
+}
+
+.admin-match-details {
+  display: grid;
+  grid-template-columns: 9rem minmax(9rem, 1fr);
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.admin-match-details .admin-match-status,
+.admin-match-details .admin-match-bank {
+  min-width: 0;
+  text-align: left;
+  white-space: nowrap;
 }
 
 .admin-roster-player {
@@ -6007,6 +6036,27 @@
   background: #f7fbfe;
 }
 
+.admin-selection-row.is-current-round {
+  border-color: #e3c96b;
+  background: #fffbea;
+}
+
+.admin-selection-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.15rem 0;
+}
+
+.admin-selection-pagination > span {
+  color: #5e7890;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+}
+
 .admin-selection-meta {
   display: flex;
   flex-wrap: wrap;
@@ -6102,12 +6152,17 @@
 
   .admin-tournament-row {
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 0.16rem;
   }
 
-  .admin-tournament-row span {
+  .admin-tournament-row > span {
     text-align: left;
+  }
+
+  .admin-match-details {
+    grid-template-columns: 8.5rem minmax(0, 1fr);
+    gap: 0.4rem;
   }
 
   .admin-roster-player {

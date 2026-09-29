@@ -4857,9 +4857,9 @@
 }
 
 .player-schedule-history-top {
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  white-space: nowrap;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
   padding-bottom: 0.1rem;
 }
 
@@ -5112,8 +5112,6 @@
   .player-schedule-history-top {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    overflow-x: hidden;
-    white-space: normal;
   }
 
   .player-tip-row {
@@ -5143,8 +5141,6 @@
   .player-schedule-history-top {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    overflow-x: hidden;
-    white-space: normal;
   }
 
   .player-schedule-history-top > span {
@@ -5171,6 +5167,12 @@
   .player-success-main,
   .player-money-head {
     min-width: 0;
+  }
+}
+
+@media (min-width: 561px) and (max-width: 900px) {
+  .player-schedule-history-top {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

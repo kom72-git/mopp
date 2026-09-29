@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Cropper from 'react-easy-crop'
 import './App.css'
 import { matches as fallbackMatches, players as fallbackPlayers } from './data/moppData'
@@ -209,6 +209,9 @@ function getTournamentStatus(tournament) {
 }
 
 function extractCalendarDate(startsAt) {
+  const isoMatch = String(startsAt ?? '').match(/^\d{4}-(\d{2})-(\d{2})T/)
+  if (isoMatch) return `${Number(isoMatch[2])}. ${Number(isoMatch[1])}.`
+
   const matched = startsAt?.match(/^\d+\.\s*\([^)]+\)\s*(\d{1,2}\.\d{1,2}\.)/)
   if (matched) return matched[1]
 
@@ -393,7 +396,7 @@ function AuthPanel({ activeProduct, selectedTournamentId, selectedTournament, se
     return () => document.removeEventListener('pointerdown', closePanelOnOutsideClick)
   }, [activePanel])
 
-  const refreshSelectionNotification = async () => {
+  const refreshSelectionNotification = useCallback(async () => {
     if (activeProduct !== 'tips' || !user || !selectedTournamentId) {
       setHasSelectionNotification(false)
       return
@@ -405,15 +408,14 @@ function AuthPanel({ activeProduct, selectedTournamentId, selectedTournament, se
     } catch {
       setHasSelectionNotification(false)
     }
-  }
+  }, [activeProduct, selectedTournamentId, user])
 
   useEffect(() => {
-    refreshSelectionNotification()
-  }, [activeProduct, user?.id, selectedTournamentId])
+    queueMicrotask(() => { void refreshSelectionNotification() })
+  }, [refreshSelectionNotification])
 
   useEffect(() => {
     if (user?.role !== 'admin') {
-      setPendingAccountNotificationCount(0)
       return undefined
     }
     let cancelled = false
@@ -451,10 +453,12 @@ function AuthPanel({ activeProduct, selectedTournamentId, selectedTournament, se
   useEffect(() => {
     const resetToken = new URLSearchParams(window.location.search).get('reset')
     if (resetToken) {
-      setUser(null)
-      setForm((current) => ({ ...current, resetToken, password: '' }))
-      setMode('reset')
-      setIsOpen(true)
+      queueMicrotask(() => {
+        setUser(null)
+        setForm((current) => ({ ...current, resetToken, password: '' }))
+        setMode('reset')
+        setIsOpen(true)
+      })
       return undefined
     }
 
@@ -667,12 +671,15 @@ function AuthPanel({ activeProduct, selectedTournamentId, selectedTournament, se
   )
 
   useEffect(() => {
-    if (activeProduct !== 'fantasy' || !user || !selectedTournamentId?.startsWith('db:') || selectedFantasyTournament?.status === 'finished') {
-      setFantasyAccountPlayer(null)
-      setFantasyAccountPeriods([])
-      return
-    }
     let cancelled = false
+    if (activeProduct !== 'fantasy' || !user || !selectedTournamentId?.startsWith('db:') || selectedFantasyTournament?.status === 'finished') {
+      queueMicrotask(() => {
+        if (cancelled) return
+        setFantasyAccountPlayer(null)
+        setFantasyAccountPeriods([])
+      })
+      return () => { cancelled = true }
+    }
     fetch(`/api/fantasy/data?tournamentId=${encodeURIComponent(selectedTournamentId)}`)
       .then((response) => response.ok ? response.json() : null)
       .then((payload) => {
@@ -683,7 +690,7 @@ function AuthPanel({ activeProduct, selectedTournamentId, selectedTournament, se
       })
       .catch(() => { setFantasyAccountPlayer(null); setFantasyAccountPeriods([]) })
     return () => { cancelled = true }
-  }, [activeProduct, fantasyRefreshKey, selectedFantasyTournament?.status, selectedTournamentId, user?.displayName, user?.id, user?.username])
+  }, [activeProduct, fantasyRefreshKey, selectedFantasyTournament?.status, selectedTournamentId, user])
 
   return (
     <div ref={authPanelRef} className={`auth-panel ${user ? 'is-authenticated' : 'is-guest'}`}>
@@ -1100,7 +1107,7 @@ function buildMatchRankSnapshots(matches, players, tieBreakOrder) {
   return snapshots
 }
 
-function buildRoundRankSnapshots(matches, players, tieBreakOrder) {
+function buildRoundRankSnapshots(matches, players) {
   const matchesByRound = new Map()
   for (const match of matches) {
     const round = extractRound(match)
@@ -1367,7 +1374,7 @@ function App() {
       ? { players: fallbackPlayers, matches: fallbackMatches }
       : emptyData,
   )
-  const [isLiveLoading, setIsLiveLoading] = useState(true)
+  const [, setIsLiveLoading] = useState(true)
   const [isRoundTabsMultiRow, setIsRoundTabsMultiRow] = useState(false)
   const [isTournamentMenuOpen, setIsTournamentMenuOpen] = useState(false)
   const [isTournamentMenuHovered, setIsTournamentMenuHovered] = useState(false)
@@ -1416,7 +1423,7 @@ function App() {
         document.head.appendChild(link)
       }
     }
-  }, [activeProduct, selectedFantasyTournament?.favicon, selectedFantasyTournament?.id, selectedTournament?.favicon, selectedTournament?.id])
+  }, [activeProduct, selectedFantasyTournament, selectedTournament])
 
   useEffect(() => {
     if (typeof document === 'undefined') return
@@ -1605,8 +1612,8 @@ function App() {
     [orderedMatches, players, selectedTournament?.tieBreakOrder],
   )
   const roundRankSnapshotByRound = useMemo(
-    () => buildRoundRankSnapshots(orderedMatches, players, selectedTournament?.tieBreakOrder),
-    [orderedMatches, players, selectedTournament?.tieBreakOrder],
+    () => buildRoundRankSnapshots(orderedMatches, players),
+    [orderedMatches, players],
   )
 
   const currentViewState = viewStateByTournament[selectedTournamentId] ?? {}
@@ -1779,13 +1786,6 @@ function App() {
     updateCurrentTournamentState((current) => ({
       standingsMetric:
         typeof value === 'function' ? value(current.standingsMetric ?? 'points') : value,
-    }))
-  }
-
-  const setRankChartView = (value) => {
-    updateCurrentTournamentState((current) => ({
-      rankChartView:
-        typeof value === 'function' ? value(current.rankChartView ?? 'match') : value,
     }))
   }
 

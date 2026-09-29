@@ -66,6 +66,7 @@ export default function PlayerTipsPanel({ selectedTournamentId, scheduleRefreshK
   const [scheduleHistory, setScheduleHistory] = useState([])
   const [upcomingSelectionRounds, setUpcomingSelectionRounds] = useState([])
   const [scheduleMessage, setScheduleMessage] = useState('')
+  const [isScheduleOverviewOpen, setIsScheduleOverviewOpen] = useState(true)
   const [tipsMode, setTipsMode] = useState('mine')
   const autoSaveTimers = useRef({})
   const matchesInitializedRef = useRef(false)
@@ -230,6 +231,32 @@ export default function PlayerTipsPanel({ selectedTournamentId, scheduleRefreshK
       ? [activeGroup]
       : []
 
+  const selectionOverviewRounds = useMemo(() => {
+    const roundsByNumber = new Map()
+    for (const round of scheduleRounds) {
+      if (round.selection || round.canSelect) {
+        roundsByNumber.set(Number(round.round), {
+          round: Number(round.round),
+          startsAt: round.matches?.[0]?.startsAt ?? null,
+          matches: round.selection ? round.matches ?? [] : [],
+          canSelect: Boolean(round.canSelect),
+        })
+      }
+    }
+    for (const round of upcomingSelectionRounds) {
+      if (!roundsByNumber.has(Number(round.round))) {
+        roundsByNumber.set(Number(round.round), {
+          round: Number(round.round),
+          startsAt: round.startsAt,
+          endsAt: round.endsAt,
+          matches: [],
+          canSelect: false,
+        })
+      }
+    }
+    return [...roundsByNumber.values()].sort((first, second) => first.round - second.round)
+  }, [scheduleRounds, upcomingSelectionRounds])
+
   const scheduleContent = (
     <section className="player-schedule-picker" aria-label="Výběr zápasu">
       {scheduleMessage ? <p className="player-tips-message" role="alert">{scheduleMessage}</p> : null}
@@ -241,39 +268,27 @@ export default function PlayerTipsPanel({ selectedTournamentId, scheduleRefreshK
           </div>
         </div>
       ) : null}
-      {upcomingSelectionRounds.length > 0 ? (
-        <div className="player-schedule-box player-schedule-timing-box">
-          <h3>Kdy tipuji</h3>
-          <div className="player-schedule-timing-list">
-            {upcomingSelectionRounds.map((item) => (
-              <div className={`player-schedule-timing-row${item.requiredSelectionCount === 1 ? ' is-single-selection' : ''}`} key={item.round}>
-                <strong>{item.round}. kolo</strong>
-                {item.requiredSelectionCount > 1 ? <span>{item.requiredSelectionCount} zápasů</span> : null}
-                <span>{item.startsAt ? formatMatchDateTime(item.startsAt) : 'Termín bude doplněn'}</span>
+      <div className="player-schedule-box player-schedule-overview-box">
+        <button type="button" className="player-schedule-overview-toggle" aria-expanded={isScheduleOverviewOpen} onClick={() => setIsScheduleOverviewOpen((current) => !current)}>
+          <span>Kdy tipuji a moje výběry</span>
+          <span aria-hidden="true">{isScheduleOverviewOpen ? '−' : '+'}</span>
+        </button>
+        {isScheduleOverviewOpen ? (
+          <div className="player-schedule-overview-list">
+            {selectionOverviewRounds.length === 0 ? <p className="player-tips-message">Zatím není dostupné kolo pro tvůj výběr.</p> : selectionOverviewRounds.map((round) => (
+              <div className={`player-schedule-round${round.matches.length > 0 ? ' is-closed' : ''}`} key={round.round}>
+                <div className="player-schedule-timing-row is-single-selection">
+                  <strong>{round.round}. kolo</strong>
+                  <span>{round.startsAt ? formatMatchDate(round.startsAt) : 'Termín bude doplněn'}</span>
+                </div>
+                {round.canSelect ? <p className="player-schedule-date-warning">Ověřuj <strong>datum</strong> a <strong>čas</strong> konání vybíraného zápasu. Termíny se mohou změnit. Při odlišnostech ve vybraném zápasu, napiš adminovi!</p> : null}
+                {round.matches.map((match) => (
+                  <div className="player-schedule-closed-match" key={match.id}><span>{getTeamDisplayName(match.home)} – {getTeamDisplayName(match.away)} · {formatMatchDateTime(match.startsAt)}</span></div>
+                ))}
               </div>
             ))}
           </div>
-        </div>
-      ) : null}
-      <div className="player-schedule-box player-schedule-selections-box">
-        <h3>Moje výběry</h3>
-        {scheduleRounds.length === 0 ? <p className="player-tips-message">Zatím není dostupné kolo pro tvůj výběr.</p> : scheduleRounds.map((round) => (
-          <div className={`player-schedule-round${round.selection ? ' is-closed' : ''}`} key={round.round}>
-            {!round.selection ? <strong>{round.round}. kolo{round.canSelect ? ` · vyber ${round.requiredSelectionCount} zápas${round.requiredSelectionCount === 1 ? '' : 'y'}` : ''}</strong> : null}
-            {round.canSelect ? <p className="player-schedule-date-warning">Ověřuj <strong>datum</strong> a <strong>čas</strong> konání vybíraného zápasu. Termíny se mohou změnit. Při odlišnostech ve vybraném zápasu, napiš adminovi!</p> : null}
-            {round.matches.map((match) => {
-              const checked = (scheduleSelections[round.round] ?? []).includes(match.id)
-              if (round.selection) return <div className="player-schedule-closed-match" key={match.id}><span>{round.round}. kolo · {getTeamDisplayName(match.home)} – {getTeamDisplayName(match.away)} · {formatMatchDateTime(match.startsAt)}</span></div>
-              return (
-                <label className={`player-schedule-match${round.selection?.matchIds?.includes(match.id) ? ' is-selected' : ''}`} key={match.id}>
-                  <input type="checkbox" checked={checked} disabled={!round.canSelect || (!checked && (scheduleSelections[round.round] ?? []).length >= round.requiredSelectionCount)} onChange={() => setScheduleSelections((current) => ({ ...current, [round.round]: checked ? (current[round.round] ?? []).filter((id) => id !== match.id) : [...(current[round.round] ?? []), match.id] }))} />
-                  <span>{getTeamDisplayName(match.home)} – {getTeamDisplayName(match.away)} · <strong>{formatMatchDateTime(match.startsAt)}</strong></span>
-                </label>
-              )
-            })}
-            {round.canSelect ? <button type="button" className="auth-submit" disabled={(scheduleSelections[round.round] ?? []).length !== round.requiredSelectionCount} onClick={() => saveScheduleSelection(round)}>Potvrdit výběr</button> : null}
-          </div>
-        ))}
+        ) : null}
       </div>
     </section>
   )
@@ -312,14 +327,14 @@ export default function PlayerTipsPanel({ selectedTournamentId, scheduleRefreshK
             </select>
             {tipViewMode !== 'all' ? <button type="button" className="auth-button" onClick={() => setActiveGroupIndex(Math.min(matchGroups.length - 1, resolvedGroupIndex + 1))} disabled={resolvedGroupIndex === matchGroups.length - 1}>Další</button> : null}
           </div>
-          {displayedGroups.map((group) => (
+          {displayedGroups.map((group) => {
+            const groupDate = [...new Set(group.matches.map((match) => formatMatchDate(match.startsAt)))].join(' – ')
+            return (
             <div className="player-tip-group" key={group.key}>
-              {tipViewMode === 'all' ? (
-                <div className="player-tip-group-heading">
-                  <h3>{group.round ? `${group.round}. kolo` : 'Skupina'}</h3>
-                  <span className="player-tip-group-date">{[...new Set(group.matches.map((match) => formatMatchDate(match.startsAt)))].join(' – ')}</span>
-                </div>
-              ) : null}
+              <div className="player-tip-group-heading">
+                <h3>{group.round ? `${group.round}. kolo` : 'Skupina'}</h3>
+                <span className="player-tip-group-date">{groupDate}</span>
+              </div>
               {group.matches.map((match) => (
                 <div className="player-tip-row" key={match._id}>
                   <div>
@@ -340,7 +355,8 @@ export default function PlayerTipsPanel({ selectedTournamentId, scheduleRefreshK
                 </div>
               ))}
             </div>
-          ))}
+            )
+          })}
           </>}
         </>
       )}

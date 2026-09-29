@@ -4789,6 +4789,34 @@
   font-size: 0.86rem;
 }
 
+.player-schedule-overview-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #174c73;
+  font-family: Sora, Verdana, sans-serif;
+  font-size: 0.86rem;
+  font-weight: 700;
+  line-height: 1.45;
+  text-align: left;
+  cursor: pointer;
+}
+
+.player-schedule-overview-toggle > span:last-child {
+  color: #315d7c;
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.player-schedule-overview-list {
+  display: grid;
+  gap: 0.3rem;
+}
+
 .player-schedule-round {
   display: grid;
   gap: 0.3rem;

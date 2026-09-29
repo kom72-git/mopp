@@ -673,8 +673,7 @@ function createAuthRoutes({ app, getDb }) {
         .slice(-5);
       const upcomingSelectionRounds = participantIndex >= 0
         ? rounds
-          .filter((round) => round.selectorUserId === req.session.sub && !round.selection && new Date(round.matches.at(-1)?.startsAt ?? 0).getTime() >= Date.now())
-          .slice(0, 6)
+          .filter((round) => round.selectorUserId === req.session.sub && !round.selection)
           .map((round) => ({
             round: round.round,
             requiredSelectionCount: round.requiredSelectionCount,

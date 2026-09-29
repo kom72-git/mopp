@@ -3841,7 +3841,7 @@ function App() {
 
               {selectedMatch.tipsVisible === false ? (
                 <>
-                  <p className="tips-hidden-message">Tipy ostatních hráčů se zobrazí po začátku zápasu.</p>
+                  <p className="tips-hidden-message">Tipy ostatních hráčů se zobrazí po začátku zápasu. Tabulka je do té doby řazena dle času vložení tipů hráčů.</p>
                 </>
               ) : null}
 

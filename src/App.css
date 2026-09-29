@@ -2459,6 +2459,17 @@
   font-weight: 800;
 }
 
+.tips-head .is-active-sort {
+  color: #123f61;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.tips-head-sort-arrow {
+  display: inline-block;
+  margin-left: 0.18em;
+}
+
 .rank-cell {
   text-align: center;
   color: #44617d;

@@ -3852,8 +3852,8 @@ function App() {
                   <span>Hráč</span>
                   <span>Tip</span>
                   <span>Výhra</span>
-                  <span>Celkem</span>
-                  <span>{rankDisplayMode === 'round' ? 'Kolo' : 'Zápas'}</span>
+                  <span className={selectedMatch.tipsVisible !== false && rankDisplayMode === 'total' ? 'is-active-sort' : ''}>Celkem{selectedMatch.tipsVisible !== false && rankDisplayMode === 'total' ? <span className="tips-head-sort-arrow" aria-hidden="true">↓</span> : null}</span>
+                  <span className={selectedMatch.tipsVisible !== false && rankDisplayMode === 'round' ? 'is-active-sort' : ''}>Kolo{selectedMatch.tipsVisible !== false && rankDisplayMode === 'round' ? <span className="tips-head-sort-arrow" aria-hidden="true">↓</span> : null}</span>
                 </div>
 
                 {selectedMatchTips.map((tip) => (

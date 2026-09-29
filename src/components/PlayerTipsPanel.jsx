@@ -16,6 +16,16 @@ function formatMatchDateTime(value) {
   return `${formattedDate} (${formattedTime})`
 }
 
+function formatMatchDate(value) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return new Intl.DateTimeFormat('cs-CZ', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(date)
+}
+
 function buildMatchGroups(matches) {
   const groups = new Map()
   for (const match of matches) {
@@ -304,11 +314,16 @@ export default function PlayerTipsPanel({ selectedTournamentId, scheduleRefreshK
           </div>
           {displayedGroups.map((group) => (
             <div className="player-tip-group" key={group.key}>
-              {tipViewMode === 'all' ? <h3>{group.round ? `${group.round}. kolo` : 'Skupina'}</h3> : null}
+              {tipViewMode === 'all' ? (
+                <div className="player-tip-group-heading">
+                  <h3>{group.round ? `${group.round}. kolo` : 'Skupina'}</h3>
+                  <span className="player-tip-group-date">{[...new Set(group.matches.map((match) => formatMatchDate(match.startsAt)))].join(' – ')}</span>
+                </div>
+              ) : null}
               {group.matches.map((match) => (
                 <div className="player-tip-row" key={match._id}>
                   <div>
-                    <span className="player-tip-date">{formatMatchDateTime(match.startsAt)}</span>
+                    {tipViewMode !== 'all' ? <span className="player-tip-date">{formatMatchDateTime(match.startsAt)}</span> : null}
                     <strong className="player-tip-match">{match.home} – {match.away}</strong>
                     <span className="player-tip-meta">Bank {match.bank == null ? 'čeká na výsledek předchozího zápasu' : `${match.bank} Kč`}</span>
                   </div>

@@ -5016,13 +5016,26 @@
   border-bottom: 1px solid #e8eff5;
 }
 
+.player-tip-group-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 0.65rem;
+  margin-top: 0.7rem;
+  padding-top: 0.6rem;
+}
+
+.player-tip-group-date {
+  color: #6d8191;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
 .player-tip-group + .player-tip-group {
   margin-top: 0.8rem;
 }
 
 .player-tip-group h3 {
-  margin: 0.7rem 0 0;
-  padding-top: 0.6rem;
+  margin: 0;
   color: #315d7c;
   font-size: 0.82rem;
 }
@@ -5041,7 +5054,7 @@
 
 .player-tip-match {
   color: #173e5f;
-  font-size: 0.9rem;
+  font-size: 0.98rem;
   font-weight: 800;
   line-height: 1.2;
 }

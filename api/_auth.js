@@ -670,7 +670,7 @@ function createAuthRoutes({ app, getDb }) {
           return selectedMatch ? { round: Number(item.round), home: selectedMatch.home, away: selectedMatch.away, startsAt: selectedMatch.startsAt } : null;
         }))
         .filter(Boolean)
-        .slice(-3);
+        .slice(-5);
       const upcomingSelectionRounds = participantIndex >= 0
         ? rounds
           .filter((round) => round.selectorUserId === req.session.sub && !round.selection && new Date(round.matches.at(-1)?.startsAt ?? 0).getTime() >= Date.now())

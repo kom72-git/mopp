@@ -4882,6 +4882,14 @@
   color: #5e7890;
 }
 
+.player-schedule-timing-row.is-single-selection {
+  grid-template-columns: 4.2rem minmax(0, 1fr);
+}
+
+.player-schedule-timing-row.is-single-selection > span {
+  white-space: nowrap;
+}
+
 .player-schedule-round small {
   color: #5e7890;
   font-size: 0.68rem;
@@ -4948,6 +4956,10 @@
   margin-top: 0.65rem;
   padding-bottom: 0.55rem;
   border-bottom: 1px solid #d7e5f2;
+}
+
+.player-tips-navigation.is-all {
+  justify-content: center;
 }
 
 .player-tips-navigation > span {

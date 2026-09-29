@@ -50,7 +50,7 @@ export default function PlayerTipsPanel({ selectedTournamentId, scheduleRefreshK
   const [tipMessages, setTipMessages] = useState({})
   const [busyMatchId, setBusyMatchId] = useState('')
   const [activeGroupIndex, setActiveGroupIndex] = useState(null)
-  const [tipViewMode, setTipViewMode] = useState('group')
+  const [tipViewMode, setTipViewMode] = useState('all')
   const [scheduleRounds, setScheduleRounds] = useState([])
   const [scheduleSelections, setScheduleSelections] = useState({})
   const [scheduleHistory, setScheduleHistory] = useState([])
@@ -225,9 +225,9 @@ export default function PlayerTipsPanel({ selectedTournamentId, scheduleRefreshK
       {scheduleMessage ? <p className="player-tips-message" role="alert">{scheduleMessage}</p> : null}
       {scheduleHistory.length > 0 ? (
         <div className="player-schedule-box player-schedule-history-box">
-          <h3>Poslední výběry</h3>
+          <h3>Poslední vybrané zápasy</h3>
           <div className="player-schedule-history player-schedule-history-top">
-                {scheduleHistory.map((match, index) => <span key={`${match.round}-${match.home}-${match.away}-${index}`}>{match.round}. kolo · {match.home} – {match.away}</span>)}
+            {scheduleHistory.map((match, index) => <span key={`${match.round}-${match.home}-${match.away}-${index}`}>{match.round}. kolo · {match.home} – {match.away}</span>)}
           </div>
         </div>
       ) : null}
@@ -236,9 +236,9 @@ export default function PlayerTipsPanel({ selectedTournamentId, scheduleRefreshK
           <h3>Kdy tipuji</h3>
           <div className="player-schedule-timing-list">
             {upcomingSelectionRounds.map((item) => (
-              <div className="player-schedule-timing-row" key={item.round}>
+              <div className={`player-schedule-timing-row${item.requiredSelectionCount === 1 ? ' is-single-selection' : ''}`} key={item.round}>
                 <strong>{item.round}. kolo</strong>
-                <span>{item.requiredSelectionCount} zápas{item.requiredSelectionCount === 1 ? '' : 'y'}</span>
+                {item.requiredSelectionCount > 1 ? <span>{item.requiredSelectionCount} zápasů</span> : null}
                 <span>{item.startsAt ? formatMatchDateTime(item.startsAt) : 'Termín bude doplněn'}</span>
               </div>
             ))}
@@ -280,12 +280,11 @@ export default function PlayerTipsPanel({ selectedTournamentId, scheduleRefreshK
         <button type="button" role="tab" aria-selected={tipsMode === 'selection'} className={tipsMode === 'selection' ? 'is-active' : ''} onClick={() => setTipsMode('selection')}>Výběr zápasu{hasSelectionNotification ? <img className="notification-bell notification-bell-tab" src="/icons/notifikace.png" alt="Jsi na řadě s výběrem zápasu" title="Jsi na řadě s výběrem zápasu" /> : null}</button>
       </div>
       {message ? <p className="player-tips-message" role="alert">{message}</p> : null}
-      {tipsMode === 'selection' ? scheduleContent : matches.length === 0 ? (
-        <p className="player-tips-message">Zatím nejsou otevřené zápasy k tipování.</p>
-      ) : (
+      {tipsMode === 'selection' ? scheduleContent : (
         <>
-          <div className="player-tips-navigation">
-            <button type="button" className="auth-button" onClick={() => setActiveGroupIndex(Math.max(0, resolvedGroupIndex - 1))} disabled={tipViewMode === 'all' || resolvedGroupIndex === 0}>Předchozí</button>
+          {matches.length === 0 ? <p className="player-tips-message">Zatím nejsou otevřené zápasy k tipování.</p> : <>
+          <div className={`player-tips-navigation${tipViewMode === 'all' ? ' is-all' : ''}`}>
+            {tipViewMode !== 'all' ? <button type="button" className="auth-button" onClick={() => setActiveGroupIndex(Math.max(0, resolvedGroupIndex - 1))} disabled={resolvedGroupIndex === 0}>Předchozí</button> : null}
             <select
               value={tipViewMode === 'all' ? 'all' : resolvedGroupIndex}
               onChange={(event) => {
@@ -298,10 +297,10 @@ export default function PlayerTipsPanel({ selectedTournamentId, scheduleRefreshK
               }}
               aria-label="Vyber rozsah tipování"
             >
-              <option value="all">Všechny otevřené</option>
+              <option value="all">Všechny k tipování</option>
               {matchGroups.map((group, index) => <option key={group.key} value={index}>{group.round ? `${group.round}. kolo` : `${index + 1}. skupina`}</option>)}
             </select>
-            <button type="button" className="auth-button" onClick={() => setActiveGroupIndex(Math.min(matchGroups.length - 1, resolvedGroupIndex + 1))} disabled={tipViewMode === 'all' || resolvedGroupIndex === matchGroups.length - 1}>Další</button>
+            {tipViewMode !== 'all' ? <button type="button" className="auth-button" onClick={() => setActiveGroupIndex(Math.min(matchGroups.length - 1, resolvedGroupIndex + 1))} disabled={resolvedGroupIndex === matchGroups.length - 1}>Další</button> : null}
           </div>
           {displayedGroups.map((group) => (
             <div className="player-tip-group" key={group.key}>
@@ -327,6 +326,7 @@ export default function PlayerTipsPanel({ selectedTournamentId, scheduleRefreshK
               ))}
             </div>
           ))}
+          </>}
         </>
       )}
     </section>

@@ -380,6 +380,7 @@ function AuthPanel({ activeProduct, selectedTournamentId, selectedTournament, se
   const [isBusy, setIsBusy] = useState(false)
   const [showPasswords, setShowPasswords] = useState(false)
   const [hasSelectionNotification, setHasSelectionNotification] = useState(false)
+  const [pendingTipNotificationCount, setPendingTipNotificationCount] = useState(0)
   const [pendingAccountNotificationCount, setPendingAccountNotificationCount] = useState(0)
   const [scheduleRefreshKey, setScheduleRefreshKey] = useState(0)
   const [fantasyAccountPlayer, setFantasyAccountPlayer] = useState(null)
@@ -399,19 +400,36 @@ function AuthPanel({ activeProduct, selectedTournamentId, selectedTournament, se
   const refreshSelectionNotification = useCallback(async () => {
     if (activeProduct !== 'tips' || !user || !selectedTournamentId) {
       setHasSelectionNotification(false)
+      setPendingTipNotificationCount(0)
       return
     }
     try {
-      const response = await fetch(`/api/player/schedule?tournamentId=${encodeURIComponent(selectedTournamentId)}`, { credentials: 'include' })
-      const payload = await response.json().catch(() => ({}))
-      setHasSelectionNotification(response.ok && (payload.rounds ?? []).some((round) => round.canSelect))
+      const [scheduleResponse, matchesResponse] = await Promise.all([
+        fetch(`/api/player/schedule?tournamentId=${encodeURIComponent(selectedTournamentId)}`, { credentials: 'include' }),
+        fetch('/api/player/matches', { credentials: 'include' }),
+      ])
+      const schedulePayload = await scheduleResponse.json().catch(() => ({}))
+      const matchesPayload = await matchesResponse.json().catch(() => ({}))
+      const now = Date.now()
+      const deadline = now + 24 * 60 * 60 * 1000
+      const pendingTipCount = matchesResponse.ok
+        ? (matchesPayload.matches ?? []).filter((match) => {
+          const start = new Date(match.startsAt).getTime()
+          return match.tip === null && Number.isFinite(start) && start > now && start <= deadline
+        }).length
+        : 0
+      setHasSelectionNotification(scheduleResponse.ok && (schedulePayload.rounds ?? []).some((round) => round.canSelect))
+      setPendingTipNotificationCount(pendingTipCount)
     } catch {
       setHasSelectionNotification(false)
+      setPendingTipNotificationCount(0)
     }
   }, [activeProduct, selectedTournamentId, user])
 
   useEffect(() => {
     queueMicrotask(() => { void refreshSelectionNotification() })
+    const intervalId = window.setInterval(() => { void refreshSelectionNotification() }, 60000)
+    return () => window.clearInterval(intervalId)
   }, [refreshSelectionNotification])
 
   useEffect(() => {
@@ -701,14 +719,14 @@ function AuthPanel({ activeProduct, selectedTournamentId, selectedTournament, se
             <span>{user.displayName || user.username}</span>
           </span>
           <div className="auth-panel-tabs">
-            {activeProduct === 'tips' ? <button type="button" className={`auth-button auth-tips-button ${activePanel === 'tips' ? 'is-active' : ''}`} onClick={() => setActivePanel((current) => current === 'tips' ? '' : 'tips')}>Tipovat{hasSelectionNotification ? <img className="notification-bell" src="/icons/notifikace.png" alt="Jsi na řadě s výběrem zápasu" title="Jsi na řadě s výběrem zápasu" /> : null}</button> : null}
+            {activeProduct === 'tips' ? <button type="button" className={`auth-button auth-tips-button ${activePanel === 'tips' ? 'is-active' : ''}`} onClick={() => setActivePanel((current) => current === 'tips' ? '' : 'tips')}>Tipovat{hasSelectionNotification || pendingTipNotificationCount > 0 ? <span className="admin-notification-badge"><img className="notification-bell admin-notification-bell" src="/icons/notifikace.png" alt="Nová upozornění k tipování" title="Nová upozornění k tipování" />{(hasSelectionNotification ? 1 : 0) + pendingTipNotificationCount > 1 ? <span>{(hasSelectionNotification ? 1 : 0) + pendingTipNotificationCount}</span> : null}</span> : null}</button> : null}
             <button type="button" className={`auth-button ${activePanel === 'account' ? 'is-active' : ''}`} onClick={() => { setActivePanel((current) => current === 'account' ? '' : 'account'); setAccountForm((current) => ({ ...current, displayName: user.displayName || '', avatar: user.avatar || '' })); setMessage('') }}>Účet</button>
             {user.role === 'admin' ? <button type="button" className={`auth-button auth-admin-button ${activePanel === 'admin' ? 'is-active' : ''}`} onClick={() => setActivePanel((current) => current === 'admin' ? '' : 'admin')}>Admin{pendingAccountNotificationCount > 0 ? <span className="admin-notification-badge" title={`${pendingAccountNotificationCount} nových hráčů`}><img className="notification-bell admin-notification-bell" src="/icons/notifikace.png" alt="" /><span>{pendingAccountNotificationCount}</span></span> : null}</button> : null}
           </div>
           <button type="button" className="auth-button auth-logout" onClick={logout}>Odhlásit</button>
           {activePanel === 'admin' && user.role === 'admin' && activeProduct === 'tips' ? <AdminPanel selectedTournamentId={selectedTournamentId} accountNotificationCount={pendingAccountNotificationCount} onAccountNotificationsRead={markAccountNotificationsRead} onTournamentMembershipChanged={handleTournamentMembershipChanged} onTournamentUpdated={onTournamentUpdated} onMatchesChanged={onMatchesChanged} onClose={() => setActivePanel('')} /> : null}
           {activePanel === 'admin' && user.role === 'admin' && activeProduct === 'fantasy' ? <FantasyAdminPanel initialTournamentId={selectedTournamentId} onImported={onFantasyUpdated} onClose={() => setActivePanel('')} /> : null}
-          {activePanel === 'tips' && activeProduct === 'tips' ? <PlayerTipsPanel selectedTournamentId={selectedTournamentId} scheduleRefreshKey={scheduleRefreshKey} hasSelectionNotification={hasSelectionNotification} onSelectionUpdated={() => setHasSelectionNotification(false)} onTipUpdated={onTipUpdated} onClose={() => setActivePanel('')} /> : null}
+          {activePanel === 'tips' && activeProduct === 'tips' ? <PlayerTipsPanel selectedTournamentId={selectedTournamentId} scheduleRefreshKey={scheduleRefreshKey} hasSelectionNotification={hasSelectionNotification} pendingTipNotificationCount={pendingTipNotificationCount} onSelectionUpdated={() => { setHasSelectionNotification(false); void refreshSelectionNotification() }} onTipUpdated={(tip) => { onTipUpdated?.(tip); void refreshSelectionNotification() }} onClose={() => setActivePanel('')} /> : null}
           {activePanel === 'account' ? (
             <div className="auth-form auth-account-form">
               <button type="button" className="panel-close-button" onClick={() => setActivePanel('')} aria-label="Zavřít panel" title="Zavřít">×</button>
@@ -3852,8 +3870,12 @@ function App() {
                   <span>Hráč</span>
                   <span>Tip</span>
                   <span>Výhra</span>
-                  <span className={selectedMatch.tipsVisible !== false && rankDisplayMode === 'total' ? 'is-active-sort' : ''}>Celkem{selectedMatch.tipsVisible !== false && rankDisplayMode === 'total' ? <span className="tips-head-sort-arrow" aria-hidden="true">↓</span> : null}</span>
-                  <span className={selectedMatch.tipsVisible !== false && rankDisplayMode === 'round' ? 'is-active-sort' : ''}>Kolo{selectedMatch.tipsVisible !== false && rankDisplayMode === 'round' ? <span className="tips-head-sort-arrow" aria-hidden="true">↓</span> : null}</span>
+                  <button type="button" className={`tips-head-sort-button${selectedMatch.tipsVisible !== false && rankDisplayMode === 'total' ? ' is-active-sort' : ''}`} onClick={() => setRankDisplayMode('total')} aria-pressed={rankDisplayMode === 'total'} title="Řadit podle celkových bodů">
+                    Celkem<span className={`tips-head-sort-arrow${selectedMatch.tipsVisible !== false && rankDisplayMode === 'total' ? ' is-visible' : ''}`} aria-hidden="true">↓</span>
+                  </button>
+                  <button type="button" className={`tips-head-sort-button${selectedMatch.tipsVisible !== false && rankDisplayMode === 'round' ? ' is-active-sort' : ''}`} onClick={() => setRankDisplayMode('round')} aria-pressed={rankDisplayMode === 'round'} title="Řadit podle bodů v kole">
+                    Kolo<span className={`tips-head-sort-arrow${selectedMatch.tipsVisible !== false && rankDisplayMode === 'round' ? ' is-visible' : ''}`} aria-hidden="true">↓</span>
+                  </button>
                 </div>
 
                 {selectedMatchTips.map((tip) => (

@@ -561,6 +561,56 @@ function createAuthRoutes({ app, getDb }) {
     }
   });
 
+  app.get("/api/player/tip-history", requireJwt, async (req, res) => {
+    try {
+      const tournamentId = String(req.query?.tournamentId ?? "").replace(/^db:/, "").trim();
+      const matchQuery = ObjectId.isValid(tournamentId) ? { tournamentId: new ObjectId(tournamentId) } : {};
+      const db = getDb();
+      const matches = await db.collection("matches").find(matchQuery, { projection: { round: 1, startsAt: 1, home: 1, away: 1, score: 1, bank: 1 } }).sort({ round: 1, startsAt: 1 }).toArray();
+      const tips = await db.collection("tips").find({ userId: new ObjectId(req.session.sub) }).toArray();
+      const tipsByMatchId = new Map(tips.map((tip) => [tip.matchId.toString(), tip]));
+      return res.json({
+        ok: true,
+        matches: matches
+          .map((match) => {
+            const tip = tipsByMatchId.get(match._id.toString());
+            if (!tip) return null;
+            return {
+              _id: match._id.toString(),
+              round: match.round,
+              startsAt: match.startsAt,
+              home: match.home,
+              away: match.away,
+              score: match.score || null,
+              bank: match.bank ?? null,
+              tip: { homeScore: tip.homeScore, awayScore: tip.awayScore, points: tip.points ?? null, updatedAt: tip.updatedAt ?? null },
+            };
+          })
+          .filter(Boolean),
+      });
+    } catch {
+      return res.status(500).json({ ok: false, message: "Historii tipů se nepodařilo načíst" });
+    }
+  });
+
+  app.delete("/api/player/tips/:matchId", requireJwt, async (req, res) => {
+    try {
+      const matchId = String(req.params.matchId ?? "").trim();
+      if (!ObjectId.isValid(matchId)) return res.status(400).json({ ok: false, message: "Zápas není platný." });
+
+      const db = getDb();
+      const match = await db.collection("matches").findOne({ _id: new ObjectId(matchId), status: "open" });
+      if (!match || parseMatchStartTime(match.startsAt) <= Date.now()) {
+        return res.status(409).json({ ok: false, message: "Tento zápas už nelze upravit." });
+      }
+
+      await db.collection("tips").deleteOne({ matchId: match._id, userId: new ObjectId(req.session.sub) });
+      return res.json({ ok: true });
+    } catch {
+      return res.status(500).json({ ok: false, message: "Tip se nepodařilo smazat" });
+    }
+  });
+
   app.put("/api/player/tips/:matchId", requireJwt, async (req, res) => {
     try {
       const matchId = String(req.params.matchId ?? "").trim();

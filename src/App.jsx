@@ -2922,7 +2922,7 @@ function App() {
       <header className={`hero hero-${activeProduct}`}>
         <div className="hero-content">
           <div className="hero-identity">
-            <span className="hero-brand-name">Master of PP</span>
+            <span className="hero-brand-name">Masters of PP</span>
             <span className="hero-section">{activeProduct === 'fantasy' ? 'Fantasy' : 'Tipovačka'}</span>
           </div>
           <h1>{activeProduct === 'fantasy' ? selectedFantasyTournament?.title ?? selectedFantasyTournament?.label ?? 'Fantasy' : selectedTournament?.title ?? selectedTournament?.label ?? 'MOPP turnaj'}</h1>
@@ -2956,7 +2956,7 @@ function App() {
 
       <nav className="account-nav" aria-label="Navigace účtu">
         <div className="account-nav-main">
-          <div className="product-nav" aria-label="Sekce Master of PP" ref={productTournamentMenuRef}>
+          <div className="product-nav" aria-label="Sekce Masters of PP" ref={productTournamentMenuRef}>
             <div
               className={`product-tournament-control${isTipsTournamentMenuVisible ? ' is-open' : ''}`}
               onMouseEnter={() => openTournamentMenuFromHover('tips')}

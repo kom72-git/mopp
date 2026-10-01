@@ -153,8 +153,8 @@ async function sendVerificationEmail({ email, token }) {
     from: process.env.MAIL_FROM,
     to: email,
     subject: "Ověření účtu MOPP",
-    text: `Pro aktivaci účtu na MOPP (Master of PP) klikni na tento odkaz:\n\n${verificationUrl}`,
-    html: `<p>Pro aktivaci účtu na MOPP (Master of PP) klikni na tento odkaz:</p><p><a href="${verificationUrl}">Ověřit e-mail</a></p>`,
+    text: `Pro aktivaci účtu na MOPP (Masters of PP) klikni na tento odkaz:\n\n${verificationUrl}`,
+    html: `<p>Pro aktivaci účtu na MOPP (Masters of PP) klikni na tento odkaz:</p><p><a href="${verificationUrl}">Ověřit e-mail</a></p>`,
   });
   return { verificationUrl, sent: true };
 }

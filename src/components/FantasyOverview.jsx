@@ -26,7 +26,7 @@ function buildXAxisTickIndexes(length, maxLabels = 12) {
   return indexes
 }
 
-function getPlayerStats(rounds, player, periodId = 'all', seasonStats = fantasySeasonStats, prizeMoneyByPeriod = fantasyPrizeMoneyByPeriod, longTermBankByPeriod = fantasyLongTermBankByPeriod, tipsportStatsByPeriod = {}) {
+function getPlayerStats(rounds, player, periodId = 'all', seasonStats = fantasySeasonStats, prizeMoneyByPeriod = fantasyPrizeMoneyByPeriod, longTermBankByPeriod = fantasyLongTermBankByPeriod, tipsportStatsByPeriod = {}, selectedRoundOnly = false) {
   const scores = rounds.map((round) => round[1][player.playerIndex])
   const countedScores = scores.filter((score) => Number.isFinite(score) || score === 'N').map((score) => score === 'N' ? 0 : score)
   const noBets = scores.filter((score) => score === 'N').length
@@ -61,7 +61,7 @@ function getPlayerStats(rounds, player, periodId = 'all', seasonStats = fantasyS
         bestPeriodRank: stats.bestPeriodRank !== null && stats.bestPeriodRank !== undefined && stats.bestPeriodRank !== '' && Number.isFinite(Number(stats.bestPeriodRank)) ? Math.min(total.bestPeriodRank ?? Infinity, Number(stats.bestPeriodRank)) : total.bestPeriodRank,
         fantasyNets: total.fantasyNets + (Number(stats.fantasyNets) || 0),
       }), { fantasyNets: roundNets + (Number(seasonStats[player.nick]?.finalFantasyNets) || 0) })
-      : { fantasyNets: roundNets + (Number(seasonStats[player.nick]?.finalFantasyNets ?? seasonStats[player.nick]?.fantasyNets) || 0) })
+      : { fantasyNets: Number(seasonStats[player.nick]?.finalFantasyNets ?? seasonStats[player.nick]?.fantasyNets) || 0 })
     : { ...(tipsportStatsByPeriod[periodId]?.[player.nick] ?? {}), fantasyNets: roundNets + (Number(tipsportStatsByPeriod[periodId]?.[player.nick]?.fantasyNets) || 0) }
   const dailyRankValues = periodId === 'all' || rounds.length > 1
     ? rounds.map((round) => Number(round[4]?.[player.nick])).filter((rank) => Number.isFinite(rank) && rank > 0)
@@ -69,6 +69,7 @@ function getPlayerStats(rounds, player, periodId = 'all', seasonStats = fantasyS
   return {
     ...seasonStats[player.nick],
     ...periodStats,
+    fantasyNets: selectedRoundOnly ? roundNets : periodStats.fantasyNets ?? (Number(seasonStats[player.nick]?.finalFantasyNets ?? seasonStats[player.nick]?.fantasyNets) || 0),
     worstDailyRank: dailyRankValues.length ? Math.max(...dailyRankValues) : null,
     bestDailyRank: selectedRoundDailyRank ?? periodStats.bestDailyRank ?? seasonStats[player.nick]?.bestDailyRank,
     prizeMoney: prizeMoneyByPeriod[periodId]?.[player.nick] ?? 0,
@@ -210,7 +211,7 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
       return [...retained, ...newPlayers]
     })
   }, [activeFantasyPlayers])
-  const standingsWithStats = useMemo(() => standings.map((player) => ({ ...player, ...getPlayerStats(rankingRounds, player, periodId, activeSeasonStats, activePrizeMoneyByPeriod, activeLongTermBankByPeriod, activeTipsportStatsByPeriod) })), [activeLongTermBankByPeriod, activePrizeMoneyByPeriod, activeSeasonStats, activeTipsportStatsByPeriod, periodId, rankingRounds, standings])
+  const standingsWithStats = useMemo(() => standings.map((player) => ({ ...player, ...getPlayerStats(rankingRounds, player, periodId, activeSeasonStats, activePrizeMoneyByPeriod, activeLongTermBankByPeriod, activeTipsportStatsByPeriod, Boolean(selectedRound)) })), [activeLongTermBankByPeriod, activePrizeMoneyByPeriod, activeSeasonStats, activeTipsportStatsByPeriod, periodId, rankingRounds, selectedRound, standings])
   const displayedStandings = useMemo(() => [...standingsWithStats].sort((first, second) => {
     const firstValue = sort.key === 'prizeMoney' ? getDisplayedPrizeMoney(first, periodId, activePrizeMoneyByPeriod) : getMetricValue(first, sort.key)
     const secondValue = sort.key === 'prizeMoney' ? getDisplayedPrizeMoney(second, periodId, activePrizeMoneyByPeriod) : getMetricValue(second, sort.key)
@@ -311,7 +312,7 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
     awards: [['awards.worst', 'Kopyto kola'], ['missed', 'Netipováno'], ['awards.best', 'Borec kola']],
     prizes: selectedRound
       ? [['fantasyNets', 'Nety'], ['bestDailyRank', 'Tipsport pořadí']]
-      : [['bestPeriodRank', `Nejlepší ${fantasyPeriodRankLabel.toLowerCase()}`], ['fantasyNets', 'Nety'], ...(hasFinalFantasyRanks ? [['finalFantasyRank', 'Konečné umístění']] : []), ...(periodId === 'all' ? [['worstDailyRank', 'Nejhorší denní']] : []), ['bestDailyRank', 'Nejlepší denní']],
+      : [['bestPeriodRank', periodId === 'all' ? `Nejlepší ${fantasyPeriodRankLabel.toLowerCase()}` : `Umístění ${period?.label?.toLocaleLowerCase('cs-CZ') ?? ''}`], ['fantasyNets', 'Nety'], ...(hasFinalFantasyRanks ? [['finalFantasyRank', 'Konečné umístění']] : []), ...(periodId === 'all' ? [['worstDailyRank', 'Nejhorší denní']] : []), ['bestDailyRank', 'Nejlepší denní']],
   }
   const columns = statViews[statView]
   const metricClass = (key) => `fantasy-metric-${key.replace('.', '-')}`
@@ -319,7 +320,7 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
     const compactLabel = key === 'bestDailyRank'
       ? (selectedRound ? 'Tipsport' : 'Nejlepší')
       : key === 'bestPeriodRank'
-        ? `Nej ${fantasyPeriodRankLabel === 'Měsíční' ? 'měsíční' : 'týdenní'}`
+        ? periodId === 'all' ? `Nej ${fantasyPeriodRankLabel === 'Měsíční' ? 'měsíční' : 'týdenní'}` : `Umístění ${period?.label?.toLocaleLowerCase('cs-CZ') ?? ''}`
         : key === 'worstDailyRank'
           ? 'Nejhorší'
         : key === 'finalFantasyRank' ? 'Konečné' : label
@@ -334,7 +335,8 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
   const statViewContext = selectedRound
     ? `${statViewEyebrow} · průběžně po ${selectedTournamentRoundIndex + 1}. kole turnaje`
     : statViewEyebrow
-  const resetSelectionSort = () => setSort({ key: statView === 'prizes' ? 'bestDailyRank' : 'points', direction: statView === 'prizes' ? 'asc' : 'desc' })
+  const defaultTipsportSortKey = selectedRound ? 'bestDailyRank' : periodId === 'all' ? 'bestDailyRank' : 'bestPeriodRank'
+  const resetSelectionSort = () => setSort({ key: statView === 'prizes' ? defaultTipsportSortKey : 'points', direction: statView === 'prizes' ? 'asc' : 'desc' })
 
   return (
     <div className="fantasy-preview">
@@ -406,7 +408,7 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
           {[['standings', 'Pořadí'], ['performance', 'Výkon'], ['awards', 'Ocenění'], ['prizes', 'Tipsport']].map(([key, label]) => (
             <button key={key} type="button" role="tab" aria-selected={statView === key} className={`player-window-tab ${statView === key ? 'is-active' : ''}`} onClick={() => {
               setStatView(key)
-              const defaultKey = key === 'standings' ? 'points' : key === 'performance' ? 'bestScore' : key === 'awards' ? 'awards.best' : key === 'prizes' ? 'bestDailyRank' : statViews[key][0][0]
+              const defaultKey = key === 'standings' ? 'points' : key === 'performance' ? 'bestScore' : key === 'awards' ? 'awards.best' : key === 'prizes' ? defaultTipsportSortKey : statViews[key][0][0]
               setSort({ key: defaultKey, direction: defaultKey.includes('Rank') ? 'asc' : 'desc' })
             }}>{label}</button>
           ))}

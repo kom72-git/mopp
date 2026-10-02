@@ -764,9 +764,9 @@ export default function AdminPanel({ selectedTournamentId: selectedTournamentKey
               <label className="admin-score-field">
                 <span className="admin-field-label">Výsledek (domácí : hosté)</span>
                 <div className="player-tip-score admin-match-score" aria-label="Výsledek zápasu">
-                  <input type="number" min="0" max="99" value={matchForm.score.split(':')[0] || ''} onChange={(event) => updateMatchScore('home', event.target.value)} aria-label={`Skóre domácího týmu ${matchForm.home || ''}`} placeholder="0" />
+                  <input type="number" min="0" max="99" value={matchForm.score.split(':')[0] || ''} onChange={(event) => updateMatchScore('home', event.target.value)} aria-label={`Skóre domácího týmu ${matchForm.home || ''}`} />
                   <span>:</span>
-                  <input type="number" min="0" max="99" value={matchForm.score.split(':')[1] || ''} onChange={(event) => updateMatchScore('away', event.target.value)} aria-label={`Skóre hostujícího týmu ${matchForm.away || ''}`} placeholder="0" />
+                  <input type="number" min="0" max="99" value={matchForm.score.split(':')[1] || ''} onChange={(event) => updateMatchScore('away', event.target.value)} aria-label={`Skóre hostujícího týmu ${matchForm.away || ''}`} />
                 </div>
               </label>
             </div>

@@ -63,15 +63,13 @@ function getPlayerStats(rounds, player, periodId = 'all', seasonStats = fantasyS
       }), { fantasyNets: roundNets + (Number(seasonStats[player.nick]?.finalFantasyNets) || 0) })
       : { fantasyNets: Number(seasonStats[player.nick]?.finalFantasyNets ?? seasonStats[player.nick]?.fantasyNets) || 0 })
     : { ...(tipsportStatsByPeriod[periodId]?.[player.nick] ?? {}), fantasyNets: roundNets + (Number(tipsportStatsByPeriod[periodId]?.[player.nick]?.fantasyNets) || 0) }
-  const dailyRankValues = periodId === 'all' || rounds.length > 1
-    ? rounds.map((round) => Number(round[4]?.[player.nick])).filter((rank) => Number.isFinite(rank) && rank > 0)
-    : []
+  const dailyRankValues = rounds.map((round) => Number(round[4]?.[player.nick])).filter((rank) => Number.isFinite(rank) && rank > 0)
   return {
     ...seasonStats[player.nick],
     ...periodStats,
     fantasyNets: selectedRoundOnly ? roundNets : periodStats.fantasyNets ?? (Number(seasonStats[player.nick]?.finalFantasyNets ?? seasonStats[player.nick]?.fantasyNets) || 0),
     worstDailyRank: dailyRankValues.length ? Math.max(...dailyRankValues) : null,
-    bestDailyRank: selectedRoundDailyRank ?? periodStats.bestDailyRank ?? seasonStats[player.nick]?.bestDailyRank,
+    bestDailyRank: selectedRoundDailyRank ?? (dailyRankValues.length ? Math.min(...dailyRankValues) : null) ?? periodStats.bestDailyRank ?? seasonStats[player.nick]?.bestDailyRank,
     prizeMoney: prizeMoneyByPeriod[periodId]?.[player.nick] ?? 0,
     longTermBank: longTermBankByPeriod[periodId]?.[player.nick] ?? 0,
     averageLastFive: countedScores.length ? Math.round(countedScores.slice(-5).reduce((total, score) => total + score, 0) / Math.min(5, countedScores.length)) : 0,

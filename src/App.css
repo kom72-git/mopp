@@ -2290,12 +2290,16 @@
 
 .match-item-admin-note,
 .selected-match-admin-note {
-  position: absolute;
-  right: 0.6rem;
-  bottom: 0.45rem;
+  display: inline-block;
+  margin: 0 0 0 0.3rem;
   color: #ad3030;
   font-weight: 400;
   font-size: 0.66rem;
+}
+
+.match-item-admin-note::before,
+.selected-match-admin-note::before {
+  content: '– ';
 }
 
 .selected-match-bottom {
@@ -2303,12 +2307,6 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 0.6rem;
-}
-
-.selected-match-admin-note {
-  position: static;
-  margin: 0.34rem 0 0;
-  text-align: right;
 }
 
 .match-item.is-clickable {
@@ -6771,6 +6769,19 @@
   .payout-badge {
     font-size: 0.62rem;
     padding: 0.08rem 0.28rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .match-item-admin-note,
+  .selected-match-admin-note {
+    display: block;
+    margin: 0.12rem 0 0;
+  }
+
+  .match-item-admin-note::before,
+  .selected-match-admin-note::before {
+    content: none;
   }
 }
 

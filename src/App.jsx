@@ -3135,9 +3135,9 @@ function App() {
               >
                 <p className="match-item-top">
                   <StartsAtLabel startsAt={match.startsAt} matchId={match.id} round={match.round} tournamentYear={String(selectedTournament?.startDate ?? '').slice(0, 4)} />
+                  {match.updatedByAdminName ? <span className="match-item-admin-note">editováno</span> : null}
                 </p>
                 {match.selectedByName ? <span className="match-item-meta">Vybral: {match.selectedByName}</span> : null}
-                {match.updatedByAdminName ? <span className="match-item-admin-note">(Editoval admin)</span> : null}
 
                 <div className="match-item-main">
                   <div className="teams-stack">
@@ -3801,6 +3801,7 @@ function App() {
               <header className="selected-match-head">
                 <p className="selected-match-time">
                   <StartsAtLabel startsAt={selectedMatch.startsAt} matchId={selectedMatch.id} round={selectedMatch.round} tournamentYear={String(selectedTournament?.startDate ?? '').slice(0, 4)} />
+                  {selectedMatch.updatedByAdminName ? <span className="selected-match-admin-note">editováno</span> : null}
                 </p>
                 {selectedMatch.selectedByName ? <p className="selected-match-meta">Vybral: {selectedMatch.selectedByName}</p> : null}
                 <div className="selected-match-main">
@@ -3853,7 +3854,6 @@ function App() {
                 </div>
                 <div className="selected-match-bottom">
                   <p className="selected-match-bank">Bank {selectedMatch.bank == null ? <><strong>čeká</strong> <span className="bank-pending-note">na výsledek předchozího zápasu</span></> : <><strong>{selectedMatch.bank}</strong> Kč</>}</p>
-                  {selectedMatch.updatedByAdminName ? <p className="selected-match-admin-note">(Editoval admin)</p> : null}
                 </div>
               </header>
 

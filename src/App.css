@@ -1810,6 +1810,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 0.12rem;
   line-height: 1.05;
 }
@@ -1849,6 +1850,49 @@
 
 .round-tab-label {
   display: block;
+  transform: translateY(1px);
+}
+
+.round-selection-turn {
+  width: 100%;
+  min-width: 0;
+  justify-self: stretch;
+  padding: 0.34rem 0.64rem;
+  border: 1px dashed #8aa0b2;
+  background: transparent;
+  color: #425d73;
+  font-family: Arial, sans-serif;
+  font-size: 13.333px;
+  font-weight: 700;
+  line-height: 1.05;
+  cursor: default;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.28rem;
+  white-space: nowrap;
+  transition: none;
+  box-shadow: none;
+}
+
+.round-selection-turn-arrow {
+  flex: 0 0 auto;
+  align-self: center;
+  font-size: 0.78em;
+  font-weight: 700;
+}
+
+.round-selection-turn > :first-child {
+  flex: 0 0 auto;
+}
+
+.round-selection-turn-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 0 1 auto;
+  white-space: nowrap;
 }
 
 .day-matches-panel {

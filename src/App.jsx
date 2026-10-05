@@ -364,7 +364,7 @@ function createCroppedAvatar(source, cropArea) {
   })
 }
 
-function AuthPanel({ activeProduct, selectedTournamentId, selectedTournament, selectedFantasyTournament, fantasyRefreshKey = 0, onFantasyUpdated, onTournamentUpdated, onMatchesChanged, onTipUpdated }) {
+function AuthPanel({ activeProduct, selectedTournamentId, selectedTournament, selectedFantasyTournament, fantasyRefreshKey = 0, onFantasyUpdated, onTournamentUpdated, onMatchesChanged, onTipUpdated, onNextSelectionChange }) {
   const [user, setUser] = useState(null)
   const [mode, setMode] = useState('login')
   const [isOpen, setIsOpen] = useState(false)
@@ -400,6 +400,7 @@ function AuthPanel({ activeProduct, selectedTournamentId, selectedTournament, se
   const refreshSelectionNotification = useCallback(async () => {
     if (activeProduct !== 'tips' || !user || !selectedTournamentId) {
       setHasSelectionNotification(false)
+      onNextSelectionChange(null)
       setPendingTipNotificationCount(0)
       return
     }
@@ -410,6 +411,7 @@ function AuthPanel({ activeProduct, selectedTournamentId, selectedTournament, se
       ])
       const schedulePayload = await scheduleResponse.json().catch(() => ({}))
       const matchesPayload = await matchesResponse.json().catch(() => ({}))
+      onNextSelectionChange(scheduleResponse.ok ? schedulePayload.nextSelection ?? null : null)
       const now = Date.now()
       const deadline = now + 24 * 60 * 60 * 1000
       const pendingTipCount = matchesResponse.ok
@@ -422,9 +424,10 @@ function AuthPanel({ activeProduct, selectedTournamentId, selectedTournament, se
       setPendingTipNotificationCount(pendingTipCount)
     } catch {
       setHasSelectionNotification(false)
+      onNextSelectionChange(null)
       setPendingTipNotificationCount(0)
     }
-  }, [activeProduct, selectedTournamentId, user])
+  }, [activeProduct, onNextSelectionChange, selectedTournamentId, user])
 
   useEffect(() => {
     queueMicrotask(() => { void refreshSelectionNotification() })
@@ -1398,6 +1401,7 @@ function App() {
   const [isTournamentMenuHovered, setIsTournamentMenuHovered] = useState(false)
   const [tournamentMenuProduct, setTournamentMenuProduct] = useState('tips')
   const [activeProduct, setActiveProduct] = useState(getProductFromPath)
+  const [nextSelection, setNextSelection] = useState(null)
   const [fantasyRefreshKey, setFantasyRefreshKey] = useState(0)
   const [viewStateByTournament, setViewStateByTournament] = useState({})
   useEffect(() => {
@@ -3054,7 +3058,7 @@ function App() {
               </div>
             </div>
           </div>
-          <AuthPanel activeProduct={activeProduct} selectedTournamentId={activeProduct === 'fantasy' ? activeFantasyTournamentId : selectedTournamentId} selectedTournament={selectedTournament} selectedFantasyTournament={selectedFantasyTournament} fantasyRefreshKey={fantasyRefreshKey} onFantasyUpdated={async (nextTournamentId) => { await refreshFantasyTournaments(); if (nextTournamentId) { setSelectedTournamentId(nextTournamentId); setActiveProduct('fantasy') }; setFantasyRefreshKey((current) => current + 1) }} onTournamentUpdated={handleTournamentUpdated} onMatchesChanged={handleMatchesChanged} onTipUpdated={handleTipUpdated} />
+          <AuthPanel activeProduct={activeProduct} selectedTournamentId={activeProduct === 'fantasy' ? activeFantasyTournamentId : selectedTournamentId} selectedTournament={selectedTournament} selectedFantasyTournament={selectedFantasyTournament} fantasyRefreshKey={fantasyRefreshKey} onNextSelectionChange={setNextSelection} onFantasyUpdated={async (nextTournamentId) => { await refreshFantasyTournaments(); if (nextTournamentId) { setSelectedTournamentId(nextTournamentId); setActiveProduct('fantasy') }; setFantasyRefreshKey((current) => current + 1) }} onTournamentUpdated={handleTournamentUpdated} onMatchesChanged={handleMatchesChanged} onTipUpdated={handleTipUpdated} />
         </div>
       </nav>
 
@@ -3108,6 +3112,7 @@ function App() {
               </button>
             )
           })}
+          {nextSelection ? <span className="round-tab round-selection-turn" role="note" aria-label={`${nextSelection.round}. vybírá ${nextSelection.selectorName}`} title={`${nextSelection.round}. vybírá ${nextSelection.selectorName}`}><span>{nextSelection.round}.</span><span className="round-selection-turn-arrow" aria-hidden="true">→</span><span className="round-selection-turn-name">{nextSelection.selectorName}</span></span> : null}
         </div>
       </section>
 

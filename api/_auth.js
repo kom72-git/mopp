@@ -731,7 +731,9 @@ function createAuthRoutes({ app, getDb }) {
             endsAt: round.matches.at(-1)?.startsAt ?? null,
           }))
         : [];
-      return res.json({ ok: true, rounds: visibleRounds, recentSelectedMatches, upcomingSelectionRounds, participantIndex });
+      const nextSelectionRound = rounds.find((round) => !round.selection);
+      const nextSelection = nextSelectionRound ? { round: nextSelectionRound.round, selectorName: nextSelectionRound.selectorName } : null;
+      return res.json({ ok: true, rounds: visibleRounds, recentSelectedMatches, upcomingSelectionRounds, nextSelection, participantIndex });
     } catch {
       return res.status(500).json({ ok: false, message: "Rozpis se nepodařilo načíst" });
     }

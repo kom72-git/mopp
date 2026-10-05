@@ -1770,7 +1770,7 @@ function App() {
   const setHidePlayedRounds = (value) => {
     updateCurrentTournamentState((current) => ({
       hidePlayedRounds:
-        typeof value === 'function' ? value(current.hidePlayedRounds ?? false) : value,
+        typeof value === 'function' ? value(current.hidePlayedRounds ?? true) : value,
     }))
   }
 

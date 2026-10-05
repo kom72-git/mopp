@@ -160,6 +160,7 @@ async function loadMongoTournamentData(getDb, tournamentId, session) {
         ? displayNameForUser(usersById.get(String(match.selectedByUserId)))
         : match.selectedByUsername || null,
       updatedByAdminName: match.updatedByUsername || null,
+      updatedByAdminFields: Array.isArray(match.updatedByAdminFields) ? match.updatedByAdminFields : [],
       tipCount: eligibleTips.filter((tip) => tip.matchId.equals(match._id)).length,
       playerCount: users.length,
       tipsVisible: parseMatchStartTime(match.startsAt) <= now,

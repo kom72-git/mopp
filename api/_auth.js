@@ -96,6 +96,21 @@ function parseMatchStartTime(value) {
   return naive.getTime() - offsetMinutes * 60 * 1000;
 }
 
+function parseMatchStartParts(value) {
+  const timestamp = parseMatchStartTime(value);
+  if (!Number.isFinite(timestamp)) return null;
+  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Prague',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(new Date(timestamp)).map(({ type, value: partValue }) => [type, partValue]));
+  return { date: `${parts.year}-${parts.month}-${parts.day}`, time: `${parts.hour}:${parts.minute}` };
+}
+
 function requireRole(role) {
   return (req, res, next) => {
     if (req.session?.role !== role) {
@@ -1119,19 +1134,32 @@ function createAuthRoutes({ app, getDb }) {
       const startsAtChanged = Number.isFinite(existingStartsAtMs) && Number.isFinite(submittedStartsAtMs)
         ? existingStartsAtMs !== submittedStartsAtMs
         : String(existingMatch.startsAt ?? "") !== startsAt;
-      const matchDetailsChanged = existingMatch.round !== round
-        || startsAtChanged
-        || existingMatch.home !== home
-        || existingMatch.away !== away;
+      const updatedFields = [];
+      if (existingMatch.round !== round) updatedFields.push("round");
+      if (startsAtChanged) {
+        const existingStartParts = parseMatchStartParts(existingMatch.startsAt);
+        const submittedStartParts = parseMatchStartParts(startsAt);
+        if (!existingStartParts || !submittedStartParts) {
+          updatedFields.push("date", "time");
+        } else {
+          if (existingStartParts.date !== submittedStartParts.date) updatedFields.push("date");
+          if (existingStartParts.time !== submittedStartParts.time) updatedFields.push("time");
+        }
+      }
+      if (existingMatch.home !== home) updatedFields.push("home");
+      if (existingMatch.away !== away) updatedFields.push("away");
+      const matchDetailsChanged = updatedFields.length > 0;
       const update = {
         $set: { round, startsAt, home, away, score: score || null, status, updatedAt: new Date() },
-        $unset: { updatedByUserId: "", updatedByUsername: "" },
+        $unset: { updatedByUserId: "", updatedByUsername: "", updatedByAdminFields: "" },
       };
       if (matchDetailsChanged) {
         delete update.$unset.updatedByUserId;
         delete update.$unset.updatedByUsername;
+        delete update.$unset.updatedByAdminFields;
         update.$set.updatedByUserId = req.session.sub;
         update.$set.updatedByUsername = req.session.displayName || req.session.username || "admin";
+        update.$set.updatedByAdminFields = updatedFields;
       }
 
       const result = await getDb().collection("matches").findOneAndUpdate(

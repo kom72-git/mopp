@@ -244,6 +244,8 @@ function parseStartsAtDisplay(startsAt, matchId, round, tournamentYear) {
         matchNo: '',
         dayName: weekday,
         dayShort: weekdayShort,
+        dateText: `${padDatePart(date.getDate())}.${padDatePart(date.getMonth() + 1)}.${date.getFullYear()}`,
+        timeText: `${pad(date.getHours())}:${pad(date.getMinutes())}`,
         rest: `${padDatePart(date.getDate())}.${padDatePart(date.getMonth() + 1)}.${date.getFullYear()} (${pad(date.getHours())}:${pad(date.getMinutes())})`,
       }
     }
@@ -298,6 +300,12 @@ function parseStartsAtDisplay(startsAt, matchId, round, tournamentYear) {
     neděle: 'ne',
   }[dayName] ?? dayName
   const restDate = restRaw.trimStart().match(/^(\d{1,2}\.\d{1,2}\.)(.*)$/)
+  const displayDate = restDate
+    ? tournamentYear
+      ? `${padDatePart(restDate[1].split('.')[0])}.${padDatePart(restDate[1].split('.')[1])}.${tournamentYear}`
+      : restDate[1]
+    : restRaw.trimStart()
+  const displayTime = restDate ? restDate[2].trim().replace(/^\((.*)\)$/, '$1') : ''
   const rest = restDate && tournamentYear
     ? (() => {
       const time = restDate[2].trim()
@@ -310,20 +318,25 @@ function parseStartsAtDisplay(startsAt, matchId, round, tournamentYear) {
     matchNo,
     dayName,
     dayShort,
+    dateText: displayDate,
+    timeText: displayTime,
     rest,
   }
 }
 
-function StartsAtLabel({ startsAt, matchId, round, tournamentYear }) {
+function StartsAtLabel({ startsAt, matchId, round, tournamentYear, updatedFields = [] }) {
   const parts = parseStartsAtDisplay(startsAt, matchId, round, tournamentYear)
   if (!parts.dayName) return <>{parts.roundLabel}</>
 
   return (
     <span className="starts-at-label">
-      <strong className="starts-at-round">{parts.roundLabel}</strong>
+      <strong className={`starts-at-round${updatedFields.includes('round') ? ' is-admin-edited' : ''}`}>{parts.roundLabel}</strong>
       {' '}
     <span className="starts-at-day">{parts.dayShort}</span>
-      <span className="starts-at-date">{parts.rest}</span>
+      <span className="starts-at-date">
+        <span className={updatedFields.includes('date') ? 'is-admin-edited' : ''}>{parts.dateText ?? parts.rest}</span>
+        {parts.timeText ? <> (<span className={updatedFields.includes('time') ? 'is-admin-edited' : ''}>{parts.timeText}</span>)</> : null}
+      </span>
     </span>
   )
 }
@@ -3139,7 +3152,7 @@ function App() {
                 onClick={() => setSelectedMatchId(match.id)}
               >
                 <p className="match-item-top">
-                  <StartsAtLabel startsAt={match.startsAt} matchId={match.id} round={match.round} tournamentYear={String(selectedTournament?.startDate ?? '').slice(0, 4)} />
+                  <StartsAtLabel startsAt={match.startsAt} matchId={match.id} round={match.round} tournamentYear={String(selectedTournament?.startDate ?? '').slice(0, 4)} updatedFields={match.updatedByAdminFields} />
                   {match.updatedByAdminName ? <span className="match-item-admin-note">editováno</span> : null}
                 </p>
                 {match.selectedByName ? <span className="match-item-meta">Vybral: {match.selectedByName}</span> : null}
@@ -3151,7 +3164,7 @@ function App() {
                         {homeFlag ? (
                           <img className={`flag ${teamLogoClassName}`} src={homeFlag} alt={`Logo ${match.home}`} loading="lazy" />
                         ) : null}
-                        {getTeamDisplayName(match.home)}
+                        <span className={match.updatedByAdminFields?.includes('home') ? 'is-admin-edited' : ''}>{getTeamDisplayName(match.home)}</span>
                       </span>
                       <strong className={`team-goals ${score.winner === 'home' ? 'is-winner' : ''}`}>
                         {score.home ?? '-'}
@@ -3162,7 +3175,7 @@ function App() {
                         {awayFlag ? (
                           <img className={`flag ${teamLogoClassName}`} src={awayFlag} alt={`Logo ${match.away}`} loading="lazy" />
                         ) : null}
-                        {getTeamDisplayName(match.away)}
+                        <span className={match.updatedByAdminFields?.includes('away') ? 'is-admin-edited' : ''}>{getTeamDisplayName(match.away)}</span>
                       </span>
                       <strong className={`team-goals ${score.winner === 'away' ? 'is-winner' : ''}`}>
                         {score.away ?? '-'}
@@ -3805,7 +3818,7 @@ function App() {
 
               <header className="selected-match-head">
                 <p className="selected-match-time">
-                  <StartsAtLabel startsAt={selectedMatch.startsAt} matchId={selectedMatch.id} round={selectedMatch.round} tournamentYear={String(selectedTournament?.startDate ?? '').slice(0, 4)} />
+                  <StartsAtLabel startsAt={selectedMatch.startsAt} matchId={selectedMatch.id} round={selectedMatch.round} tournamentYear={String(selectedTournament?.startDate ?? '').slice(0, 4)} updatedFields={selectedMatch.updatedByAdminFields} />
                   {selectedMatch.updatedByAdminName ? <span className="selected-match-admin-note">editováno</span> : null}
                 </p>
                 {selectedMatch.selectedByName ? <p className="selected-match-meta">Vybral: {selectedMatch.selectedByName}</p> : null}
@@ -3829,7 +3842,7 @@ function App() {
                                   loading="lazy"
                                 />
                               ) : null}
-                              {getTeamDisplayName(selectedMatch.home)}
+                              <span className={selectedMatch.updatedByAdminFields?.includes('home') ? 'is-admin-edited' : ''}>{getTeamDisplayName(selectedMatch.home)}</span>
                             </span>
                             <strong className={`team-goals ${score.winner === 'home' ? 'is-winner' : ''}`}>
                               {score.home ?? '-'}
@@ -3846,7 +3859,7 @@ function App() {
                                   loading="lazy"
                                 />
                               ) : null}
-                              {getTeamDisplayName(selectedMatch.away)}
+                              <span className={selectedMatch.updatedByAdminFields?.includes('away') ? 'is-admin-edited' : ''}>{getTeamDisplayName(selectedMatch.away)}</span>
                             </span>
                             <strong className={`team-goals ${score.winner === 'away' ? 'is-winner' : ''}`}>
                               {score.away ?? '-'}

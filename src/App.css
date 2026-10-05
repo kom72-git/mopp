@@ -2341,6 +2341,11 @@
   font-size: 0.66rem;
 }
 
+.is-admin-edited {
+  color: #ad3030;
+  font-weight: 700;
+}
+
 .match-item-admin-note::before,
 .selected-match-admin-note::before {
   content: '– ';

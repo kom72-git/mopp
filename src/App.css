@@ -4695,6 +4695,64 @@
   font-size: 0.8rem;
 }
 
+.password-input-wrap {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #c7d9e8;
+  border-radius: 5px;
+  background: #fff;
+}
+
+.password-input-wrap:focus-within {
+  border-color: #5f9bc5;
+  box-shadow: 0 0 0 2px rgb(95 155 197 / 18%);
+}
+
+.auth-form .password-input-wrap > input {
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  border-radius: inherit;
+  outline: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.auth-form .password-input-wrap > input::-ms-reveal {
+  display: none;
+}
+
+.password-visibility-toggle {
+  flex: 0 0 2.5rem;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 0 4px 4px 0;
+  padding: 0;
+  background: transparent;
+  color: #456781;
+  cursor: pointer;
+}
+
+.password-visibility-toggle:hover {
+  background: #edf5fb;
+  color: #1f5a8d;
+}
+
+.password-visibility-toggle:focus-visible {
+  outline: 2px solid #4c91c1;
+  outline-offset: -3px;
+}
+
+.password-eye-icon {
+  display: block;
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
 .auth-form-help {
   color: #5e7890;
   font-size: 0.72rem;

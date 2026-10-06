@@ -377,6 +377,48 @@ function createCroppedAvatar(source, cropArea) {
   })
 }
 
+function PasswordInput({ name, value, onChange, placeholder, autoComplete, required = false }) {
+  const [isVisible, setIsVisible] = useState(false)
+
+  return (
+    <div className="password-input-wrap">
+      <input
+        name={name}
+        type={isVisible ? 'text' : 'password'}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        autoComplete={autoComplete}
+        required={required}
+      />
+      <button
+        type="button"
+        className="password-visibility-toggle"
+        aria-label={isVisible ? 'Skrýt heslo' : 'Zobrazit heslo'}
+        aria-pressed={isVisible}
+        title={isVisible ? 'Skrýt heslo' : 'Zobrazit heslo'}
+        onClick={() => setIsVisible((visible) => !visible)}
+      >
+        <svg className="password-eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+          {isVisible ? (
+            <>
+              <path d="M3 3 21 21" />
+              <path d="M10.6 10.6a2 2 0 0 0 2.8 2.8" />
+              <path d="M9.9 5.2A10.7 10.7 0 0 1 12 5c6.4 0 10 7 10 7a15.8 15.8 0 0 1-4 4.6" />
+              <path d="M6.2 6.2A16.6 16.6 0 0 0 2 12s3.6 7 10 7a10.7 10.7 0 0 0 4.1-.8" />
+            </>
+          ) : (
+            <>
+              <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z" />
+              <circle cx="12" cy="12" r="3" />
+            </>
+          )}
+        </svg>
+      </button>
+    </div>
+  )
+}
+
 function AuthPanel({ activeProduct, selectedTournamentId, selectedTournament, selectedFantasyTournament, fantasyRefreshKey = 0, onFantasyUpdated, onTournamentUpdated, onMatchesChanged, onTipUpdated, onNextSelectionChange }) {
   const [user, setUser] = useState(null)
   const [mode, setMode] = useState('login')
@@ -391,7 +433,6 @@ function AuthPanel({ activeProduct, selectedTournamentId, selectedTournament, se
   const [profileMessage, setProfileMessage] = useState('')
   const [message, setMessage] = useState('')
   const [isBusy, setIsBusy] = useState(false)
-  const [showPasswords, setShowPasswords] = useState(false)
   const [hasSelectionNotification, setHasSelectionNotification] = useState(false)
   const [pendingTipNotificationCount, setPendingTipNotificationCount] = useState(0)
   const [pendingAccountNotificationCount, setPendingAccountNotificationCount] = useState(0)
@@ -808,9 +849,9 @@ function AuthPanel({ activeProduct, selectedTournamentId, selectedTournament, se
               ) : null}
               <form onSubmit={changeAccountPassword}>
                 <h3>Změna hesla</h3>
-                <input name="currentPassword" type="password" value={accountForm.currentPassword} onChange={updateAccountField} placeholder="Současné heslo" autoComplete="current-password" required />
-                <input name="newPassword" type="password" value={accountForm.newPassword} onChange={updateAccountField} placeholder="Nové heslo" autoComplete="new-password" required />
-                <input name="confirmPassword" type="password" value={accountForm.confirmPassword} onChange={updateAccountField} placeholder="Nové heslo znovu" autoComplete="new-password" required />
+                <PasswordInput name="currentPassword" value={accountForm.currentPassword} onChange={updateAccountField} placeholder="Současné heslo" autoComplete="current-password" required />
+                <PasswordInput name="newPassword" value={accountForm.newPassword} onChange={updateAccountField} placeholder="Nové heslo" autoComplete="new-password" required />
+                <PasswordInput name="confirmPassword" value={accountForm.confirmPassword} onChange={updateAccountField} placeholder="Nové heslo znovu" autoComplete="new-password" required />
                 <button type="submit" className="auth-submit" disabled={isBusy}>Změnit heslo</button>
                 {message ? <p className="auth-message" role="alert">{message}</p> : null}
               </form>
@@ -872,18 +913,15 @@ function AuthPanel({ activeProduct, selectedTournamentId, selectedTournament, se
               ) : mode === 'forgot' ? (
                 <input name="email" type="email" value={form.email} onChange={updateField} placeholder="E-mail pro obnovu hesla" autoComplete="email" required />
               ) : mode === 'reset' ? (
-                <input name="password" type="password" value={form.password} onChange={updateField} placeholder="Nové heslo" autoComplete="new-password" required />
+                <PasswordInput name="password" value={form.password} onChange={updateField} placeholder="Nové heslo" autoComplete="new-password" required />
               ) : (
                 <input name="usernameOrEmail" value={form.usernameOrEmail} onChange={updateField} placeholder="E-mail" aria-label="E-mail" autoComplete="email" required />
               )}
               {mode === 'login' || mode === 'register' ? (
                 <>
-                  <input name="password" type={mode === 'register' && showPasswords ? 'text' : 'password'} value={form.password} onChange={updateField} placeholder="Heslo" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} required />
+                  <PasswordInput name="password" value={form.password} onChange={updateField} placeholder="Heslo" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} required />
                   {mode === 'register' ? (
-                    <>
-                      <input name="confirmPassword" type={showPasswords ? 'text' : 'password'} value={form.confirmPassword} onChange={updateField} placeholder="Heslo znovu" autoComplete="new-password" required />
-                      <label className="auth-password-toggle"><input type="checkbox" checked={showPasswords} onChange={(event) => setShowPasswords(event.target.checked)} aria-label="Zobrazit hesla" /> Zobrazit hesla</label>
-                    </>
+                    <PasswordInput name="confirmPassword" value={form.confirmPassword} onChange={updateField} placeholder="Heslo znovu" autoComplete="new-password" required />
                   ) : null}
                 </>
               ) : null}

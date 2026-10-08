@@ -2040,6 +2040,12 @@ function App() {
     .filter((item) => Number.isFinite(item.amount) && item.amount >= 0),
   [orderedMatches, players, remainderRecipientByMatchId])
 
+  const visibleTipsBankHistory = useMemo(
+    () => tipsBankHistory.filter((item) => !Number.isFinite(effectiveSelectedRound) || extractRound(item.match) <= effectiveSelectedRound),
+    [tipsBankHistory, effectiveSelectedRound],
+  )
+  const isCurrentRoundSelected = effectiveSelectedRound === currentRound
+
   const effectiveSelectedPlayerId = useMemo(() => {
     if (standings.length === 0) return ''
     if (!selectedPlayerId) return ''
@@ -3992,13 +3998,13 @@ function App() {
             <div className="tips-bank-current-details">
               <span className="long-term-bank-toggle-label">
                 <span className="bank-icon" aria-hidden="true">💵</span>
-                <span>Aktuální bank</span>
+                <span>{isCurrentRoundSelected ? 'Aktuální bank' : 'Bank vybraného kola'}</span>
               </span>
               <button
                 type="button"
                 className="tips-bank-history-more"
                 aria-expanded={showAllTipsBankHistory}
-                disabled={tipsBankHistory.length <= tipsBankPreviewCount}
+                disabled={visibleTipsBankHistory.length <= tipsBankPreviewCount}
                 onClick={() => setShowAllTipsBankHistory((current) => !current)}
               >
                 {showAllTipsBankHistory ? 'Skrýt přehled' : 'Zobrazit přehled'}
@@ -4010,19 +4016,19 @@ function App() {
           </div>
 
           <div className="long-term-bank-info tips-bank-history-info">
-              {tipsBankHistory.length > 0 ? (
+              {visibleTipsBankHistory.length > 0 ? (
                 <>
                   <div className="tips-bank-timeline" role="list" aria-label="Historie banku podle zápasů">
-                  {(showAllTipsBankHistory || tipsBankHistory.length <= tipsBankPreviewCount ? tipsBankHistory : tipsBankHistory.slice(-tipsBankPreviewCount)).map((item, visibleIndex, visibleItems) => {
-                    const matchIndex = showAllTipsBankHistory || tipsBankHistory.length <= tipsBankPreviewCount
+                  {(showAllTipsBankHistory || visibleTipsBankHistory.length <= tipsBankPreviewCount ? visibleTipsBankHistory : visibleTipsBankHistory.slice(-tipsBankPreviewCount)).map((item, visibleIndex, visibleItems) => {
+                    const matchIndex = showAllTipsBankHistory || visibleTipsBankHistory.length <= tipsBankPreviewCount
                       ? visibleIndex
-                      : tipsBankHistory.length - visibleItems.length + visibleIndex
+                      : visibleTipsBankHistory.length - visibleItems.length + visibleIndex
                     const parsedDate = new Date(item.match.startsAt)
                     const date = Number.isNaN(parsedDate.getTime())
                       ? (extractCalendarDate(item.match.startsAt) || item.match.startsAt)
                       : new Intl.DateTimeFormat('cs-CZ', { day: 'numeric', month: 'numeric' }).format(parsedDate)
                     return (
-                      <article className={`tips-bank-event${item.isPending ? ' is-current' : ''}`} role="listitem" key={item.match.id}>
+                      <article className={`tips-bank-event${item.match.id === selectedMatch?.id ? ' is-current' : ''}`} role="listitem" key={item.match.id}>
                         <span className="tips-bank-event-meta" title={`${item.match.home} – ${item.match.away}`}>
                           {matchIndex + 1}. {roundLabel} · {date} · {getTeamAbbreviation(item.match.home)}–{getTeamAbbreviation(item.match.away)}
                         </span>

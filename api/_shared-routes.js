@@ -52,7 +52,8 @@ function scoreTip(tipPick, matchResult, scoring) {
   const resultOutcome = Math.sign(resultHome - resultAway);
   const tipOutcome = Math.sign(tipHome - tipAway);
   if (resultOutcome !== tipOutcome) return 0;
-  if (resultOutcome === 0) return 0;
+  // U remízy nejde uhodnout "vítěze s přesným počtem gólů", jiná remíza dává jen body za vítěze.
+  if (resultOutcome === 0) return Number(scoring?.winner) || 3;
   const resultWinnerGoals = resultOutcome > 0 ? resultHome : resultAway;
   const tipWinnerGoals = tipOutcome > 0 ? tipHome : tipAway;
   if (tipWinnerGoals === resultWinnerGoals) return Number(scoring?.near) || 5;

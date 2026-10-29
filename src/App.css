@@ -607,6 +607,11 @@
   grid-template-columns: 2rem 2.5rem minmax(160px, 1fr) repeat(4, minmax(5.1rem, 0.68fr));
 }
 
+.fantasy-table-head.is-five-columns,
+.fantasy-table-row.is-five-columns {
+  grid-template-columns: 2rem 2.5rem minmax(160px, 1fr) repeat(5, minmax(4.7rem, 0.62fr));
+}
+
 .fantasy-table-head.is-extra-wide,
 .fantasy-table-row.is-extra-wide {
   grid-template-columns: 2rem 2.5rem minmax(150px, 1fr) repeat(6, minmax(4.2rem, 0.58fr));
@@ -677,13 +682,11 @@
 
   .fantasy-table-head.is-prizes .fantasy-metric-bestPeriodRank,
   .fantasy-table-row.is-prizes .fantasy-metric-bestPeriodRank {
-    order: 4;
+    order: 3;
   }
 
   .fantasy-table-head.is-performance .fantasy-metric-awards-worst,
-  .fantasy-table-row.is-performance .fantasy-metric-awards-worst,
-  .fantasy-table-head.is-prizes .fantasy-metric-fantasyNets,
-  .fantasy-table-row.is-prizes .fantasy-metric-fantasyNets {
+  .fantasy-table-row.is-performance .fantasy-metric-awards-worst {
     order: 4;
   }
 
@@ -699,6 +702,11 @@
 
   .fantasy-table-head.is-prizes .fantasy-metric-finalFantasyRank,
   .fantasy-table-row.is-prizes .fantasy-metric-finalFantasyRank {
+    order: 4;
+  }
+
+  .fantasy-table-head.is-prizes .fantasy-metric-fantasyNets,
+  .fantasy-table-row.is-prizes .fantasy-metric-fantasyNets {
     order: 5;
   }
 }
@@ -936,6 +944,25 @@
   letter-spacing: 0.04em;
   line-height: 1;
   text-transform: uppercase;
+}
+
+@media (min-width: 780px) and (max-width: 979px) {
+  .fantasy-table-head.is-five-columns {
+    align-items: end;
+  }
+
+  .fantasy-table-head.is-five-columns .fantasy-label-stack {
+    flex-direction: column;
+    gap: 0.12rem;
+  }
+
+  .fantasy-table-head.is-five-columns .fantasy-minmax-badge {
+    order: -1;
+  }
+
+  .fantasy-table-head.is-five-columns .fantasy-label-stack .fantasy-label-name {
+    position: relative;
+  }
 }
 
 @media (min-width: 780px) and (max-width: 849px) {
@@ -1239,6 +1266,7 @@
   .fantasy-table-row,
   .fantasy-table-row.is-compact,
   .fantasy-table-row.is-wide,
+  .fantasy-table-row.is-five-columns,
   .fantasy-table-row.is-extra-wide {
     grid-template-columns: 2rem 2.3rem minmax(0, 1fr) auto;
     grid-template-areas:

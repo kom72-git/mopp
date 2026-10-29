@@ -366,13 +366,15 @@
 
 .fantasy-period-round-tabs {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(82px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(74px, 1fr));
   gap: 0.32rem;
 }
 
 .fantasy-period-round-tabs .round-tab {
   width: 100%;
   max-width: none;
+  padding: 0.24rem 0.35rem;
+  border-radius: 0.65rem;
 }
 
 .fantasy-period-round-tabs small {
@@ -605,30 +607,29 @@
   grid-template-columns: 2rem 2.5rem minmax(160px, 1fr) repeat(4, minmax(5.1rem, 0.68fr));
 }
 
+.fantasy-table-head.is-extra-wide,
+.fantasy-table-row.is-extra-wide {
+  grid-template-columns: 2rem 2.5rem minmax(150px, 1fr) repeat(6, minmax(4.2rem, 0.58fr));
+  gap: 0.5rem;
+}
+
 .fantasy-table-head.is-compact,
 .fantasy-table-row.is-compact {
   grid-template-columns: 2rem 2.5rem minmax(170px, 1fr) repeat(2, minmax(5.4rem, 0.72fr));
 }
 
-.fantasy-table-row.is-compact .fantasy-cell-nets {
-  grid-column: 4;
-}
+@media (min-width: 780px) {
+  .fantasy-table-head.is-compact .fantasy-metric-fantasyNets,
+  .fantasy-table-row.is-compact .fantasy-cell-nets {
+    grid-column: 4;
+    grid-row: 1;
+  }
 
-.fantasy-table-row.is-compact .fantasy-cell-tipsport-rank {
-  grid-column: 5;
-}
-
-.fantasy-table-head.is-compact .fantasy-metric-fantasyNets,
-.fantasy-table-head.is-compact .fantasy-metric-bestDailyRank {
-  grid-row: 1;
-}
-
-.fantasy-table-head.is-compact .fantasy-metric-fantasyNets {
-  grid-column: 4;
-}
-
-.fantasy-table-head.is-compact .fantasy-metric-bestDailyRank {
-  grid-column: 5;
+  .fantasy-table-head.is-compact .fantasy-metric-bestDailyRank,
+  .fantasy-table-row.is-compact .fantasy-cell-tipsport-rank {
+    grid-column: 5;
+    grid-row: 1;
+  }
 }
 
 @media (min-width: 621px) {
@@ -654,11 +655,19 @@
 
   .fantasy-table-head.is-performance .fantasy-metric-bestScore,
   .fantasy-table-row.is-performance .fantasy-metric-bestScore,
-  .fantasy-table-head.is-awards .fantasy-metric-awards-best,
-  .fantasy-table-row.is-awards .fantasy-metric-awards-best,
   .fantasy-table-head.is-prizes .fantasy-metric-bestDailyRank,
   .fantasy-table-row.is-prizes .fantasy-metric-bestDailyRank {
     order: 1;
+  }
+
+  .fantasy-table-head.is-performance .fantasy-metric-awards-best,
+  .fantasy-table-row.is-performance .fantasy-metric-awards-best {
+    order: 2;
+  }
+
+  .fantasy-table-head.is-performance .fantasy-metric-awards-bestMinScore,
+  .fantasy-table-row.is-performance .fantasy-metric-awards-bestMinScore {
+    order: 3;
   }
 
   .fantasy-table-head.is-prizes .fantasy-metric-worstDailyRank,
@@ -666,22 +675,26 @@
     order: 2;
   }
 
-  .fantasy-table-head.is-performance .fantasy-metric-worstScore,
-  .fantasy-table-row.is-performance .fantasy-metric-worstScore,
-  .fantasy-table-head.is-awards .fantasy-metric-awards-worst,
-  .fantasy-table-row.is-awards .fantasy-metric-awards-worst,
   .fantasy-table-head.is-prizes .fantasy-metric-bestPeriodRank,
   .fantasy-table-row.is-prizes .fantasy-metric-bestPeriodRank {
-    order: 3;
+    order: 4;
   }
 
-  .fantasy-table-head.is-performance .fantasy-metric-last,
-  .fantasy-table-row.is-performance .fantasy-metric-last,
-  .fantasy-table-head.is-awards .fantasy-metric-missed,
-  .fantasy-table-row.is-awards .fantasy-metric-missed,
+  .fantasy-table-head.is-performance .fantasy-metric-awards-worst,
+  .fantasy-table-row.is-performance .fantasy-metric-awards-worst,
   .fantasy-table-head.is-prizes .fantasy-metric-fantasyNets,
   .fantasy-table-row.is-prizes .fantasy-metric-fantasyNets {
     order: 4;
+  }
+
+  .fantasy-table-head.is-performance .fantasy-metric-awards-worstMaxScore,
+  .fantasy-table-row.is-performance .fantasy-metric-awards-worstMaxScore {
+    order: 5;
+  }
+
+  .fantasy-table-head.is-performance .fantasy-metric-worstScore,
+  .fantasy-table-row.is-performance .fantasy-metric-worstScore {
+    order: 6;
   }
 
   .fantasy-table-head.is-prizes .fantasy-metric-finalFantasyRank,
@@ -713,10 +726,79 @@
   display: none;
 }
 
+.fantasy-mobile-sort .fantasy-sort-option {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.1rem 0.35rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #637b8e;
+  font: inherit;
+  font-size: 0.72rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.fantasy-mobile-sort .fantasy-sort-option:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  right: -0.15rem;
+  top: 50%;
+  height: 0.8em;
+  border-left: 1px solid #c4dfda;
+  transform: translateY(-50%);
+}
+
+.fantasy-mobile-sort .fantasy-sort-option.is-active {
+  color: #175f58;
+  font-weight: 800;
+}
+
+.fantasy-mobile-sort .fantasy-sort-option:hover,
+.fantasy-mobile-sort .fantasy-sort-option:focus-visible {
+  color: #175f58;
+  text-decoration: underline;
+  text-underline-offset: 0.2rem;
+}
+
+.fantasy-mobile-sort .fantasy-label-wide {
+  display: inline;
+}
+
+.fantasy-mobile-sort .fantasy-label-compact {
+  display: none;
+}
+
+.fantasy-table-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.55rem 1rem;
+}
+
+.fantasy-table-controls > * {
+  flex: 0 0 auto;
+  max-width: 100%;
+}
+
+.fantasy-stat-view {
+  display: flex;
+  align-items: baseline;
+  gap: 0.2rem;
+}
+
 .fantasy-table-head button.is-active,
 .fantasy-table-row .is-active-sort {
   color: #123f61;
   font-weight: 800;
+}
+
+.fantasy-table-head button {
+  position: relative;
 }
 
 .fantasy-table-row {
@@ -780,6 +862,103 @@
 
 .fantasy-label-compact {
   display: none;
+}
+
+.fantasy-label-stack {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  line-height: 1.1;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.fantasy-label-name {
+  position: relative;
+  display: inline-flex;
+  align-items: baseline;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.fantasy-label-stack .fantasy-label-name {
+  position: static;
+}
+
+.fantasy-sort-indicator {
+  position: absolute;
+  right: -0.7em;
+  bottom: 0;
+  width: 0.7em;
+  text-align: right;
+}
+
+@media (min-width: 780px) {
+  .fantasy-table-head.is-standings,
+  .fantasy-table-row.is-standings {
+    grid-template-columns: 2rem 2.5rem minmax(160px, 1fr) repeat(2, minmax(5.1rem, 0.68fr)) repeat(2, 6rem);
+  }
+
+  .fantasy-table-head button,
+  .fantasy-table-row .fantasy-cell,
+  .fantasy-table-row .fantasy-points {
+    text-align: center;
+  }
+
+  .fantasy-table-row .fantasy-points {
+    padding-right: 0;
+  }
+
+  .fantasy-table-head.is-standings .fantasy-metric-points,
+  .fantasy-table-head.is-standings .fantasy-metric-prizeMoney,
+  .fantasy-table-row.is-standings .fantasy-metric-points,
+  .fantasy-table-row.is-standings .fantasy-metric-prizeMoney {
+    text-align: right;
+  }
+
+  .fantasy-table-head.is-standings .fantasy-metric-prizeMoney,
+  .fantasy-table-row.is-standings .fantasy-metric-prizeMoney {
+    padding-right: 2.5rem;
+  }
+}
+
+.fantasy-minmax-badge {
+  display: inline-block;
+  margin: 0;
+  padding: 0.12rem 0.28rem 0.1rem;
+  border-radius: 0.26rem;
+  background: rgba(148, 163, 184, 0.22);
+  color: inherit;
+  font-size: 0.78em;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+@media (min-width: 780px) and (max-width: 849px) {
+  .fantasy-table-head.is-standings,
+  .fantasy-table-head.is-extra-wide {
+    align-items: end;
+  }
+
+  .fantasy-table-head.is-standings .fantasy-label-stack,
+  .fantasy-table-head.is-extra-wide .fantasy-label-stack {
+    flex-direction: column;
+    gap: 0.12rem;
+  }
+
+  .fantasy-table-head.is-standings .fantasy-minmax-badge,
+  .fantasy-table-head.is-extra-wide .fantasy-minmax-badge {
+    order: -1;
+  }
+
+  .fantasy-table-head.is-standings .fantasy-label-stack .fantasy-label-name,
+  .fantasy-table-head.is-extra-wide .fantasy-label-stack .fantasy-label-name {
+    position: relative;
+  }
 }
 
 .fantasy-table-row .fantasy-cell .fantasy-cell-label {
@@ -1009,7 +1188,9 @@
   .fantasy-workspace {
     grid-template-columns: 1fr;
   }
+}
 
+@media (max-width: 779px) {
   .fantasy-table-head {
     display: none;
   }
@@ -1034,10 +1215,18 @@
   }
 
   .fantasy-mobile-sort {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: baseline;
     gap: 0.3rem;
+  }
+
+  .fantasy-sort-options {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.1rem 0.3rem;
+    min-width: 0;
   }
 
   .fantasy-mobile-sort > span {
@@ -1048,7 +1237,9 @@
   }
 
   .fantasy-table-row,
-  .fantasy-table-row.is-wide {
+  .fantasy-table-row.is-compact,
+  .fantasy-table-row.is-wide,
+  .fantasy-table-row.is-extra-wide {
     grid-template-columns: 2rem 2.3rem minmax(0, 1fr) auto;
     grid-template-areas:
       'rank shift player points'
@@ -1079,17 +1270,6 @@
     justify-content: flex-start;
     gap: 0.8rem;
     min-width: 0;
-  }
-
-  .fantasy-one-table.has-standings-bank .fantasy-row-metrics {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: baseline;
-    justify-content: initial;
-  }
-
-  .fantasy-one-table.has-standings-bank .fantasy-row-metrics .fantasy-metric-prizeMoney {
-    grid-column: 1 / -1;
   }
 
   .fantasy-cell {
@@ -1125,6 +1305,37 @@
 
 }
 
+@media (min-width: 544px) and (max-width: 779px) {
+  .fantasy-table-row.is-standings .fantasy-row-metrics {
+    display: grid;
+    grid-template-columns: 11.5rem 5rem 5rem;
+  }
+
+  .fantasy-table-row.is-standings .fantasy-money-cell > span {
+    flex: 0 0 3.5rem;
+    text-align: right;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 779px) {
+  .fantasy-table-row.is-standings .fantasy-money-cell > * {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 543px) {
+  .fantasy-one-table.has-standings-bank .fantasy-row-metrics {
+    display: grid;
+    grid-template-columns: minmax(0, 4.5rem) minmax(0, 1fr);
+  }
+
+  .fantasy-one-table.has-standings-bank .fantasy-row-metrics .fantasy-metric-prizeMoney {
+    grid-column: 1 / -1;
+  }
+}
+
 @media (max-width: 620px) {
   .fantasy-filter-panel {
     align-items: stretch;
@@ -1139,10 +1350,6 @@
 
   .fantasy-period-rounds {
     grid-column: 1;
-  }
-
-  .fantasy-period-round-tabs {
-    grid-template-columns: repeat(3, 1fr);
   }
 
   .fantasy-period-tabs .player-window-tab {

@@ -303,7 +303,7 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
   }
 
   const changeSort = (key) => {
-    const defaultDirection = key === 'worstDailyRank' ? 'desc' : key === 'worstScore' || key.includes('Rank') ? 'asc' : 'desc'
+    const defaultDirection = key === 'worstDailyRank' ? 'desc' : key === 'worstScore' || key === 'awards.bestMinScore' || key.includes('Rank') ? 'asc' : 'desc'
     setSort((current) => current.key === key
       ? { key, direction: current.direction === 'desc' ? 'asc' : 'desc' }
       : { key, direction: defaultDirection })

@@ -667,12 +667,12 @@
 
   .fantasy-table-head.is-performance .fantasy-metric-awards-best,
   .fantasy-table-row.is-performance .fantasy-metric-awards-best {
-    order: 2;
+    order: 3;
   }
 
   .fantasy-table-head.is-performance .fantasy-metric-awards-bestMinScore,
   .fantasy-table-row.is-performance .fantasy-metric-awards-bestMinScore {
-    order: 3;
+    order: 5;
   }
 
   .fantasy-table-head.is-prizes .fantasy-metric-worstDailyRank,
@@ -692,12 +692,12 @@
 
   .fantasy-table-head.is-performance .fantasy-metric-awards-worstMaxScore,
   .fantasy-table-row.is-performance .fantasy-metric-awards-worstMaxScore {
-    order: 5;
+    order: 6;
   }
 
   .fantasy-table-head.is-performance .fantasy-metric-worstScore,
   .fantasy-table-row.is-performance .fantasy-metric-worstScore {
-    order: 6;
+    order: 2;
   }
 
   .fantasy-table-head.is-prizes .fantasy-metric-finalFantasyRank,
@@ -947,19 +947,23 @@
 }
 
 @media (min-width: 780px) and (max-width: 979px) {
+  .fantasy-table-head.is-extra-wide,
   .fantasy-table-head.is-five-columns {
     align-items: end;
   }
 
+  .fantasy-table-head.is-extra-wide .fantasy-label-stack,
   .fantasy-table-head.is-five-columns .fantasy-label-stack {
     flex-direction: column;
     gap: 0.12rem;
   }
 
+  .fantasy-table-head.is-extra-wide .fantasy-minmax-badge,
   .fantasy-table-head.is-five-columns .fantasy-minmax-badge {
     order: -1;
   }
 
+  .fantasy-table-head.is-extra-wide .fantasy-label-stack .fantasy-label-name,
   .fantasy-table-head.is-five-columns .fantasy-label-stack .fantasy-label-name {
     position: relative;
   }

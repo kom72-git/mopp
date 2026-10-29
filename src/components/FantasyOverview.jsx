@@ -312,12 +312,13 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
   const sortLabel = (key, label) => `${label}, ${sort.key === key ? (sort.direction === 'desc' ? 'sestupně' : 'vzestupně') : 'seřadit'}`
   const statViews = {
     standings: [['prizeMoney', 'Peníze'], ['average', 'Průměr'], ['averageLastFive', 'Průměr z posledních 5 kol'], ['points', 'Body']],
-    performance: [['worstScore', 'Body'], ['awards.worst', 'Kopyto'], ['awards.worstMaxScore', 'Kopyto'], ['awards.best', 'Borec'], ['awards.bestMinScore', 'Borec'], ['bestScore', 'Body']],
+    performance: [['worstScore', 'Body'], ['awards.best', 'Borec kola'], ['awards.worst', 'Kopyto kola'], ['awards.bestMinScore', 'Borec kola'], ['awards.worstMaxScore', 'Kopyto kola'], ['bestScore', 'Body']],
     prizes: selectedRound
       ? [['fantasyNets', 'Nety'], ['bestDailyRank', 'Tipsport pořadí']]
       : [['bestPeriodRank', periodId === 'all' ? `Nejlepší ${fantasyPeriodRankLabel.toLowerCase()}` : `Umístění ${period?.label?.toLocaleLowerCase('cs-CZ') ?? ''}`], ...(hasFinalFantasyRanks ? [['finalFantasyRank', 'Konečné umístění']] : []), ['fantasyNets', 'Nety'], ...(periodId === 'all' ? [['worstDailyRank', 'Nejhorší denní']] : []), ['bestDailyRank', 'Nejlepší denní']],
   }
   const columns = statViews[statView]
+  const sortColumns = statView === 'performance' ? [columns.at(-1), ...columns.slice(0, -1)] : columns
   const tableWidthClass = columns.length === 6 ? 'is-extra-wide' : columns.length === 5 ? 'is-five-columns' : columns.length === 4 ? 'is-wide' : columns.length === 2 ? 'is-compact' : ''
   const metricClass = (key) => `fantasy-metric-${key.replace('.', '-')}`
   const metricLabel = (key, label, suffix = null) => {
@@ -343,9 +344,11 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
       compactLabel = 'Prům.'
       qualifier = '5'
     }
+    if (key === 'awards.best' || key === 'awards.worst') qualifier = 'kola'
+    const labelName = (text) => key.startsWith('awards.') ? text.replace(/ kola$/, '') : text
     const labelContent = (text, badge = qualifier) => badge
-      ? <span className="fantasy-label-stack"><span className="fantasy-label-name">{text}{suffix}</span><span className="fantasy-minmax-badge">{badge}</span></span>
-      : <span className="fantasy-label-name">{text}{suffix}</span>
+      ? <span className="fantasy-label-stack"><span className="fantasy-label-name">{labelName(text)}{suffix}</span><span className="fantasy-minmax-badge">{badge}</span></span>
+      : <span className="fantasy-label-name">{labelName(text)}{suffix}</span>
     const title = key === 'averageLastFive' ? 'Průměr bodů z posledních 5 Fantasy kol' : undefined
     return <><span className="fantasy-label-wide" title={title}>{labelContent(wideLabel)}</span><span className="fantasy-label-compact" title={title}>{labelContent(compactLabel, key === 'averageLastFive' ? '5' : qualifier)}</span></>
   }
@@ -460,7 +463,7 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
           <div className="fantasy-mobile-sort" role="group" aria-label="Řazení pořadí">
             <span>Řadit:</span>
             <div className="fantasy-sort-options">
-            {columns.map(([key, label]) => (
+            {sortColumns.map(([key, label]) => (
               <button key={key} type="button" className={`fantasy-sort-option ${sort.key === key ? 'is-active' : ''}`} aria-label={sortLabel(key, label)} aria-pressed={sort.key === key} onClick={() => changeSort(key)}>
                 {metricLabel(key, label)}
                 {sort.key === key ? <span aria-hidden="true">{sort.direction === 'desc' ? '↓' : '↑'}</span> : null}

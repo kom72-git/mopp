@@ -1144,6 +1144,10 @@ function comparePlayersByTieBreak(a, b, statsByPlayer, fallbackOrder, tieBreakOr
   return (fallbackOrder.get(a.id) ?? 999) - (fallbackOrder.get(b.id) ?? 999)
 }
 
+function getTournamentTieBreakOrder(tournament) {
+  return tournament?.tieBreakOrder ?? tournament?.longTermBank?.tieBreakOrder ?? []
+}
+
 function rankPlayersByLongTermBank(players, statsByPlayer, tieBreakOrder) {
   const fallbackOrder = new Map(players.map((player, index) => [player.id, index]))
   return [...players].sort((a, b) => comparePlayersByTieBreak(a, b, statsByPlayer, fallbackOrder, tieBreakOrder))
@@ -1608,7 +1612,7 @@ function App() {
       }))
       .filter((item) => Number.isFinite(item.place) && item.place >= 1 && item.amount > 0)
 
-    const bankRankedPlayers = rankPlayersByLongTermBank(players, statsByPlayer, selectedTournament?.tieBreakOrder)
+    const bankRankedPlayers = rankPlayersByLongTermBank(players, statsByPlayer, getTournamentTieBreakOrder(selectedTournament))
     for (const payout of payoutConfig) {
       const playerAtPlace = bankRankedPlayers[payout.place - 1]
       if (!playerAtPlace) continue
@@ -1681,8 +1685,8 @@ function App() {
   }, [matches])
 
   const rankSnapshotByMatchId = useMemo(
-    () => buildMatchRankSnapshots(orderedMatches, players, selectedTournament?.tieBreakOrder),
-    [orderedMatches, players, selectedTournament?.tieBreakOrder],
+    () => buildMatchRankSnapshots(orderedMatches, players, getTournamentTieBreakOrder(selectedTournament)),
+    [orderedMatches, players, selectedTournament],
   )
   const roundRankSnapshotByRound = useMemo(
     () => buildRoundRankSnapshots(orderedMatches, players),
@@ -2668,7 +2672,7 @@ function App() {
       const bankStatsByPlayer = new Map(
         scoreboard.map((player) => [player.id, fullStandingByPlayer.get(player.id)?.stats ?? {}]),
       )
-      const pointsRankedRows = rankPlayersByLongTermBank(scoreboard, bankStatsByPlayer, selectedTournament?.tieBreakOrder)
+      const pointsRankedRows = rankPlayersByLongTermBank(scoreboard, bankStatsByPlayer, getTournamentTieBreakOrder(selectedTournament))
 
       for (const payout of payoutConfig) {
         const playerAtPlace = pointsRankedRows[payout.place - 1]
@@ -2764,10 +2768,15 @@ function App() {
       return applyLongTermPayout(baseRows)
     })()
 
-    return rows
-      .sort((a, b) => {
+    const statsByPlayer = new Map(rows.map((player) => [player.id, player.stats ?? {}]))
+    const tieBreakOrder = getTournamentTieBreakOrder(selectedTournament)
+
+    return rows.sort((a, b) => {
         const diff = getStandingsMetricValue(b, standingsMetric) - getStandingsMetricValue(a, standingsMetric)
         if (diff !== 0) return diff
+        if (standingsMetric === 'points') {
+          return comparePlayersByTieBreak(a, b, statsByPlayer, playerOrder, tieBreakOrder)
+        }
         return (playerOrder.get(a.id) ?? 999) - (playerOrder.get(b.id) ?? 999)
       })
   }, [standingsFormWindow, standings, playedMatches, scoreboard, remainderRecipientByMatchId, standingsMetric, selectedTournament])

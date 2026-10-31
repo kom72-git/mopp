@@ -4154,9 +4154,9 @@
   gap: 0.2rem;
   min-width: 0;
   padding: 0.42rem 0.48rem;
-  border: 1px solid #d7e5f2;
-  border-radius: 7px;
-  background: #f9fcff;
+  border: 1px solid #dbe6ee;
+  border-radius: 8px;
+  background: #fff;
   color: #49647a;
   font-size: 0.72rem;
 }
@@ -4199,7 +4199,11 @@
 
 .tips-bank-winner-label {
   display: inline-block;
-  color: #8c5b00;
+  padding: 0.06rem 0.28rem;
+  border-radius: 0.25rem;
+  background: #e2f2e5;
+  color: #205c32;
+  font-weight: 900;
   white-space: nowrap;
 }
 

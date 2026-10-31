@@ -4044,7 +4044,7 @@ function App() {
                         <strong className="tips-bank-event-amount">Bank {item.amount.toLocaleString('cs-CZ')} Kč</strong>
                         {item.winnerCount > 0 ? (
                           <span className="tips-bank-event-payout">
-                            <span className="tips-bank-winner-label">{item.winnerCount > 1 ? `${item.winnerCount}× výhra:` : 'Výhra:'}</span>{' '}
+                            <span className="tips-bank-winner-label">{item.winnerCount > 1 ? `${item.winnerCount}× výherce:` : 'výherce:'}</span>{' '}
                             {item.winners.map((winner, winnerIndex) => (
                               <Fragment key={`${item.match.id}-${winnerIndex}`}>
                                 {winnerIndex > 0 ? <span className="tips-bank-winner-separator" aria-hidden="true">{' · '}</span> : null}

@@ -4054,7 +4054,7 @@ function App() {
                               </Fragment>
                             ))}
                           </span>
-                        ) : <span className="tips-bank-event-result">{item.isPending ? 'Čeká na výsledek' : 'Přeneseno dál'}</span>}
+                        ) : <span className="tips-bank-event-result">{item.isPending ? 'Čeká na výsledek' : 'Převedeno'}</span>}
                       </article>
                     )
                   })}

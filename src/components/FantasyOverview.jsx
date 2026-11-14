@@ -151,6 +151,7 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
   const [showRankLegendInfo, setShowRankLegendInfo] = useState(false)
   const touchLegendHandledRef = useRef(false)
   const fantasyOneTableRef = useRef(null)
+  const playerDetailRef = useRef(null)
   const activeFantasyPlayers = fantasyData?.players ?? (isDbFantasy ? [] : fantasyPlayers)
   const activePeriodsRaw = fantasyData?.periods?.length ? fantasyData.periods : (isDbFantasy ? [{ id: 'all', label: 'Celkem' }] : periods)
   const activeFantasyRounds = fantasyData?.rounds ?? (isDbFantasy ? [] : fantasyRounds)
@@ -391,6 +392,13 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
     key: statView === 'prizes' ? getDefaultTipsportSortKey(targetPeriodId, isRoundSelected) : 'points',
     direction: statView === 'prizes' ? 'asc' : 'desc',
   })
+  const showPlayerDetail = (nick) => {
+    setSelectedPlayerNick(nick)
+    requestAnimationFrame(() => playerDetailRef.current?.scrollIntoView({
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+      block: 'start',
+    }))
+  }
 
   return (
     <div className="fantasy-preview">
@@ -485,8 +493,11 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
             const standingsRank = rankByPlayer.get(player.name)
             const shift = visibleRounds.length > 1 ? (previousRankByPlayer.get(player.name) ?? standingsRank) - standingsRank : 0
             return (
-              <article className={`stand-card fantasy-table-row is-${statView} ${tableWidthClass} ${selectedPlayerNick === player.nick ? 'is-selected' : ''}`} key={player.name} role="button" tabIndex={0} onClick={() => setSelectedPlayerNick(player.nick)} onKeyDown={(event) => {
-                if (event.key === 'Enter' || event.key === ' ') setSelectedPlayerNick(player.nick)
+              <article className={`stand-card fantasy-table-row is-${statView} ${tableWidthClass} ${selectedPlayerNick === player.nick ? 'is-selected' : ''}`} key={player.name} role="button" tabIndex={0} onClick={() => showPlayerDetail(player.nick)} onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault()
+                  showPlayerDetail(player.nick)
+                }
               }}>
                 <span className={`fantasy-rank is-rank-${rank}`}>{rank}</span>
                 <span className={`fantasy-rank-shift ${shift > 0 ? 'is-up' : shift < 0 ? 'is-down' : 'is-flat'}`} aria-label={shift > 0 ? `posun nahoru o ${shift}` : shift < 0 ? `posun dolů o ${Math.abs(shift)}` : 'beze změny'}>
@@ -568,7 +579,7 @@ function FantasyOverview({ selectedTournamentId = '', selectedTournament = null,
       ) : null}
 
       {selectedPlayer && selectedPlayerStats ? (
-        <section className="panel fantasy-player-detail">
+        <section ref={playerDetailRef} className="panel fantasy-player-detail">
           <div className="panel-head">
             <div>
               <span className="fantasy-eyebrow">Statistiky hráče · {period.label}</span>

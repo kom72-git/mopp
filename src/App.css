@@ -1037,6 +1037,7 @@
 .fantasy-player-detail {
   display: grid;
   gap: 0.6rem;
+  scroll-margin-top: 1rem;
 }
 
 .fantasy-rank-chart-panel {

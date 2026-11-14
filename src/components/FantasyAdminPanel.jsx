@@ -45,6 +45,8 @@ export default function FantasyAdminPanel({ onImported, onClose, initialTourname
   const [rounds, setRounds] = useState([])
   const [selectedRoundId, setSelectedRoundId] = useState('new')
   const [roundDate, setRoundDate] = useState('')
+  const [roundDateMissing, setRoundDateMissing] = useState(false)
+  const roundDateRef = useRef(null)
   const [scores, setScores] = useState({})
   const [tipsportNets, setTipsportNets] = useState({})
   const [tipsportDailyRanks, setTipsportDailyRanks] = useState({})
@@ -127,6 +129,7 @@ export default function FantasyAdminPanel({ onImported, onClose, initialTourname
 
   const selectRound = (roundId) => {
     setSelectedRoundId(roundId)
+    setRoundDateMissing(false)
     if (roundId === 'new') {
       setRoundDate('')
       setScores({})
@@ -266,6 +269,12 @@ export default function FantasyAdminPanel({ onImported, onClose, initialTourname
 
   const saveRound = async () => {
     if (!selectedTournamentId) return
+    if (!roundDate.trim()) {
+      setMessage('')
+      setRoundDateMissing(true)
+      roundDateRef.current?.focus()
+      return
+    }
     setIsBusy(true)
     setMessage('')
     try {
@@ -587,7 +596,11 @@ export default function FantasyAdminPanel({ onImported, onClose, initialTourname
             const missing = players.filter((player) => String(round.scores?.[player.nick] ?? '').trim() === '').map((player) => player.name)
             return <option key={round._id} value={round._id}>{round.roundNumber}. kolo · {round.date}{missing.length ? ` · chybí ${missing.join(', ')}` : ''}</option>
           })}</select></label>
-          <label className="admin-field"><span className="admin-field-label">Datum kola</span><input value={roundDate} onChange={(event) => setRoundDate(event.target.value)} placeholder="např. 9.9" /></label>
+          <label className="admin-field">
+            <span className="admin-field-label">Datum kola</span>
+            <input ref={roundDateRef} value={roundDate} onChange={(event) => { setRoundDate(event.target.value); if (event.target.value.trim()) setRoundDateMissing(false) }} placeholder="např. 9.9" aria-invalid={roundDateMissing} aria-describedby={roundDateMissing ? 'fantasy-round-date-error' : undefined} />
+            {roundDateMissing ? <small id="fantasy-round-date-error" className="admin-field-error" role="alert">Vyplň datum kola.</small> : null}
+          </label>
           {players.map((player) => <div className="admin-fantasy-payout-row" key={player.nick}>
             <span className="admin-fantasy-player-name"><strong>{player.name}</strong><small>{player.nick}</small></span>
             <label className="admin-member-checkbox"><input type="checkbox" checked={awards.best?.includes(player.nick)} onChange={(event) => setAwards((current) => ({ ...current, best: event.target.checked ? [...(current.best || []), player.nick] : (current.best || []).filter((nick) => nick !== player.nick) }))} /><span>Borec při shodě</span></label>
@@ -596,7 +609,7 @@ export default function FantasyAdminPanel({ onImported, onClose, initialTourname
             <label className="admin-field"><span className="admin-field-label">Pořadí Tipsport</span><input type="number" min="1" value={tipsportDailyRanks[player.nick] ?? ''} onChange={(event) => setTipsportDailyRanks((current) => ({ ...current, [player.nick]: event.target.value }))} /></label>
           </div>)}
           <div className="admin-form-actions">
-            <button type="button" className="auth-submit" onClick={saveRound} disabled={isBusy || !selectedTournamentId || !roundDate || players.length === 0}>Uložit kolo</button>
+            <button type="button" className="auth-submit" onClick={saveRound} disabled={isBusy || !selectedTournamentId || players.length === 0}>Uložit kolo</button>
             <button type="button" className="auth-button is-danger" onClick={deleteRound} disabled={isBusy || selectedRoundId === 'new'}>Smazat kolo</button>
           </div>
           {selectedTournament ? <p className="admin-field-help">Vybraný turnaj: {selectedTournament.name}</p> : null}

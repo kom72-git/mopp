@@ -6225,6 +6225,11 @@
   font-size: 0.7rem;
 }
 
+.admin-field-error {
+  color: #ad3030;
+  font-size: 0.7rem;
+}
+
 .admin-field {
   display: grid;
   gap: 0.2rem;
